@@ -367,14 +367,6 @@ public class BrowserUnit {
         // ONLY clear cookies and logins if the user explicitly commanded manual cookie deletion
         if (clearCookie) {
             try {
-                if (com.petal.browser.engine.gecko.PetalGeckoRuntime.isGeckoAvailable(context)) {
-                    com.petal.browser.engine.gecko.PetalGeckoRuntime.clearData(
-                        context,
-                        org.mozilla.geckoview.StorageController.ClearFlags.COOKIES
-                    );
-                }
-            } catch (Exception ignored) {}
-            try {
                 CookieManager cookieManager = CookieManager.getInstance();
                 cookieManager.flush();
                 cookieManager.removeAllCookies(value -> {});
@@ -386,14 +378,6 @@ public class BrowserUnit {
             sp.edit().putInt("restart_changed", 1).apply();
         }
         if (clearIndexedDB) {
-            try {
-                if (com.petal.browser.engine.gecko.PetalGeckoRuntime.isGeckoAvailable(context)) {
-                    com.petal.browser.engine.gecko.PetalGeckoRuntime.clearData(
-                        context,
-                        org.mozilla.geckoview.StorageController.ClearFlags.DOM_STORAGES
-                    );
-                }
-            } catch (Exception ignored) {}
             try {
                 WebStorage.getInstance().deleteAllData();
             } catch (Exception ignored) {}

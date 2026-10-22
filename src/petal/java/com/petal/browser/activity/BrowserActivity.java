@@ -6989,7 +6989,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
      * again — GeckoView already opened the session per its onNewSession contract.
      * Calling open() a second time would cause an assertion crash.
      */
-    public synchronized void adoptPopupGeckoSession(org.mozilla.geckoview.GeckoSession popupSession,
+    public synchronized void adoptPopupGeckoSession(Object popupSession,
                                                     String targetUrl,
                                                     boolean isIncognito) {
         try {

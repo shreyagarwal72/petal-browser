@@ -102,8 +102,8 @@ public class PetalMediaBridge {
     private final Context context;
     private WebView webView;
     private com.petal.browser.browser.AlbumController geckoView;
-    private org.mozilla.geckoview.MediaSession activeGeckoMediaSession;
-    private mozilla.components.concept.engine.mediasession.MediaSession.Controller activeEngineMediaController;
+    private Object activeGeckoMediaSession;
+    private Object activeEngineMediaController;
     private MediaStateListener listener;
 
     public interface MediaStateListener {
@@ -177,16 +177,15 @@ public class PetalMediaBridge {
         }
     }
 
-    public void setActiveGeckoMediaSession(org.mozilla.geckoview.MediaSession session) {
+    public void setActiveGeckoMediaSession(Object session) {
         this.activeGeckoMediaSession = session;
     }
 
-    public org.mozilla.geckoview.MediaSession getActiveGeckoMediaSession() {
+    public Object getActiveGeckoMediaSession() {
         return activeGeckoMediaSession;
     }
 
-    public void setActiveEngineMediaController(
-            mozilla.components.concept.engine.mediasession.MediaSession.Controller controller) {
+    public void setActiveEngineMediaController(Object controller) {
         this.activeEngineMediaController = controller;
     }
 

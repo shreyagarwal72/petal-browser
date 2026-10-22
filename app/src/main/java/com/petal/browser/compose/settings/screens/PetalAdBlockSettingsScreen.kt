@@ -273,7 +273,7 @@ fun PetalAdBlockSettingsScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             ExpressiveHeader(
                 title = "Shields & AdBlock Control",
-                subtitle = "Brave Shields, Cromite subscriptions & GeckoView ETP",
+                subtitle = "Brave Shields & Cromite subscriptions",
                 onBack = onNavigateBack
             )
 

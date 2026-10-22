@@ -345,7 +345,7 @@ fun PrivacySettingsScreenContent(
                     com.petal.browser.ui.containment.PetalSettingsToggleRow(
                         position = com.petal.browser.ui.containment.PetalGroupPosition.MIDDLE,
                         title = "Auto-Reject Cookie Banners (GDPR)",
-                        subtitle = "GeckoView automatically declines consent modals & cookie popups",
+                        subtitle = "Automatically declines consent modals & cookie popups",
                         icon = Icons.Rounded.VerifiedUser,
                         checked = cookieBannerAutoReject,
                         onCheckedChange = onCookieBannerAutoRejectChange
