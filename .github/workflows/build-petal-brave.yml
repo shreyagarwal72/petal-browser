@@ -145,6 +145,7 @@ jobs:
           echo "BRAVE_WORKSPACE=$HOME/brave-workspace" >> $GITHUB_ENV
           echo "BRAVE_CORE_DIR=$HOME/brave-workspace/src/brave" >> $GITHUB_ENV
           echo "CHROMIUM_SRC=$HOME/brave-workspace/src" >> $GITHUB_ENV
+          echo "PYTHONPATH=$HOME/brave-workspace/src/brave/script" >> $GITHUB_ENV
 
       # ── 9. Setup pnpm & dependencies ──────────────────────────────────────────
       - name: 📦 Setup pnpm & install build tool dependencies
