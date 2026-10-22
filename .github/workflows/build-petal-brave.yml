@@ -198,6 +198,7 @@ jobs:
           android_channel = "stable"
           is_debug = false
           is_official_build = true
+          brave_services_key = "petal_dummy_services_key"
           brave_rewards_enabled = false
           brave_news_enabled = false
           brave_vpn_enabled = false
@@ -238,6 +239,7 @@ jobs:
           android_channel = "stable"
           is_debug = false
           is_official_build = true
+          brave_services_key = "petal_dummy_services_key"
           brave_rewards_enabled = false
           brave_news_enabled = false
           brave_vpn_enabled = false
