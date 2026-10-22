@@ -973,10 +973,8 @@ object PetalAccountSyncBridge {
                     fontWeight = fontWeightVal,
                     fontRoundness = fontRoundnessVal
                 ) {
-                    com.petal.browser.account.mozilla.FirefoxAccountSyncScreen(
-                        backgroundSnapshot = snapshotBitmap,
-                        onBack = onBack,
-                        onOpenOAuth = onOpenOAuth
+                    com.petal.browser.sync.PetalSyncScreen(
+                        onBack = onBack
                     )
                 }
             }
