@@ -1,0 +1,13 @@
+--- a/src/brave/browser/ui/webui/brave_web_ui_controller_factory.cc
++++ b/src/brave/browser/ui/webui/brave_web_ui_controller_factory.cc
+@@ -50,6 +50,11 @@ WebUI::TypeID BraveWebUIControllerFactory::GetWebUIType(
+   if (url.host_piece() == kShieldsPanelHost) {
+     return &kShieldsPanelHost;
+   }
++  // Register Petal flags & extension routing URLs
++  if (url.host_piece() == "flags") {
++    return &kFlagsHost;
++  }
+   return ChromeWebUIControllerFactory::GetInstance()->GetWebUIType(
+       browser_context, url);
+ }

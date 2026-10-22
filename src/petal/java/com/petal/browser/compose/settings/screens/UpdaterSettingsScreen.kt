@@ -1,0 +1,407 @@
+package com.petal.browser.compose.settings.screens
+import com.petal.browser.ui.components.scrollMotionBlur
+import com.petal.browser.ui.containment.PetalSettingsSection
+import com.petal.browser.ui.containment.liquidGlassChrome
+
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.preference.PreferenceManager
+import com.petal.browser.compose.composable.ContainedLoadingIndicator
+import com.petal.browser.compose.settings.viewmodel.MiscSettingsViewModel
+import com.petal.browser.haptics.PetalHapticEngine
+import com.petal.browser.logger.PetalAppLogger
+import com.petal.browser.ui.components.ExpressiveHeader
+import com.petal.browser.ui.components.M3ExpressiveVariableBackground
+import com.petal.browser.ui.components.PetalCrashReportingPicker
+import com.petal.browser.unit.PetalUpdateManager
+import com.petal.browser.unit.UpdateUnit
+import com.petal.browser.view.PetalToast
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import com.petal.browser.R
+
+@Composable
+fun UpdaterSettingsScreen(
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: MiscSettingsViewModel = hiltViewModel()
+) {
+    val checkUpdateOnLaunch by viewModel.checkUpdateOnLaunch.collectAsStateWithLifecycle()
+
+    UpdaterSettingsScreenContent(
+        checkUpdateOnLaunch = checkUpdateOnLaunch,
+        onCheckUpdateOnLaunchChange = viewModel::setCheckUpdateOnLaunch,
+        onNavigateBack = onNavigateBack,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun UpdaterSettingsScreenContent(
+    checkUpdateOnLaunch: Boolean,
+    onCheckUpdateOnLaunchChange: (Boolean) -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val sp = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var crashReportMode by remember {
+        mutableStateOf(sp.getString(PetalAppLogger.PREF_CRASH_REPORT_MODE, "off") ?: "off")
+    }
+    var lastCheckTimestamp by remember {
+        mutableLongStateOf(sp.getLong("sp_update_last_check_timestamp", 0L))
+    }
+
+    val appVersionName = remember {
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            pInfo.versionName ?: "1.0.0"
+        } catch (e: Exception) { "1.0.0" }
+    }
+    val appVersionCode = remember {
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+        } catch (e: Exception) { 100L }
+    }
+
+    val formattedLastCheck = remember(lastCheckTimestamp) {
+        if (lastCheckTimestamp <= 0L) "Never"
+        else SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(lastCheckTimestamp))
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        M3ExpressiveVariableBackground(pageSeed = "updater_settings")
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            ExpressiveHeader(
+                title = "Updates & Diagnostics",
+                subtitle = "Release tracker, automatic updates & crash reporting",
+                onBack = onNavigateBack
+            )
+
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .scrollMotionBlur(scrollState)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // ── Section 1: Inbuilt Update Engine & Tracker ──
+                PetalSettingsSection(
+                    title = stringResource(R.string.ui_update_tracker_releases),
+                    iconRes = com.petal.browser.R.drawable.update_rounded
+                ) {
+                    com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                        position = com.petal.browser.ui.containment.PetalGroupPosition.TOP,
+                        title = stringResource(R.string.ui_check_for_updates_on_launch),
+                        subtitle = stringResource(R.string.ui_automatically_check_for_new_browser),
+                        icon = Icons.Rounded.SystemUpdate,
+                        checked = checkUpdateOnLaunch,
+                        onCheckedChange = onCheckUpdateOnLaunchChange
+                    )
+                    // Channel & Version Hero Card
+                    val isGlass = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments")
+                    val channelCardShape = com.petal.browser.ui.containment.petalGroupShape(com.petal.browser.ui.containment.PetalGroupPosition.BOTTOM)
+                    Surface(
+                        shape = channelCardShape,
+                        color = com.petal.browser.ui.containment.petalGroupSurfaceColor(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (isGlass) Modifier.liquidGlassChrome(channelCardShape, enabled = true) else Modifier)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Rounded.RocketLaunch,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.ui_petal_v, appVersionName, appVersionCode),
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.ui_channel_github_official_last_checked, formattedLastCheck),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            val activeUpdateState by PetalUpdateManager.downloadState.collectAsStateWithLifecycle()
+                            LaunchedEffect(Unit) {
+                                PetalUpdateManager.initialize(context)
+                            }
+
+                            when (val state = activeUpdateState) {
+                                is PetalUpdateManager.UpdateDownloadState.Downloading -> {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Downloading Update ${state.version} (${state.progress}%)",
+                                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                                TextButton(onClick = { PetalUpdateManager.pauseUpdateDownload(context) }) {
+                                                    Text("Pause", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                                }
+                                            }
+                                            LinearProgressIndicator(
+                                                progress = { state.progress / 100f },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
+                                            )
+                                        }
+                                    }
+                                }
+                                is PetalUpdateManager.UpdateDownloadState.Paused -> {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "Update Paused (${state.progress}%)",
+                                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Row {
+                                                    TextButton(onClick = { PetalUpdateManager.resumeUpdateDownload(context) }) {
+                                                        Text("Resume")
+                                                    }
+                                                    TextButton(onClick = { PetalUpdateManager.cancelUpdateDownload(context) }) {
+                                                        Text("Cancel")
+                                                    }
+                                                }
+                                            }
+                                            LinearProgressIndicator(
+                                                progress = { state.progress / 100f },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                color = MaterialTheme.colorScheme.outline,
+                                                trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
+                                            )
+                                        }
+                                    }
+                                }
+                                is PetalUpdateManager.UpdateDownloadState.Completed -> {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Update Ready to Install",
+                                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                                Text(
+                                                    text = "Version ${state.version} downloaded",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                                )
+                                            }
+                                            Button(
+                                                onClick = { PetalUpdateManager.installActiveUpdate(context) },
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text("Install")
+                                            }
+                                        }
+                                    }
+                                }
+                                else -> {}
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (isCheckingUpdate) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(42.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        ContainedLoadingIndicator(modifier = Modifier.size(32.dp))
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = {
+                                            PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.CLICK, 0.7f)
+                                            isCheckingUpdate = true
+                                            var act: Activity? = null
+                                            var ctx = context
+                                            while (ctx is ContextWrapper) {
+                                                if (ctx is Activity) {
+                                                    act = ctx
+                                                    break
+                                                }
+                                                ctx = ctx.baseContext
+                                            }
+                                            if (act != null) {
+                                                UpdateUnit.checkForUpdates(act, false) {
+                                                    isCheckingUpdate = false
+                                                    lastCheckTimestamp = System.currentTimeMillis()
+                                                }
+                                            } else {
+                                                isCheckingUpdate = false
+                                                PetalToast.show(context, "Checking for updates...")
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.CloudSync, contentDescription = null, modifier = Modifier.size(17.dp))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text(stringResource(R.string.ui_check_now), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.CLICK, 0.6f)
+                                            var act: Activity? = null
+                                            var ctx = context
+                                            while (ctx is ContextWrapper) {
+                                                if (ctx is Activity) {
+                                                    act = ctx
+                                                    break
+                                                }
+                                                ctx = ctx.baseContext
+                                            }
+                                            if (act != null) {
+                                                com.petal.browser.ui.components.PetalUpdateSheetBridge.showChangelogHistorySheet(act as androidx.activity.ComponentActivity)
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.History, contentDescription = null, modifier = Modifier.size(17.dp))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text(stringResource(R.string.ui_changelog), maxLines = 1, softWrap = false)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Section 2: Crash Reporting & Diagnostic Tracker (Inspired by Essentials) ──
+                PetalSettingsSection(
+                    title = stringResource(R.string.ui_crash_reporting_diagnostics),
+                    icon = Icons.Rounded.BugReport
+                ) {
+                    PetalCrashReportingPicker(
+                        selectedMode = crashReportMode,
+                        onModeSelected = { mode ->
+                            crashReportMode = mode
+                            sp.edit().putString(PetalAppLogger.PREF_CRASH_REPORT_MODE, mode).apply()
+                            PetalToast.show(context, if (mode == "auto") "Crash reporting set to Auto" else "Crash reporting disabled")
+                        }
+                    )
+                    // Diagnostic Actions: Export ZIP Logs
+                    com.petal.browser.ui.containment.PetalGroupRow(
+                        icon = Icons.Rounded.FolderZip,
+                        title = stringResource(R.string.ui_export_logs_zip),
+                        position = com.petal.browser.ui.containment.PetalGroupPosition.BOTTOM,
+                        onClick = {
+                            PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.CLICK, 0.6f)
+                            PetalAppLogger.shareLogsZip(context)
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    }
+}
