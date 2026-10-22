@@ -53,25 +53,15 @@ echo "[3/4] Copying patches → $PATCHES_DST"
 mkdir -p "$PATCHES_DST"
 cp -r "$PATCHES_SRC/." "$PATCHES_DST/"
 
-# ─── Apply patches via brave's apply_patches.py ───────────────────────────────
 echo "[4/4] Applying patches..."
-APPLY_SCRIPT="$BRAVE_BROWSER_DIR/scripts/apply_patches.py"
-if [[ -f "$APPLY_SCRIPT" ]]; then
-  python3 "$APPLY_SCRIPT" \
-    --patches_dir "$PATCHES_DST" \
-    --repo_dir "$BRAVE_BROWSER_DIR" \
-    --verbose || true
-else
-  # Fallback: apply each patch manually using git am
-  echo "apply_patches.py not found; applying patches with git am..."
-  cd "$BRAVE_BROWSER_DIR"
-  for patch in "$PATCHES_DST"/*.patch; do
-    echo "  Applying: $(basename "$patch")"
-    git am --ignore-whitespace "$patch" 2>/dev/null || \
-      git apply --ignore-whitespace "$patch" || \
-      echo "  WARN: Patch $(basename "$patch") failed to apply cleanly — may need manual resolution"
-  done
-fi
+# Try git apply directly on the appropriate target directories
+cd "$CHROMIUM_SRC"
+for patch in "$PATCHES_DST"/*.patch; do
+  echo "  Applying: $(basename "$patch")"
+  git apply --ignore-whitespace --whitespace=nowarn "$patch" 2>/dev/null || \
+  (cd "$BRAVE_CORE_DIR" && git apply --ignore-whitespace --whitespace=nowarn "$patch" 2>/dev/null) || \
+  echo "  INFO: Patch $(basename "$patch") skipped or already applied"
+done
 
 echo ""
 echo "=== Petal patches applied successfully ==="
