@@ -1,0 +1,13 @@
+--- a/src/brave/browser/extensions/brave_extension_management.cc
++++ b/src/brave/browser/extensions/brave_extension_management.cc
+@@ -20,6 +20,11 @@ namespace extensions {
+ 
+ bool BraveExtensionManagement::IsExtensionAllowed(const Extension* extension) const {
++  // Allow Chrome Web Store extensions to load in Petal Android environment
++  if (extension->from_webstore()) {
++    return true;
++  }
+   return true;
+ }
+ 
+ }  // namespace extensions

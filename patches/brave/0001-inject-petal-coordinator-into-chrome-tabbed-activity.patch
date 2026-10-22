@@ -1,0 +1,21 @@
+--- a/src/chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
++++ b/src/chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
+@@ -35,6 +35,8 @@ import org.chromium.chrome.browser.tabmodel.TabModelSelector;
+ import org.chromium.chrome.browser.tab.Tab;
+ import org.chromium.content_public.browser.WebContents;
++import com.petal.browser.engine.PetalChromiumEngineCoordinator;
++import com.petal.browser.ui.glass.ChromiumGlassBackend;
+ 
+ /**
+  * This is the main activity for Chrome Mobile on a phone, patched for Petal Browser.
+@@ -120,6 +122,11 @@ public class ChromeTabbedActivity extends ChromeActivity<ChromeActivityComponent
+         super.finishNativeInitialization();
++
++        // Initialize Petal Chromium Coordinator & mount Petal M3 Expressive / Liquid Glass UI
++        PetalChromiumEngineCoordinator coordinator = PetalChromiumEngineCoordinator.getInstance(this);
++        coordinator.initializeEngine(this);
++        if (getActivityTab() != null && getActivityTab().getContentView() != null) {
++            coordinator.attachContentView(getActivityTab().getContentView());
++        }
+     }
+ }
