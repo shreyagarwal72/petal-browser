@@ -80,10 +80,6 @@ import com.petal.browser.ui.components.entrance
 import com.petal.browser.ui.theme.ExperimentalMaterial3ExpressiveApi
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import kotlinx.coroutines.launch
-import org.mozilla.geckoview.AllowOrDeny
-import org.mozilla.geckoview.GeckoResult
-import org.mozilla.geckoview.GeckoSession
-import org.mozilla.geckoview.GeckoView
 import androidx.compose.ui.res.stringResource
 import com.petal.browser.R
 

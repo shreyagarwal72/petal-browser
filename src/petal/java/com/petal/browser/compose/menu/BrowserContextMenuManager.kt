@@ -626,8 +626,14 @@ object BrowserContextMenuManager {
         )
     }
 
+    // Standard context element types
+    const val TYPE_NONE = 0
+    const val TYPE_IMAGE = 1
+    const val TYPE_VIDEO = 2
+    const val TYPE_AUDIO = 3
+
     /**
-     * Unified entry point for GeckoSession.ContentDelegate.onContextMenu.
+     * Unified entry point for context menus.
      * Dynamically determines whether the targeted element is an image, link, image-in-link,
      * video, audio, or fallback.
      */
@@ -644,19 +650,19 @@ object BrowserContextMenuManager {
 
         when {
             // Combined Image inside a Link (<a href="..."><img src="..."></a>)
-            hasLink && (hasSrc || elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_IMAGE) -> {
+            hasLink && (hasSrc || elemType == TYPE_IMAGE) -> {
                 showImageLinkContextMenu(activity, linkUri!!, srcUri ?: linkUri, linkText)
             }
             // Explicit Image or non-empty image source
-            elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_IMAGE || (hasSrc && elemType != org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO && elemType != org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_AUDIO) -> {
+            elemType == TYPE_IMAGE || (hasSrc && elemType != TYPE_VIDEO && elemType != TYPE_AUDIO) -> {
                 showImageContextMenu(activity, srcUri ?: linkUri.orEmpty())
             }
             // Video element
-            elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO -> {
+            elemType == TYPE_VIDEO -> {
                 showVideoContextMenu(activity, srcUri ?: linkUri.orEmpty())
             }
             // Audio element
-            elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_AUDIO -> {
+            elemType == TYPE_AUDIO -> {
                 showAudioContextMenu(activity, srcUri ?: linkUri.orEmpty())
             }
             // Plain Link

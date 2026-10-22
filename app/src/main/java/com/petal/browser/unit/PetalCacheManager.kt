@@ -13,10 +13,8 @@ import android.webkit.WebView
 import androidx.webkit.Profile
 import androidx.webkit.ProfileStore
 import androidx.webkit.WebViewFeature
-import com.petal.browser.engine.gecko.PetalGeckoRuntime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.mozilla.geckoview.StorageController
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -136,29 +134,21 @@ object PetalCacheManager {
     ) {
         val appContext = context.applicationContext
 
-        // 1. Mozilla GeckoView StorageController pipeline (Firefox official engine)
+        // 1. Chromium native BrowsingDataBridge & WebStorage pipeline
         try {
-            if (PetalGeckoRuntime.isGeckoAvailable(appContext)) {
-                var geckoFlags = 0L
-                if ((flags and Flags.NETWORK_CACHE) != 0L) {
-                    geckoFlags = geckoFlags or StorageController.ClearFlags.ALL_CACHES
-                }
-                if ((flags and Flags.IMAGE_MEDIA_CACHE) != 0L) {
-                    geckoFlags = geckoFlags or StorageController.ClearFlags.IMAGE_CACHE
-                }
-                if ((flags and Flags.DOM_WEB_STORAGE) != 0L) {
-                    geckoFlags = geckoFlags or StorageController.ClearFlags.DOM_STORAGES
-                }
-                if ((flags and Flags.COOKIES) != 0L) {
-                    geckoFlags = geckoFlags or StorageController.ClearFlags.COOKIES
-                    geckoFlags = geckoFlags or StorageController.ClearFlags.AUTH_SESSIONS
-                }
-                if (geckoFlags != 0L) {
-                    PetalGeckoRuntime.clearData(appContext, geckoFlags)
-                }
+            val browsingDataBridgeClass = try {
+                Class.forName("org.chromium.chrome.browser.browsing_data.BrowsingDataBridge")
+            } catch (_: Throwable) { null }
+
+            if (browsingDataBridgeClass != null) {
+                val getInstanceMethod = browsingDataBridgeClass.getMethod("getInstance")
+                val bridge = getInstanceMethod.invoke(null)
+                val clearMethod = browsingDataBridgeClass.getMethod("clearBrowsingData", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
+                clearMethod.invoke(bridge, 0, 0)
+                Log.i(TAG, "Cleared Chromium browsing data via BrowsingDataBridge")
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Error clearing GeckoView storage", e)
+            Log.w(TAG, "Error clearing Chromium browsing data", e)
         }
 
         // 2. Tab Thumbnail Cache (memory and disk) - only when THUMBNAILS_CACHE explicitly requested
@@ -260,29 +250,7 @@ object PetalCacheManager {
             val colon = cleanHost.indexOf(':')
             if (colon != -1) cleanHost = cleanHost.substring(0, colon)
 
-            if (PetalGeckoRuntime.isGeckoAvailable(appContext)) {
-                var flags = StorageController.ClearFlags.ALL_CACHES or
-                        StorageController.ClearFlags.DOM_STORAGES or
-                        StorageController.ClearFlags.AUTH_SESSIONS
-                if (includeCookies) {
-                    flags = flags or StorageController.ClearFlags.COOKIES
-                }
-                if (includePermissions) {
-                    flags = flags or StorageController.ClearFlags.PERMISSIONS
-                }
-
-                val storageController = PetalGeckoRuntime.getOrCreate(appContext).storageController
-                storageController.clearDataFromHost(cleanHost, flags)
-
-                // Also clear base domain if host is a subdomain (e.g., www.example.com -> example.com)
-                val parts = cleanHost.split(".")
-                if (parts.size > 2) {
-                    val baseDomain = parts.takeLast(2).joinToString(".")
-                    storageController.clearDataFromHost(baseDomain, flags)
-                }
-            }
-
-            // Chromium WebStorage & CookieManager fallback
+            // Chromium WebStorage & CookieManager
             try {
                 android.webkit.WebStorage.getInstance().deleteOrigin("https://$cleanHost")
                 android.webkit.WebStorage.getInstance().deleteOrigin("http://$cleanHost")
@@ -305,7 +273,7 @@ object PetalCacheManager {
     fun onTrimMemory(context: Context, level: Int) {
         val appContext = context.applicationContext
         try {
-            PetalGeckoRuntime.onTrimMemory(appContext, level)
+            // Native Chromium memory trimming is handled automatically by Android and Blink
             if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
                 level >= ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
                 TabThumbnailCache.clearMemory()
