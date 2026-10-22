@@ -1,0 +1,313 @@
+package com.petal.browser.account
+
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.net.Uri
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RotateRight
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import com.petal.browser.haptics.PetalHapticEngine
+import com.petal.browser.ui.components.PetalSlider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.InputStream
+import androidx.compose.ui.res.stringResource
+import com.petal.browser.R
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PetalAvatarCropSheet(
+    imageUri: Uri,
+    onDismiss: () -> Unit,
+    onAvatarCropped: () -> Unit,
+    onSaveBitmap: ((Bitmap) -> Unit)? = null
+) {
+    val context = LocalContext.current
+    var sourceBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var rotationAngle by remember { mutableFloatStateOf(0f) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(imageUri) {
+        withContext(Dispatchers.IO) {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeStream(inputStream, null, options)
+                inputStream?.close()
+
+                val maxDimension = 1280
+                var sampleSize = 1
+                while (options.outWidth / sampleSize > maxDimension || options.outHeight / sampleSize > maxDimension) {
+                    sampleSize *= 2
+                }
+
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
+                val freshStream = context.contentResolver.openInputStream(imageUri)
+                sourceBitmap = BitmapFactory.decodeStream(freshStream, null, decodeOptions)
+                freshStream?.close()
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    com.petal.browser.ui.containment.PetalSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.ui_crop_profile_picture),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.ui_close))
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            if (sourceBitmap == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    com.petal.browser.compose.composable.PetalContainedLoadingIndicator(size = 48.dp)
+                }
+            } else {
+                val bitmap = sourceBitmap!!
+
+                // Interactive Crop Canvas Area
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.Black)
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                scale = (scale * zoom).coerceIn(0.5f, 5f)
+                                offset += pan
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        canvasSize = IntSize(canvasWidth.toInt(), canvasHeight.toInt())
+                        val circleRadius = Math.min(canvasWidth, canvasHeight) * 0.4f
+
+                        // Draw Rotated & Transformed Image
+                        drawContext.canvas.save()
+                        drawContext.canvas.translate(canvasWidth / 2f + offset.x, canvasHeight / 2f + offset.y)
+                        drawContext.canvas.rotate(rotationAngle)
+                        drawContext.canvas.scale(scale, scale)
+
+                        drawImage(
+                            image = bitmap.asImageBitmap(),
+                            dstOffset = IntOffset(-bitmap.width / 2, -bitmap.height / 2),
+                            dstSize = IntSize(bitmap.width, bitmap.height)
+                        )
+                        drawContext.canvas.restore()
+
+                        // Dim Mask with Circular Profile Cutout
+                        val outerPath = Path().apply {
+                            addRect(Rect(0f, 0f, canvasWidth, canvasHeight))
+                        }
+                        val circlePath = Path().apply {
+                            addOval(
+                                Rect(
+                                    center = Offset(canvasWidth / 2f, canvasHeight / 2f),
+                                    radius = circleRadius
+                                )
+                            )
+                        }
+                        val maskPath = Path.combine(PathOperation.Difference, outerPath, circlePath)
+
+                        drawPath(maskPath, color = Color.Black.copy(alpha = 0.65f))
+                        drawPath(circlePath, color = Color.White.copy(alpha = 0.85f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()))
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Control Toolbar: Rotate, Reset, PetalSlider Zoom
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        rotationAngle = (rotationAngle + 90f) % 360f
+                        PetalHapticEngine.getInstance(context).playTick(context)
+                    }) {
+                        Icon(Icons.Rounded.RotateRight, contentDescription = stringResource(R.string.ui_rotate))
+                    }
+
+                    IconButton(onClick = {
+                        scale = 1f
+                        offset = Offset.Zero
+                        rotationAngle = 0f
+                        PetalHapticEngine.getInstance(context).playTick(context)
+                    }) {
+                        Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.ui_reset))
+                    }
+
+                    PetalSlider(
+                        value = scale,
+                        onValueChange = { scale = it },
+                        valueRange = 0.8f..4f,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Crop & Save Button
+                Button(
+                    onClick = {
+                        val bmp = sourceBitmap ?: return@Button
+                        val cw = if (canvasSize.width > 0) canvasSize.width.toFloat() else 1000f
+                        val ch = if (canvasSize.height > 0) canvasSize.height.toFloat() else 1000f
+                        val cropped = cropBitmap(bmp, scale, offset, rotationAngle, cw, ch)
+                        if (onSaveBitmap != null) {
+                            onSaveBitmap(cropped)
+                        } else {
+                            GoogleAccountManager.saveCroppedAvatar(context, cropped)
+                        }
+                        PetalHapticEngine.getInstance(context).playClick(context)
+                        onAvatarCropped()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.ui_save_profile_picture),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Accurate bitmap crop calculation taking into account user pan offset, scale zoom, rotation angle,
+ * and preview canvas coordinate mapping.
+ */
+private fun cropBitmap(
+    source: Bitmap,
+    scale: Float,
+    offset: Offset,
+    rotationAngle: Float,
+    canvasWidth: Float,
+    canvasHeight: Float
+): Bitmap {
+    if (source.isRecycled || source.width <= 0 || source.height <= 0) return source
+
+    try {
+        val rotatedBitmap = if (rotationAngle % 360f != 0f) {
+            val matrix = Matrix().apply { postRotate(rotationAngle) }
+            Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
+        } else {
+            source
+        }
+
+        val rw = rotatedBitmap.width.toFloat()
+        val rh = rotatedBitmap.height.toFloat()
+
+        val cw = if (canvasWidth > 0f) canvasWidth else 1000f
+        val ch = if (canvasHeight > 0f) canvasHeight else 1000f
+        val cropSize = Math.min(cw, ch) * 0.8f
+        val currentScale = scale.coerceAtLeast(0.1f)
+
+        val imgCenterX = cw / 2f + offset.x
+        val imgCenterY = ch / 2f + offset.y
+
+        val imgLeftCanvas = imgCenterX - (rw * currentScale) / 2f
+        val imgTopCanvas = imgCenterY - (rh * currentScale) / 2f
+
+        val cropLeftCanvas = cw / 2f - cropSize / 2f
+        val cropTopCanvas = ch / 2f - cropSize / 2f
+
+        val dxCanvas = cropLeftCanvas - imgLeftCanvas
+        val dyCanvas = cropTopCanvas - imgTopCanvas
+
+        val cropX = (dxCanvas / currentScale).coerceIn(0f, (rw - 1f).coerceAtLeast(0f))
+        val cropY = (dyCanvas / currentScale).coerceIn(0f, (rh - 1f).coerceAtLeast(0f))
+
+        val maxAllowedW = rw - cropX
+        val maxAllowedH = rh - cropY
+        val cropDim = (cropSize / currentScale)
+            .coerceIn(1f, Math.min(maxAllowedW, maxAllowedH).coerceAtLeast(1f))
+
+        val cropped = Bitmap.createBitmap(
+            rotatedBitmap,
+            cropX.toInt(),
+            cropY.toInt(),
+            cropDim.toInt().coerceAtLeast(1),
+            cropDim.toInt().coerceAtLeast(1)
+        )
+
+        return Bitmap.createScaledBitmap(cropped, 512, 512, true)
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        return source
+    }
+}

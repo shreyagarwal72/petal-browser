@@ -1,0 +1,684 @@
+package com.petal.browser.compose.settings.screens
+import com.petal.browser.ui.components.scrollMotionBlur
+
+import com.petal.browser.ui.containment.PetalSettingsSection
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.petal.browser.accessibility.PetalAccessibilityEngine
+import com.petal.browser.compose.settings.viewmodel.DisplaySettingsViewModel
+import com.petal.browser.haptics.PetalHapticEngine
+import com.petal.browser.ui.components.ExpressiveHeader
+import com.petal.browser.ui.components.M3ExpressiveVariableBackground
+import com.petal.browser.ui.components.PetalSlider
+import com.petal.browser.ui.components.ScrollFadeRow
+import androidx.compose.ui.res.stringResource
+import com.petal.browser.R
+
+@Composable
+fun DisplaySettingsScreen(
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    targetHighlightItemId: String? = null,
+    viewModel: DisplaySettingsViewModel = hiltViewModel()
+) {
+    val touchHaptics by viewModel.touchHaptics.collectAsStateWithLifecycle()
+    val scrollHaptics by viewModel.scrollHaptics.collectAsStateWithLifecycle()
+    val predictiveBack by viewModel.predictiveBack.collectAsStateWithLifecycle()
+    val depthBlur by viewModel.depthBlur.collectAsStateWithLifecycle()
+    val fontSizeScale by viewModel.fontSizeScale.collectAsStateWithLifecycle()
+    val zoomLevelScale by viewModel.zoomLevelScale.collectAsStateWithLifecycle()
+    val forceZoom by viewModel.forceZoom.collectAsStateWithLifecycle()
+    val readerModeDetection by viewModel.readerModeDetection.collectAsStateWithLifecycle()
+    val caretBrowsing by viewModel.caretBrowsing.collectAsStateWithLifecycle()
+    val touchpadSwipeNav by viewModel.touchpadSwipeNav.collectAsStateWithLifecycle()
+
+    val doubleBackExit by viewModel.doubleBackExit.collectAsStateWithLifecycle()
+    val appleDuoEnabled by viewModel.appleDuoEnabled.collectAsStateWithLifecycle()
+    val appleDuoWebsites by viewModel.appleDuoWebsites.collectAsStateWithLifecycle()
+    val appleDuoUseSensor by viewModel.appleDuoUseSensor.collectAsStateWithLifecycle()
+    val appleDuoManualTilt by viewModel.appleDuoManualTilt.collectAsStateWithLifecycle()
+    val appleDuoAutoRecenter by viewModel.appleDuoAutoRecenter.collectAsStateWithLifecycle()
+    val appleDuoEyeDistance by viewModel.appleDuoEyeDistance.collectAsStateWithLifecycle()
+    val appleDuoBlurSpread by viewModel.appleDuoBlurSpread.collectAsStateWithLifecycle()
+    val appleDuoDarkening by viewModel.appleDuoDarkening.collectAsStateWithLifecycle()
+    val appleDuoCurrentTilt by viewModel.appleDuoCurrentTilt.collectAsStateWithLifecycle()
+    val appleDuoCurrentHinge by viewModel.appleDuoCurrentHinge.collectAsStateWithLifecycle()
+    val appleDuoHasSensor by viewModel.appleDuoHasSensor.collectAsStateWithLifecycle()
+
+    DisplaySettingsScreenContent(
+        touchHaptics = touchHaptics,
+        scrollHaptics = scrollHaptics,
+        predictiveBack = predictiveBack,
+        depthBlur = depthBlur,
+        fontSizeScale = fontSizeScale,
+        zoomLevelScale = zoomLevelScale,
+        forceZoom = forceZoom,
+        readerModeDetection = readerModeDetection,
+        caretBrowsing = caretBrowsing,
+        touchpadSwipeNav = touchpadSwipeNav,
+        doubleBackExit = doubleBackExit,
+        appleDuoEnabled = appleDuoEnabled,
+        appleDuoWebsites = appleDuoWebsites,
+        appleDuoUseSensor = appleDuoUseSensor,
+        appleDuoManualTilt = appleDuoManualTilt,
+        appleDuoAutoRecenter = appleDuoAutoRecenter,
+        appleDuoEyeDistance = appleDuoEyeDistance,
+        appleDuoBlurSpread = appleDuoBlurSpread,
+        appleDuoDarkening = appleDuoDarkening,
+        appleDuoCurrentTilt = appleDuoCurrentTilt,
+        appleDuoCurrentHinge = appleDuoCurrentHinge,
+        appleDuoHasSensor = appleDuoHasSensor,
+        onTouchHapticsChange = viewModel::setTouchHaptics,
+        onScrollHapticsChange = viewModel::setScrollHaptics,
+        onPredictiveBackChange = viewModel::setPredictiveBack,
+        onDepthBlurChange = viewModel::setDepthBlur,
+        onFontSizeScaleChange = viewModel::setFontSizeScale,
+        onZoomLevelScaleChange = viewModel::setZoomLevelScale,
+        onForceZoomChange = viewModel::setForceZoom,
+        onReaderModeDetectionChange = viewModel::setReaderModeDetection,
+        onCaretBrowsingChange = viewModel::setCaretBrowsing,
+        onTouchpadSwipeNavChange = viewModel::setTouchpadSwipeNav,
+        onDoubleBackExitChange = viewModel::setDoubleBackExit,
+        onAppleDuoEnabledChange = viewModel::setAppleDuoEnabled,
+        onAppleDuoWebsitesChange = viewModel::setAppleDuoWebsites,
+        onAppleDuoUseSensorChange = viewModel::setAppleDuoUseSensor,
+        onAppleDuoManualTiltChange = viewModel::setAppleDuoManualTilt,
+        onAppleDuoAutoRecenterChange = viewModel::setAppleDuoAutoRecenter,
+        onAppleDuoEyeDistanceChange = viewModel::setAppleDuoEyeDistance,
+        onAppleDuoBlurSpreadChange = viewModel::setAppleDuoBlurSpread,
+        onAppleDuoDarkeningChange = viewModel::setAppleDuoDarkening,
+        onAppleDuoRecalibrate = viewModel::recalibrateAppleDuo,
+        onNavigateBack = onNavigateBack,
+        targetHighlightItemId = targetHighlightItemId,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun DisplaySettingsScreenContent(
+    touchHaptics: Boolean,
+    scrollHaptics: Boolean,
+    predictiveBack: Boolean,
+    depthBlur: Boolean,
+    fontSizeScale: Float,
+    zoomLevelScale: Float,
+    forceZoom: Boolean,
+    readerModeDetection: Boolean,
+    caretBrowsing: Boolean,
+    touchpadSwipeNav: Boolean,
+    doubleBackExit: Boolean,
+    appleDuoEnabled: Boolean,
+    appleDuoWebsites: Boolean,
+    appleDuoUseSensor: Boolean,
+    appleDuoManualTilt: Float,
+    appleDuoAutoRecenter: Boolean,
+    appleDuoEyeDistance: Float,
+    appleDuoBlurSpread: Float,
+    appleDuoDarkening: Float,
+    appleDuoCurrentTilt: Float,
+    appleDuoCurrentHinge: Float,
+    appleDuoHasSensor: Boolean,
+    onTouchHapticsChange: (Boolean) -> Unit,
+    onScrollHapticsChange: (Boolean) -> Unit,
+    onPredictiveBackChange: (Boolean) -> Unit,
+    onDepthBlurChange: (Boolean) -> Unit,
+    onFontSizeScaleChange: (Float) -> Unit,
+    onZoomLevelScaleChange: (Float) -> Unit,
+    onForceZoomChange: (Boolean) -> Unit,
+    onReaderModeDetectionChange: (Boolean) -> Unit,
+    onCaretBrowsingChange: (Boolean) -> Unit,
+    onTouchpadSwipeNavChange: (Boolean) -> Unit,
+    onDoubleBackExitChange: (Boolean) -> Unit,
+    onAppleDuoEnabledChange: (Boolean) -> Unit,
+    onAppleDuoWebsitesChange: (Boolean) -> Unit,
+    onAppleDuoUseSensorChange: (Boolean) -> Unit,
+    onAppleDuoManualTiltChange: (Float) -> Unit,
+    onAppleDuoAutoRecenterChange: (Boolean) -> Unit,
+    onAppleDuoEyeDistanceChange: (Float) -> Unit,
+    onAppleDuoBlurSpreadChange: (Float) -> Unit,
+    onAppleDuoDarkeningChange: (Float) -> Unit,
+    onAppleDuoRecalibrate: () -> Unit,
+    onNavigateBack: () -> Unit,
+    targetHighlightItemId: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var showAppleDuoExplainer by remember { mutableStateOf(false) }
+
+    PetalFeatureExplainerDialog(
+        visible = showAppleDuoExplainer,
+        onDismissRequest = { showAppleDuoExplainer = false },
+        feature = PetalExplainerFeature(
+            type = ExplainerFeatureType.APPLE_DUO,
+            title = "Apple Duo (BETA)",
+            badge = "BETA",
+            subtitle = "3D Dual-Pane Frosted Glass Folding",
+            bullets = listOf(
+                "Simulates a dual-screen foldable device with dynamic real-time perspective depth.",
+                "Real-time frosted glass blur and specular lighting across the central fold seam.",
+                "Responds to 6DoF gyroscope sensor motion tracking or customizable manual touch tilt.",
+                "Zero battery overhead when browsing static 2D web pages."
+            ),
+            icon = Icons.Rounded.Animation,
+            iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            iconTint = MaterialTheme.colorScheme.primary
+        ),
+        actionLabel = if (!appleDuoEnabled) "Enable Apple Duo" else "Got it",
+        onActionClick = {
+            if (!appleDuoEnabled) onAppleDuoEnabledChange(true)
+        }
+    )
+
+    Box(modifier = modifier.fillMaxSize()) {
+        M3ExpressiveVariableBackground(pageSeed = "display_zoom_settings")
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            ExpressiveHeader(
+                title = "Accessibility & Display",
+                subtitle = "Navigation gestures, haptics, font scaling, and 3D visual effects",
+                onBack = onNavigateBack
+            )
+
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .scrollMotionBlur(scrollState)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Navigation Safeguards Card
+                PetalSettingsSection(
+                    title = stringResource(R.string.ui_navigation_safeguards),
+                    icon = Icons.Rounded.ExitToApp,
+                    cardId = "nav_safeguards",
+                    targetHighlightId = targetHighlightItemId
+                ) {
+                    com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                        title = stringResource(R.string.ui_double_back_to_exit),
+                        subtitle = stringResource(R.string.ui_press_back_twice_quickly_to),
+                        icon = Icons.Rounded.ExitToApp,
+                        checked = doubleBackExit,
+                        onCheckedChange = onDoubleBackExitChange
+                    )
+                }
+
+                // Apple Duo (BETA) Card
+                PetalSettingsSection(
+                    title = stringResource(R.string.ui_apple_duo_beta),
+                    icon = Icons.Rounded.Animation,
+                    cardId = "apple_duo",
+                    targetHighlightId = targetHighlightItemId,
+                    onInfoClick = { showAppleDuoExplainer = true }
+                ) {
+                    Text(
+                        text = stringResource(R.string.ui_real_time_frosted_glass_fold),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                        title = stringResource(R.string.ui_enable_apple_duo_fold_effect),
+                        subtitle = stringResource(R.string.ui_apply_dynamic_frosted_glass_fold),
+                        icon = Icons.Rounded.Animation,
+                        checked = appleDuoEnabled,
+                        onCheckedChange = onAppleDuoEnabledChange
+                    )
+
+                    if (appleDuoEnabled) {
+                        com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                            title = stringResource(R.string.ui_show_in_websites),
+                            subtitle = stringResource(R.string.ui_keep_the_3d_frosted_fold),
+                            icon = Icons.Rounded.Language,
+                            checked = appleDuoWebsites,
+                            onCheckedChange = onAppleDuoWebsitesChange
+                        )
+
+                        com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                            title = if (appleDuoUseSensor && appleDuoHasSensor) "Sensor Motion Tracking" else "Manual Tilt Control",
+                            subtitle = if (!appleDuoHasSensor) "Rotation sensor unavailable on this device — manual mode active" else "Use gyroscope and game rotation sensors for 6DoF tilt",
+                            icon = if (appleDuoUseSensor && appleDuoHasSensor) Icons.Rounded.ScreenRotation else Icons.Rounded.Tune,
+                            checked = appleDuoUseSensor && appleDuoHasSensor,
+                            enabled = appleDuoHasSensor,
+                            onCheckedChange = onAppleDuoUseSensorChange
+                        )
+
+                        if (!appleDuoUseSensor || !appleDuoHasSensor) {
+                            com.petal.browser.ui.containment.PetalHeroCard {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.ui_manual_tilt_angle),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.ui_1f_hinge_s).format(appleDuoManualTilt, if (appleDuoManualTilt >= 0f) "Right" else "Left"),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    PetalSlider(
+                                        value = appleDuoManualTilt,
+                                        onValueChange = onAppleDuoManualTiltChange,
+                                        valueRange = -45f..45f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        } else {
+                            com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                title = stringResource(R.string.ui_auto_recenter_washout),
+                                subtitle = stringResource(R.string.ui_live_tilt_1f_hinge_s).format(appleDuoCurrentTilt, if (appleDuoCurrentHinge >= 0f) "Right" else "Left"),
+                                icon = Icons.Rounded.Autorenew,
+                                checked = appleDuoAutoRecenter,
+                                onCheckedChange = onAppleDuoAutoRecenterChange
+                            )
+
+                            com.petal.browser.ui.containment.PetalHeroCard {
+                                Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                                    Button(
+                                        onClick = onAppleDuoRecalibrate,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.FilterCenterFocus, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.ui_recalibrate_zero_pose))
+                                    }
+                                }
+                            }
+                        }
+
+                        com.petal.browser.ui.containment.PetalHeroCard {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.ui_physics_shader_tuning),
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                // Eye Distance Slider
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.ui_eye_distance),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.ui_0f_mm).format(appleDuoEyeDistance),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    PetalSlider(
+                                        value = appleDuoEyeDistance,
+                                        onValueChange = onAppleDuoEyeDistanceChange,
+                                        valueRange = 200f..800f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                // Blur Spread Slider
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.ui_blur_spread_radius),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "%.3f".format(appleDuoBlurSpread),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    PetalSlider(
+                                        value = appleDuoBlurSpread,
+                                        onValueChange = onAppleDuoBlurSpreadChange,
+                                        valueRange = 0.02f..0.30f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                // Darkening Slider
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.ui_glass_frost_darkening),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "%.3f".format(appleDuoDarkening),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    PetalSlider(
+                                        value = appleDuoDarkening,
+                                        onValueChange = onAppleDuoDarkeningChange,
+                                        valueRange = 0.001f..0.05f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                // Accessibility & Display Options Card
+                PetalSettingsSection(
+                    title = stringResource(R.string.ui_accessibility_display_options),
+                    iconRes = com.petal.browser.R.drawable.mobile_vibrate_filled,
+                    cardId = "display",
+                    targetHighlightId = targetHighlightItemId
+                ) {
+                    com.petal.browser.ui.containment.PetalGroup(rowCount = 4) { index, position ->
+                        when (index) {
+                            0 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_predictive_back_animations),
+                                    subtitle = stringResource(R.string.ui_enable_fluid_predictive_back_gesture),
+                                    icon = Icons.Rounded.Animation,
+                                    checked = predictiveBack,
+                                    position = position,
+                                    onCheckedChange = onPredictiveBackChange
+                                )
+                            }
+                            1 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_depth_blur_effects),
+                                    subtitle = stringResource(R.string.ui_show_24_dp_depth_blur),
+                                    icon = Icons.Rounded.BlurOn,
+                                    checked = depthBlur,
+                                    position = position,
+                                    onCheckedChange = onDepthBlurChange
+                                )
+                            }
+                            2 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_touch_haptics_engine),
+                                    subtitle = stringResource(R.string.ui_tactile_feedback_on_button_presses),
+                                    icon = Icons.Rounded.Vibration,
+                                    checked = touchHaptics,
+                                    position = position,
+                                    onCheckedChange = { newValue ->
+                                        onTouchHapticsChange(newValue)
+                                        if (newValue) {
+                                            PetalHapticEngine.getInstance(context).playClick(context)
+                                        }
+                                    }
+                                )
+                            }
+                            3 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_scroll_haptics),
+                                    subtitle = stringResource(R.string.ui_subtle_tactile_feedback_while_scrollin),
+                                    icon = Icons.Rounded.TouchApp,
+                                    checked = scrollHaptics,
+                                    enabled = touchHaptics,
+                                    position = position,
+                                    onCheckedChange = { newValue ->
+                                        onScrollHapticsChange(newValue)
+                                        if (newValue && touchHaptics) {
+                                            PetalHapticEngine.getInstance(context).playClick(context)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    // Text Font Scale Slider & Live Box
+                    com.petal.browser.ui.containment.PetalHeroCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.ui_text_font_scale),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    "${(fontSizeScale * 100f).toInt()}%",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            PetalSlider(
+                                value = fontSizeScale,
+                                onValueChange = onFontSizeScaleChange,
+                                valueRange = 0.7f..1.5f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        stringResource(R.string.ui_live_font_preview, (fontSizeScale * 100).toInt()),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "The quick brown fox jumps over the lazy dog.",
+                                        fontSize = (15 * fontSizeScale).sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Default Page Zoom Slider & Live Box
+                    com.petal.browser.ui.containment.PetalHeroCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    stringResource(R.string.ui_default_page_zoom),
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    "${(zoomLevelScale * 100f).toInt()}%",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            PetalSlider(
+                                value = zoomLevelScale,
+                                onValueChange = onZoomLevelScaleChange,
+                                valueRange = 0.8f..2.0f,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        stringResource(R.string.ui_live_zoom_preview, (zoomLevelScale * 100).toInt()),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height((75 * zoomLevelScale).dp)
+                                    ) {
+                                        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary, modifier = Modifier.size((12 * zoomLevelScale).dp)) {}
+                                                Text(
+                                                    stringResource(R.string.ui_sample_web_page_article),
+                                                    fontSize = (12 * zoomLevelScale).sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                            Text(
+                                                stringResource(R.string.ui_rendering_responsive_web_content_at, (zoomLevelScale * 100).toInt()),
+                                                fontSize = (10 * zoomLevelScale).sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    com.petal.browser.ui.containment.PetalGroup(rowCount = 5) { index, position ->
+                        when (index) {
+                            0 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_force_enable_zoom_override_viewport),
+                                    subtitle = stringResource(R.string.ui_override_website_viewport_locks_user),
+                                    icon = Icons.Rounded.ZoomIn,
+                                    checked = forceZoom,
+                                    position = position,
+                                    onCheckedChange = onForceZoomChange
+                                )
+                            }
+                            1 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_simplified_view_for_webpages),
+                                    subtitle = stringResource(R.string.ui_detect_article_content_and_enable),
+                                    icon = Icons.Rounded.Article,
+                                    checked = readerModeDetection,
+                                    position = position,
+                                    onCheckedChange = onReaderModeDetectionChange
+                                )
+                            }
+                            2 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_caret_browsing_f7_shortcut),
+                                    subtitle = stringResource(R.string.ui_navigate_and_select_text_within),
+                                    icon = Icons.Rounded.TextFormat,
+                                    checked = caretBrowsing,
+                                    position = position,
+                                    onCheckedChange = { newValue ->
+                                        onCaretBrowsingChange(newValue)
+                                        PetalAccessibilityEngine.setCaretBrowsing(context, null, newValue)
+                                    }
+                                )
+                            }
+                            3 -> {
+                                com.petal.browser.ui.containment.PetalSettingsToggleRow(
+                                    title = stringResource(R.string.ui_touchpad_two_finger_navigation),
+                                    subtitle = stringResource(R.string.ui_swipe_horizontally_with_two_fingers),
+                                    icon = Icons.Rounded.Swipe,
+                                    checked = touchpadSwipeNav,
+                                    position = position,
+                                    onCheckedChange = onTouchpadSwipeNavChange
+                                )
+                            }
+                            4 -> {
+                                com.petal.browser.ui.containment.PetalGroupRow(
+                                    icon = Icons.Rounded.ClosedCaption,
+                                    title = stringResource(R.string.ui_system_captions_preferences),
+                                    subtitle = stringResource(R.string.ui_configure_system_level_closed_captioni),
+                                    position = position,
+                                    onClick = { PetalAccessibilityEngine.launchCaptionSettings(context) },
+                                    trailing = {
+                                        Icon(
+                                            imageVector = Icons.Rounded.OpenInNew,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    }
+}

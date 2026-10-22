@@ -1,0 +1,274 @@
+name: Android CI/CD Build
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+UseG1GC -Dorg.gradle.daemon=false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Setup Signing Keystore
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$SIGNING_KEY" ]; then
+            echo "✅ Using SIGNING_KEY secret — decoding keystore..."
+            echo "$SIGNING_KEY" | base64 -d > /tmp/signing.keystore
+            STORE_PASS="$KEY_STORE_PASSWORD"
+            KEY_PASS="$KEY_PASSWORD"
+            ALIAS_NAME="$ALIAS"
+            echo "🔑 Secret keystore alias: $ALIAS_NAME"
+            keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>&1 | head -6
+          else
+            echo "⚠️  SIGNING_KEY secret not set — using app/release.keystore from repo"
+            if [ ! -f app/release.keystore ]; then
+              echo "❌ No release.keystore found in repo either! Generating temporary key (NOT for production)..."
+              keytool -genkey -v -keystore /tmp/signing.keystore -storepass android \
+                -alias releasekey -keypass android -keyalg RSA -keysize 2048 \
+                -validity 10000 -dname "CN=Android Release, O=Android, C=US"
+            else
+              cp app/release.keystore /tmp/signing.keystore
+            fi
+            STORE_PASS="android"
+            KEY_PASS="android"
+            ALIAS_NAME="releasekey"
+            echo "🔑 Repo keystore alias: $ALIAS_NAME"
+            keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>&1 | head -6
+          fi
+
+          DETECTED_ALIAS=$(keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>/dev/null | grep 'PrivateKeyEntry' | head -n 1 | awk -F ',' '{print $1}' | xargs)
+          if keytool -list \
+              -keystore /tmp/signing.keystore \
+              -storepass "$STORE_PASS" \
+              -alias "$ALIAS_NAME" >/dev/null 2>&1; then
+            echo "✅ Specified alias '$ALIAS_NAME' verified."
+          elif [ -n "$DETECTED_ALIAS" ]; then
+            echo "⚠️ Specified alias '$ALIAS_NAME' not matched, but detected PrivateKeyEntry alias '$DETECTED_ALIAS' in keystore. Using '$DETECTED_ALIAS'."
+            ALIAS_NAME="$DETECTED_ALIAS"
+          else
+            echo "❌ ERROR: No valid signing alias found in keystore! Aborting."
+            keytool -list -keystore /tmp/signing.keystore -storepass "$STORE_PASS" 2>&1
+            exit 1
+          fi
+
+          echo "KEYSTORE_PATH=/tmp/signing.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_STORE_PASS=$STORE_PASS" >> $GITHUB_ENV
+          echo "KEYSTORE_KEY_PASS=$KEY_PASS" >> $GITHUB_ENV
+          echo "KEYSTORE_ALIAS=$ALIAS_NAME" >> $GITHUB_ENV
+
+      - name: Build Release APKs & AAB Bundle
+        run: |
+          set -euo pipefail
+          mkdir -p raw_apks raw_aabs
+
+          test -f "$KEYSTORE_PATH"
+          test -n "$KEYSTORE_STORE_PASS"
+          test -n "$KEYSTORE_KEY_PASS"
+          test -n "$KEYSTORE_ALIAS"
+
+          keytool -list \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$KEYSTORE_STORE_PASS" \
+            -alias "$KEYSTORE_ALIAS" >/dev/null
+
+          ./gradlew :app:assembleRelease :app:bundleRelease \
+            -PRELEASE_STORE_FILE="$KEYSTORE_PATH" \
+            -PRELEASE_STORE_PASSWORD="$KEYSTORE_STORE_PASS" \
+            -PRELEASE_KEY_ALIAS="$KEYSTORE_ALIAS" \
+            -PRELEASE_KEY_PASSWORD="$KEYSTORE_KEY_PASS" \
+            --stacktrace --info
+          for apk in app/build/outputs/apk/release/*.apk; do
+            if [ -f "$apk" ]; then
+              cp "$apk" raw_apks/
+            fi
+          done
+          for aab in app/build/outputs/bundle/release/*.aab; do
+            if [ -f "$aab" ]; then
+              cp "$aab" raw_aabs/
+            fi
+          done
+
+      - name: Sign & ZipAlign Release APKs & AAB
+        run: |
+          STORE_PASS="$KEYSTORE_STORE_PASS"
+          KEY_PASS="$KEYSTORE_KEY_PASS"
+          ALIAS_NAME="$KEYSTORE_ALIAS"
+          ANDROID_SDK_BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
+          echo "Using Android Build-Tools: $ANDROID_SDK_BUILD_TOOLS"
+
+          mkdir -p signed_apks signed_aabs
+          for apk in raw_apks/*.apk; do
+            if [ -f "$apk" ]; then
+              filename=$(basename "$apk")
+              aligned_apk="/tmp/aligned_$filename"
+              final_apk="signed_apks/$filename"
+
+              # Gradle assembleRelease with release signingConfig already aligns and signs APKs (v1, v2, v3).
+              # Running zipalign on an already-signed APK corrupts signatures and causes INSTALL_PARSE_FAILED_NO_CERTIFICATES.
+              # Check if APK is already validly signed by Gradle:
+              if $ANDROID_SDK_BUILD_TOOLS/apksigner verify "$apk" >/dev/null 2>&1; then
+                echo "APK $filename is already cleanly signed and aligned by Gradle. Copying to signed_apks."
+                cp "$apk" "$final_apk"
+              else
+                echo "Signing $filename with apksigner (v1, v2, v3)..."
+                # Strip any existing broken signatures in META-INF before zipaligning and signing
+                zip -d "$apk" "META-INF/*.SF" "META-INF/*.RSA" "META-INF/*.DSA" "META-INF/*.EC" "META-INF/MANIFEST.MF" >/dev/null 2>&1 || true
+                $ANDROID_SDK_BUILD_TOOLS/zipalign -v -p 4 "$apk" "$aligned_apk"
+                $ANDROID_SDK_BUILD_TOOLS/apksigner sign \
+                  --ks /tmp/signing.keystore \
+                  --ks-pass pass:"$STORE_PASS" \
+                  --key-pass pass:"$KEY_PASS" \
+                  --ks-key-alias "$ALIAS_NAME" \
+                  --v1-signing-enabled true \
+                  --v2-signing-enabled true \
+                  --v3-signing-enabled true \
+                  --v4-signing-enabled false \
+                  --out "$final_apk" \
+                  "$aligned_apk"
+                rm -f "$aligned_apk"
+              fi
+
+              $ANDROID_SDK_BUILD_TOOLS/apksigner verify --verbose "$final_apk"
+            fi
+          done
+
+          for aab in raw_aabs/*.aab; do
+            if [ -f "$aab" ]; then
+              filename=$(basename "$aab")
+              final_aab="signed_aabs/$filename"
+              cp "$aab" "$final_aab"
+              # bundleRelease is already signed by the Gradle release signingConfig.
+              # Do not run jarsigner again: a second signature adds another
+              # certificate chain, which Google Play rejects for Android App Bundles.
+              jarsigner -verify "$final_aab"
+            fi
+          done
+
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: petal-browser-release
+          path: signed_apks/*.apk
+          retention-days: 1
+
+      - name: Upload Release AAB Bundle Artifact (Play Store)
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: petal-browser-release-bundle
+          path: signed_aabs/*.aab
+          retention-days: 7
+
+      - name: Prepare Release APK & AAB Files
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
+        run: |
+          mkdir -p dist
+          find signed_apks -type f
+          find signed_aabs -type f
+
+          for f in signed_apks/*.apk; do
+            if [ -f "$f" ]; then
+              if [[ "$f" == *"arm64-v8a"* ]]; then
+                cp "$f" dist/petal-browser-arm64-v8a-release.apk
+              elif [[ "$f" == *"armeabi-v7a"* ]]; then
+                cp "$f" dist/petal-browser-armeabi-v7a-release.apk
+              elif [[ "$f" == *"x86_64"* ]]; then
+                cp "$f" dist/petal-browser-x86_64-release.apk
+              elif [[ "$f" == *"x86"* ]]; then
+                cp "$f" dist/petal-browser-x86-release.apk
+              elif [[ "$f" == *"universal"* ]]; then
+                cp "$f" dist/petal-browser-universal-release.apk
+              else
+                cp "$f" dist/$(basename "$f")
+              fi
+            fi
+          done
+
+          for f in signed_aabs/*.aab; do
+            if [ -f "$f" ]; then
+              cp "$f" dist/petal-browser-release.aab
+            fi
+          done
+          ls -la dist/
+
+      - name: Extract App Version and Changelog
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
+        id: get_version
+        run: |
+          VERSION=$(grep "versionName" app/build.gradle | head -n 1 | awk -F '"' '{print $2}')
+          VERSION_CODE=$(grep "versionCode" app/build.gradle | head -n 1 | awk '{print $2}')
+          echo "APP_VERSION=v$VERSION" >> $GITHUB_ENV
+
+          CHANGELOG_FILE="fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt"
+          if [ -f "$CHANGELOG_FILE" ]; then
+            echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+            cat "$CHANGELOG_FILE" >> $GITHUB_ENV
+            echo "" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "CHANGELOG=Release v$VERSION" >> $GITHUB_ENV
+          fi
+
+      - name: Create or Update GitHub Release
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || env.APP_VERSION }}
+          RELEASE_TITLE: ${{ startsWith(github.ref, 'refs/tags/v') && format('Petal Browser {0} Release', github.ref_name) || format('Petal Browser {0} Release', env.APP_VERSION) }}
+        run: |
+          echo "Ensuring release exists for $TAG_NAME..."
+          if ! gh release view "$TAG_NAME" > /dev/null 2>&1; then
+            gh release create "$TAG_NAME" \
+              --title "$RELEASE_TITLE" \
+              --notes "$CHANGELOG" \
+              --generate-notes
+          fi
+
+          echo "Uploading APK & AAB assets with retries..."
+          for asset in dist/*; do
+            if [ -f "$asset" ]; then
+              echo "Uploading $asset..."
+              for attempt in {1..3}; do
+                if gh release upload "$TAG_NAME" "$asset" --clobber; then
+                  echo "Successfully uploaded $asset"
+                  break
+                else
+                  echo "Upload failed for $asset (attempt $attempt/3). Retrying in 5s..."
+                  sleep 5
+                  if [ "$attempt" -eq 3 ]; then
+                    echo "Failed to upload $asset after 3 attempts, continuing with remaining assets."
+                  fi
+                fi
+              done
+            fi
+          done

@@ -1,0 +1,438 @@
+/*
+ * PetalAdBlockEngine.kt
+ * ─────────────────────────────────────────────────────────────────────────
+ * uBlock Origin & AdGuard-grade Ad & Tracker Blocker Engine for Petal Browser.
+ * Features:
+ * 1. Trie / Bloom filter network request interceptor for shouldInterceptRequest
+ *    parsing EasyList, EasyPrivacy, uBlock (uAssets), and AdGuard mobile rules.
+ * 2. High-performance empty 204 HTTP WebResourceResponse stream replacement.
+ * 3. Official uBO scriptlets (set-constant, abort-on-property-read, nano-sib).
+ * 4. Cosmetic CSS rules and procedural selectors (:has(), :has-text()) via MutationObserver.
+ * 5. Dedicated YouTube mobile scriptlet auto-skipping, muting, and accelerating video ads.
+ * 6. Per-domain whitelist support & SharedPreferences/DataStore persistence.
+ */
+
+package com.petal.browser.browser
+
+import android.content.Context
+import android.net.Uri
+import android.webkit.WebResourceResponse
+import androidx.preference.PreferenceManager
+import com.petal.browser.engine.petal.blocking.PetalCosmeticScript
+import com.petal.browser.engine.petal.blocking.PetalProceduralCosmeticScript
+import com.petal.browser.engine.petal.blocking.ContentBlocker
+import java.io.ByteArrayInputStream
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+
+class TrieNode {
+    val children = HashMap<Char, TrieNode>()
+    var isTerminal = false
+}
+
+class FastRuleTrie {
+    val root = TrieNode()
+
+    fun insert(pattern: String) {
+        if (pattern.isBlank()) return
+        var curr = root
+        for (ch in pattern.lowercase(Locale.US)) {
+            curr = curr.children.getOrPut(ch) { TrieNode() }
+        }
+        curr.isTerminal = true
+    }
+
+    fun containsSubstring(text: String): Boolean {
+        val lower = text.lowercase(Locale.US)
+        val len = lower.length
+        for (i in 0 until len) {
+            var curr: TrieNode? = root
+            for (j in i until len) {
+                curr = curr?.children?.get(lower[j])
+                if (curr == null) break
+                if (curr.isTerminal) return true
+            }
+        }
+        return false
+    }
+}
+
+object PetalAdBlockEngine {
+
+    private val trieEngine = FastRuleTrie()
+    private val whitelistedDomains = ConcurrentHashMap.newKeySet<String>()
+    private val domainBlockedCount = ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>()
+    private val totalBlockedCount = java.util.concurrent.atomic.AtomicLong(0)
+    @Volatile private var isInitialized = false
+    @Volatile private var contentBlocker: ContentBlocker? = null
+
+    // Default EasyList / uBlock / AdGuard high-frequency ad & tracker patterns
+    private val defaultRules = listOf(
+        "doubleclick.net", "googlesyndication.com", "google-analytics.com",
+        "adservice.google.com", "adnxs.com", "popads.net", "popcash.net",
+        "adform.net", "taboola.com", "outbrain.com", "adroll.com", "criteo.com",
+        "rubiconproject.com", "pubmatic.com", "smartadserver.com", "zedo.com",
+        "amazon-adsystem.com", "adk2.com", "propellerads.com", "exoclick.com",
+        "scorecardresearch.com", "quantserve.com", "openx.net", "monetag.com",
+        "hilltopads.com", "adcash.com", "adsterra.com", "a-ads.com", "mgid.com",
+        "revcontent.com", "juicyads.com", "trafficjunky.com", "coinhive.com",
+        "statcounter.com", "pixel.facebook.com",
+        "/pagead/", "/ad_banner", "/popunder", "/popup.js", "adsbygoogle.js"
+    )
+
+    @JvmStatic
+    fun ensureInitialized(context: Context) {
+        if (isInitialized && contentBlocker != null) return
+        synchronized(this) {
+            if (isInitialized && contentBlocker != null) return
+            val appContext = context.applicationContext ?: context
+            if (contentBlocker == null) {
+                contentBlocker = ContentBlocker(appContext)
+            }
+            val sp = PreferenceManager.getDefaultSharedPreferences(appContext)
+
+            // Populate fallback Trie with default filters
+            defaultRules.forEach { trieEngine.insert(it) }
+
+            // Load user domain whitelist
+            val whitelistSet = sp.getStringSet("sp_adblock_whitelisted_domains", emptySet()) ?: emptySet()
+            whitelistedDomains.addAll(whitelistSet)
+
+            // Initialize active filter subscriptions
+            PetalFilterSubscriptionManager.reloadActiveRules(appContext)
+
+            // Initialize Brave Shields adblock-rust native engine
+            try {
+                com.petal.browser.browser.adblock.PetalBraveShieldEngine.initialize(appContext)
+            } catch (_: Throwable) {}
+
+            isInitialized = true
+        }
+    }
+
+    @JvmStatic
+    fun getContentBlocker(context: Context): ContentBlocker {
+        ensureInitialized(context)
+        return contentBlocker ?: synchronized(this) {
+            contentBlocker ?: ContentBlocker(context.applicationContext ?: context).also { contentBlocker = it }
+        }
+    }
+
+    @JvmStatic
+    fun getAdBlockMode(context: Context): PetalAdBlockMode {
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.contextOrApp())
+        val isEnabled = sp.getBoolean("sp_ad_block", true)
+        if (!isEnabled) return PetalAdBlockMode.DISABLED
+        val modeStr = sp.getString("sp_adblock_protection_mode", PetalAdBlockMode.STANDARD.id)
+        return PetalAdBlockMode.fromId(modeStr)
+    }
+
+    @JvmStatic
+    fun setAdBlockMode(context: Context, mode: PetalAdBlockMode) {
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.contextOrApp())
+        val isEnabled = mode != PetalAdBlockMode.DISABLED
+        sp.edit()
+            .putBoolean("sp_ad_block", isEnabled)
+            .putBoolean("profileStandard_adBlock", isEnabled)
+            .putString("sp_adblock_protection_mode", mode.id)
+            .apply()
+        try {
+            com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        } catch (_: Throwable) {}
+    }
+
+    @JvmStatic
+    fun getDomainOverride(context: Context, domain: String?): PetalAdBlockMode? {
+        if (domain.isNullOrBlank()) return null
+        val cleanDomain = domain.lowercase(Locale.US).removePrefix("www.")
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.contextOrApp())
+        val modeStr = sp.getString("sp_adblock_domain_mode_$cleanDomain", null) ?: return null
+        return PetalAdBlockMode.fromId(modeStr)
+    }
+
+    @JvmStatic
+    fun setDomainOverride(context: Context, domain: String, mode: PetalAdBlockMode?) {
+        if (domain.isBlank()) return
+        val cleanDomain = domain.lowercase(Locale.US).removePrefix("www.")
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.contextOrApp())
+        if (mode == null) {
+            sp.edit().remove("sp_adblock_domain_mode_$cleanDomain").apply()
+        } else {
+            sp.edit().putString("sp_adblock_domain_mode_$cleanDomain", mode.id).apply()
+        }
+    }
+
+    @JvmStatic
+    fun getEffectiveMode(context: Context, domain: String?): PetalAdBlockMode {
+        if (domain != null && isDomainWhitelisted(domain)) return PetalAdBlockMode.DISABLED
+        val override = getDomainOverride(context, domain)
+        return override ?: getAdBlockMode(context)
+    }
+
+    @JvmStatic
+    fun isAdBlockEnabled(context: Context): Boolean {
+        return getAdBlockMode(context) != PetalAdBlockMode.DISABLED
+    }
+
+    @JvmStatic
+    fun setAdBlockEnabled(context: Context, enabled: Boolean) {
+        val targetMode = if (enabled) PetalAdBlockMode.STANDARD else PetalAdBlockMode.DISABLED
+        setAdBlockMode(context, targetMode)
+    }
+
+    @JvmStatic
+    fun isDomainWhitelisted(domain: String): Boolean {
+        if (domain.isBlank()) return false
+        val cleanDomain = domain.lowercase(Locale.US).removePrefix("www.")
+        return whitelistedDomains.any { cleanDomain.endsWith(it) }
+    }
+
+    @JvmStatic
+    fun addDomainToWhitelist(context: Context, domain: String) {
+        if (domain.isBlank()) return
+        val cleanDomain = domain.lowercase(Locale.US).removePrefix("www.")
+        whitelistedDomains.add(cleanDomain)
+
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.contextOrApp())
+        sp.edit().putStringSet("sp_adblock_whitelisted_domains", whitelistedDomains.toSet()).apply()
+    }
+
+    @JvmStatic
+    fun removeDomainFromWhitelist(context: Context, domain: String) {
+        val cleanDomain = domain.lowercase(Locale.US).removePrefix("www.")
+        whitelistedDomains.remove(cleanDomain)
+
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.contextOrApp())
+        sp.edit().putStringSet("sp_adblock_whitelisted_domains", whitelistedDomains.toSet()).apply()
+    }
+
+    @JvmStatic
+    fun getWhitelistedDomains(): Set<String> = whitelistedDomains.toSet()
+
+    @JvmStatic
+    fun shouldBlockUrl(context: Context, requestUrl: String, pageUrl: String? = null): Boolean {
+        if (requestUrl.isBlank()) return false
+        val pageHost = try { Uri.parse(pageUrl ?: "").host ?: "" } catch (e: Exception) { "" }
+        val effectiveMode = getEffectiveMode(context, pageHost)
+        if (effectiveMode == PetalAdBlockMode.DISABLED) return false
+
+        // Check if request host is in active subscription lists (Cromite-style)
+        val requestHost = try { Uri.parse(requestUrl).host ?: "" } catch (e: Exception) { "" }
+        if (requestHost.isNotEmpty() && PetalFilterSubscriptionManager.isDomainInActiveSubscriptions(requestHost)) {
+            recordBlock(pageUrl)
+            return true
+        }
+
+        // 1. Petal ContentBlocker advanced rules & host indexes (EasyList, uAssets, HaGeZi)
+        val blocker = contentBlocker
+        if (blocker != null) {
+            try {
+                val blocked = blocker.shouldBlock(requestUrl, pageUrl)
+                if (blocked) {
+                    recordBlock(pageUrl)
+                    return true
+                }
+            } catch (_: Throwable) {
+                // Fall through to Trie matching if engine is still loading
+            }
+        }
+
+        // 1b. Brave Shields native adblock-rust check
+        if (com.petal.browser.browser.adblock.PetalBraveShieldEngine.isNativeActive()) {
+            val braveBlocked = com.petal.browser.browser.adblock.PetalBraveShieldEngine.shouldBlock(requestUrl, pageHost)
+            if (braveBlocked) {
+                recordBlock(pageUrl)
+                return true
+            }
+        }
+
+        // 2. Fast Trie fallback
+        val trieBlocked = trieEngine.containsSubstring(requestUrl)
+        if (trieBlocked) {
+            recordBlock(pageUrl)
+            return true
+        }
+
+        // 3. Aggressive mode extra heuristics (Brave-style strict blocking)
+        if (effectiveMode == PetalAdBlockMode.AGGRESSIVE) {
+            val lower = requestUrl.lowercase(Locale.US)
+            if (lower.contains("/telemetry") || lower.contains("/analytics") || 
+                lower.contains("/pixel") || lower.contains("/collect?") ||
+                lower.contains("cookie-banner") || lower.contains("consent.js")) {
+                recordBlock(pageUrl)
+                return true
+            }
+        }
+
+        return false
+    }
+
+    fun recordBlock(pageUrl: String?) {
+        totalBlockedCount.incrementAndGet()
+        if (!pageUrl.isNullOrBlank()) {
+            val pageHost = try { Uri.parse(pageUrl).host ?: "" } catch (e: Exception) { "" }
+            val cleanHost = pageHost.lowercase(Locale.US).removePrefix("www.")
+            if (cleanHost.isNotEmpty()) {
+                domainBlockedCount.computeIfAbsent(cleanHost) { java.util.concurrent.atomic.AtomicInteger(0) }.incrementAndGet()
+            }
+        }
+    }
+
+    @JvmStatic
+    fun getBlockedCountForDomain(domain: String?): Int {
+        if (domain.isNullOrBlank()) return 0
+        val cleanHost = domain.lowercase(Locale.US).removePrefix("www.")
+        return domainBlockedCount[cleanHost]?.get() ?: 0
+    }
+
+    @JvmStatic
+    fun getTotalBlockedCount(): Long = totalBlockedCount.get()
+
+    /**
+     * High-performance empty 204 No Content WebResourceResponse to cancel ad network requests cleanly.
+     */
+    @JvmStatic
+    fun createEmpty204Response(): WebResourceResponse {
+        return WebResourceResponse(
+            "text/plain",
+            "UTF-8",
+            204,
+            "No Content",
+            mapOf("Access-Control-Allow-Origin" to "*"),
+            ByteArrayInputStream(ByteArray(0))
+        )
+    }
+
+    /**
+     * uBlock Origin & AdGuard Injection Payload:
+     * - Bundled cosmetic CSS selectors and procedural selectors (:has(), :has-text()) from petal ContentBlocker
+     * - uBO Scriptlets (`set-constant`, `abort-on-property-read`, `nano-sib`)
+     * - Dedicated YouTube Mobile auto-skip, mute, and speedup scriptlet
+     */
+    @JvmStatic
+    fun getuBlockCosmeticAndScriptletPayload(url: String? = null): String {
+        val isYouTube = !url.isNullOrBlank() && url.contains("youtube.com")
+
+        val ytScriptlet = if (isYouTube) """
+            // ── Dedicated YouTube Mobile Video Ad Auto-Skipper & Muter ──
+            function handleYouTubeAds() {
+                try {
+                    const video = document.querySelector('video');
+                    const adContainer = document.querySelector('.ad-container, .ad-interrupting, .ytp-ad-player-overlay, .ytp-ad-module, ytd-promoted-sparkles-web-renderer');
+                    const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button');
+
+                    if (adContainer || skipBtn || (video && document.querySelector('.ytp-ad-text'))) {
+                        if (video) {
+                            video.muted = true;
+                            video.playbackRate = 16.0;
+                            if (isFinite(video.duration) && video.duration > 0) {
+                                video.currentTime = video.duration - 0.1;
+                            }
+                        }
+                        if (skipBtn) {
+                            skipBtn.click();
+                        }
+                    }
+                    // Remove promo banners & companion ads
+                    const promoElements = document.querySelectorAll('ytd-compact-promoted-item-renderer, ytd-promoted-video-renderer, #masthead-ad, rendered-ad-background');
+                    promoElements.forEach(el => el.remove());
+                } catch (e) {}
+            }
+            setInterval(handleYouTubeAds, 250);
+        """.trimIndent() else ""
+
+        val cosmeticScript = contentBlocker?.let { blocker ->
+            try {
+                val selectors = blocker.adCosmeticSelectors(url)
+                val script = PetalCosmeticScript.create(selectors)
+                val procedural = blocker.adProceduralDocumentStartScript(url)
+                "$script\n$procedural"
+            } catch (_: Throwable) {
+                ""
+            }
+        }.orEmpty()
+
+        return """
+            javascript:(function() {
+                if (window.__petal_ubo_injected__) return;
+                window.__petal_ubo_injected__ = true;
+
+                // 1. uBO Scriptlets: set-constant & abort-on-property-read
+                window.uBO = {
+                    setConstant: function(obj, prop, val) {
+                        try {
+                            Object.defineProperty(obj, prop, { value: val, writable: false });
+                        } catch(e) {}
+                    },
+                    abortOnPropertyRead: function(obj, prop) {
+                        try {
+                            Object.defineProperty(obj, prop, { get: function() { throw new Error('uBO Abort'); } });
+                        } catch(e) {}
+                    }
+                };
+
+                // Apply uBO scriptlet constants for common ad networks
+                try {
+                    window.google_ad_status = 1;
+                    window.canRunAds = true;
+                    window.isAdBlockActive = false;
+                } catch(e) {}
+
+                // 2. Cosmetic CSS & Procedural Rules (:has, :has-text)
+                const adSelectors = [
+                    '.ad-container', '.ad-banner', '.ad-wrapper', '.ad-slot', '.ad-unit', '.ad-box',
+                    '[id*="google_ads"]', '[id*="taboola"]', '[id*="outbrain"]', '[class*="sponsored"]',
+                    'iframe[src*="ads"]', 'iframe[src*="doubleclick"]', 'iframe[src*="adnxs"]',
+                    '.popunder', '.popup-overlay', '.adsterra_tag', '[class*="adsterra"]', '[id*="adsterra"]',
+                    '.top-ad', '.bottom-ad', '.sidebar-ad', '.header-ad', 'ins.adsbygoogle', '.native-ad'
+                ];
+
+                function applyCosmeticRules() {
+                    try {
+                        const elements = document.querySelectorAll(adSelectors.join(', '));
+                        elements.forEach(el => {
+                            el.style.setProperty('display', 'none', 'important');
+                            el.style.setProperty('visibility', 'hidden', 'important');
+                            el.style.setProperty('height', '0px', 'important');
+                            el.style.setProperty('opacity', '0', 'important');
+                            el.style.setProperty('pointer-events', 'none', 'important');
+                        });
+
+                        // Procedural :has-text filter matching
+                        const allDivs = document.querySelectorAll('div, section, article');
+                        allDivs.forEach(el => {
+                            if (el.children.length === 0 && (el.textContent.trim() === 'Sponsored' || el.textContent.trim() === 'Advertisement')) {
+                                if (el.parentElement) el.parentElement.style.setProperty('display', 'none', 'important');
+                            }
+                        });
+                    } catch (e) {}
+                }
+
+                applyCosmeticRules();
+
+                if (document.body) {
+                    const observer = new MutationObserver(() => applyCosmeticRules());
+                    observer.observe(document.body, { childList: true, subtree: true });
+                } else {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        applyCosmeticRules();
+                        if (document.body) {
+                            const observer = new MutationObserver(() => applyCosmeticRules());
+                            observer.observe(document.body, { childList: true, subtree: true });
+                        }
+                    });
+                }
+
+                // 3. Petal Engine Cosmetic & Procedural Rules
+                try {
+                    $cosmeticScript
+                } catch(e) {}
+
+                // 4. YouTube Mobile Ad Skipper
+                $ytScriptlet
+            })();
+        """.trimIndent()
+    }
+
+    private fun Context.contextOrApp(): Context = this.applicationContext ?: this
+}

@@ -1,0 +1,891 @@
+package com.petal.browser.data.repository
+
+import android.app.Application
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
+import com.petal.browser.predictive.PetalPredictiveJunction
+import com.petal.browser.ui.theme.AppFont
+import com.petal.browser.ui.theme.ColorStyle
+import com.petal.browser.ui.theme.GSFlexPreset
+import com.petal.browser.ui.theme.ThemeConfig
+import com.petal.browser.ui.theme.defaultPaletteId
+import com.petal.browser.ui.theme.isDynamicColorSupported
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onStart
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class SettingsRepositoryImpl @Inject constructor(
+    private val application: Application
+) : SettingsRepository {
+
+    private val sp: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
+
+    init {
+        sp.registerOnSharedPreferenceChangeListener { _, key ->
+            if (key != null && (key.startsWith("sp_liquid_glass") || key == "useDynamicColor" || key == "sp_palette_id" || key == "sp_color_style" || key == "sp_amoled" || key == "sp_theme_config")) {
+                com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+            }
+        }
+    }
+
+    private fun <T> preferenceFlow(key: String, getter: () -> T): Flow<T> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+            if (changedKey == key) {
+                trySend(getter())
+            }
+        }
+        sp.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { sp.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.onStart { emit(getter()) }.distinctUntilChanged()
+
+    // ── Appearance & Theming ──────────────────────────────────────────────────
+    override val appFont: Flow<AppFont> = preferenceFlow("sp_app_font") {
+        AppFont.fromName(sp.getString("sp_app_font", "PETAL"))
+    }
+
+    override val fontWidth: Flow<Float> = preferenceFlow("sp_font_width") {
+        sp.getFloat("sp_font_width", 92f)
+    }
+
+    override val fontWeight: Flow<Float> = preferenceFlow("sp_font_weight") {
+        sp.getInt("sp_font_weight", 750).toFloat()
+    }
+
+    override val fontRoundness: Flow<Float> = preferenceFlow("sp_font_roundness") {
+        sp.getFloat("sp_font_roundness", 100f)
+    }
+
+    override val gsFlexPreset: Flow<GSFlexPreset> = preferenceFlow("sp_gs_flex_preset") {
+        try {
+            GSFlexPreset.valueOf(sp.getString("sp_gs_flex_preset", "PETAL") ?: "PETAL")
+        } catch (e: Exception) {
+            GSFlexPreset.PETAL
+        }
+    }
+
+    override val colorStyle: Flow<ColorStyle> = preferenceFlow("sp_color_style") {
+        try {
+            ColorStyle.valueOf(sp.getString("sp_color_style", "TONAL_SPOT") ?: "TONAL_SPOT")
+        } catch (e: Exception) {
+            ColorStyle.TONAL_SPOT
+        }
+    }
+
+    override val paletteId: Flow<String> = preferenceFlow("sp_palette_id") {
+        sp.getString("sp_palette_id", defaultPaletteId) ?: defaultPaletteId
+    }
+
+    override val dynamicColor: Flow<Boolean> = preferenceFlow("useDynamicColor") {
+        sp.getBoolean("useDynamicColor", isDynamicColorSupported)
+    }
+
+    override val amoledMode: Flow<Boolean> = preferenceFlow("sp_amoled") {
+        sp.getBoolean("sp_amoled", false)
+    }
+
+    override val themeConfig: Flow<ThemeConfig> = preferenceFlow("sp_theme_config") {
+        try {
+            ThemeConfig.valueOf(sp.getString("sp_theme_config", "FOLLOW_SYSTEM") ?: "FOLLOW_SYSTEM")
+        } catch (e: Exception) {
+            ThemeConfig.FOLLOW_SYSTEM
+        }
+    }
+
+    override val floatingTabBar: Flow<Boolean> = preferenceFlow("sp_floating_tab_bar") {
+        sp.getBoolean("sp_floating_tab_bar", true)
+    }
+
+    override val expressiveColors: Flow<Boolean> = preferenceFlow("sp_expressive_colors") {
+        sp.getBoolean("sp_expressive_colors", false)
+    }
+
+    override val expressiveBgShapes: Flow<Boolean> = preferenceFlow("sp_expressive_bg_shapes") {
+        sp.getBoolean("sp_expressive_bg_shapes", true)
+    }
+
+    override val expressiveShapes35: Flow<Boolean> = preferenceFlow(com.petal.browser.ui.theme.PetalMaterialShapes.PREF_EXPRESSIVE_SHAPES_ENABLED) {
+        sp.getBoolean(com.petal.browser.ui.theme.PetalMaterialShapes.PREF_EXPRESSIVE_SHAPES_ENABLED, true)
+    }
+
+    override val bgShapeChangeMode: Flow<String> = preferenceFlow("sp_bg_shape_change_mode") {
+        sp.getString("sp_bg_shape_change_mode", "ALWAYS") ?: "ALWAYS"
+    }
+
+    override val bgShapeRotationMin: Flow<Int> = preferenceFlow("sp_bg_shape_rotation_min") {
+        sp.getInt("sp_bg_shape_rotation_min", 5)
+    }
+
+    override val highRefreshRate: Flow<Boolean> = preferenceFlow("sp_high_refresh_rate") {
+        sp.getBoolean("sp_high_refresh_rate", true)
+    }
+
+    override val customFontName: Flow<String> = preferenceFlow("sp_custom_font_name") {
+        sp.getString("sp_custom_font_name", "No font file selected") ?: "No font file selected"
+    }
+
+    override val launchRippleEnabled: Flow<Boolean> = preferenceFlow("sp_launch_ripple_enabled") {
+        sp.getBoolean("sp_launch_ripple_enabled", true)
+    }
+
+    override val motionBlurEnabled: Flow<Boolean> = preferenceFlow("sp_motion_blur_enabled") {
+        sp.getBoolean("sp_motion_blur_enabled", false)
+    }
+
+    override val motionBlurScale: Flow<Float> = preferenceFlow("sp_motion_blur_scale") {
+        sp.getFloat("sp_motion_blur_scale", 1.0f)
+    }
+
+    override val liquidGlassUnlocked: Flow<Boolean> = preferenceFlow("sp_liquid_glass_unlocked") {
+        sp.getBoolean("sp_liquid_glass_unlocked", false)
+    }
+
+    override val liquidGlassEnabled: Flow<Boolean> = preferenceFlow("sp_liquid_glass_enabled") {
+        sp.getBoolean("sp_liquid_glass_enabled", false)
+    }
+
+    override val liquidGlassAlpha: Flow<Float> = preferenceFlow("sp_liquid_glass_alpha") {
+        sp.getFloat("sp_liquid_glass_alpha", 0.70f)
+    }
+
+    override val liquidGlassSheen: Flow<Float> = preferenceFlow("sp_liquid_glass_sheen") {
+        sp.getFloat("sp_liquid_glass_sheen", 0.60f)
+    }
+
+    override val liquidGlassTint: Flow<String> = preferenceFlow("sp_liquid_glass_tint") {
+        sp.getString("sp_liquid_glass_tint", "FROSTED") ?: "FROSTED"
+    }
+
+    override val liquidGlassContainments: Flow<Boolean> = preferenceFlow("sp_liquid_glass_containments") {
+        sp.getBoolean("sp_liquid_glass_containments", true)
+    }
+
+    override val liquidGlassBottomNav: Flow<Boolean> = preferenceFlow("sp_liquid_glass_bottom_nav") {
+        sp.getBoolean("sp_liquid_glass_bottom_nav", true)
+    }
+
+    override val liquidGlassAddressBar: Flow<Boolean> = preferenceFlow("sp_liquid_glass_address_bar") {
+        sp.getBoolean("sp_liquid_glass_address_bar", true)
+    }
+
+    override val liquidGlassOverflowBlurBg: Flow<Boolean> = preferenceFlow("sp_overflow_menu_blur_bg") {
+        sp.getBoolean("sp_overflow_menu_blur_bg", true)
+    }
+
+    override val liquidGlassBgMode: Flow<String> = preferenceFlow("sp_liquid_glass_bg_mode") {
+        sp.getString("sp_liquid_glass_bg_mode", "STRIDE") ?: "STRIDE"
+    }
+
+    override val liquidGlassBgImageUri: Flow<String> = preferenceFlow("sp_liquid_glass_bg_image_uri") {
+        sp.getString("sp_liquid_glass_bg_image_uri", "") ?: ""
+    }
+
+    override val liquidGlassBgDim: Flow<Float> = preferenceFlow("sp_liquid_glass_bg_dim") {
+        sp.getFloat("sp_liquid_glass_bg_dim", 0.35f)
+    }
+
+    override val liquidGlassBgBlur: Flow<Float> = preferenceFlow("sp_liquid_glass_bg_blur") {
+        sp.getFloat("sp_liquid_glass_bg_blur", 16f)
+    }
+
+    // ── Search & Homepage ─────────────────────────────────────────────────────
+    override val searchEngineIndex: Flow<String> = preferenceFlow("sp_search_engine") {
+        sp.getString("sp_search_engine", "0") ?: "0"
+    }
+
+    override val homepageType: Flow<String> = preferenceFlow("sp_home_type") {
+        sp.getString("sp_home_type", "0") ?: "0"
+    }
+
+    override val customHomepageUrl: Flow<String> = preferenceFlow("sp_custom_homepage_url") {
+        sp.getString("sp_custom_homepage_url", "https://google.com") ?: "https://google.com"
+    }
+
+    override val backgroundPlay: Flow<Boolean> = preferenceFlow("sp_background_play") {
+        sp.getBoolean("sp_background_play", false)
+    }
+
+    override val autoPip: Flow<Boolean> = preferenceFlow("sp_auto_pip") {
+        sp.getBoolean("sp_auto_pip", true)
+    }
+
+    override val forceDarkMode: Flow<Boolean> = preferenceFlow("sp_force_dark_mode") {
+        sp.getBoolean("sp_force_dark_mode", false)
+    }
+
+    override val enableLiveSuggestions: Flow<Boolean> = preferenceFlow("sp_enable_live_suggestions") {
+        sp.getBoolean("sp_enable_live_suggestions", true)
+    }
+
+    override val showSearchEngineSelectorInOmnibox: Flow<Boolean> = preferenceFlow("sp_show_search_engine_selector_in_omnibox") {
+        sp.getBoolean("sp_show_search_engine_selector_in_omnibox", true)
+    }
+
+    // ── Privacy & Security ────────────────────────────────────────────────────
+    override val adBlockEnabled: Flow<Boolean> = preferenceFlow("sp_ad_block") {
+        sp.getBoolean("sp_ad_block", true)
+    }
+
+    override val blockThirdPartyCookies: Flow<Boolean> = preferenceFlow("sp_block_third_party_cookies") {
+        sp.getBoolean("sp_block_third_party_cookies", false)
+    }
+
+    override val totalCookieProtection: Flow<Boolean> = preferenceFlow("sp_total_cookie_protection") {
+        sp.getBoolean("sp_total_cookie_protection", true)
+    }
+
+    override val cookieBannerAutoReject: Flow<Boolean> = preferenceFlow("sp_cookie_banner_auto_reject") {
+        sp.getBoolean("sp_cookie_banner_auto_reject", true)
+    }
+
+    override val etpStrict: Flow<Boolean> = preferenceFlow("sp_etp_strict") {
+        sp.getBoolean("sp_etp_strict", true)
+    }
+
+    override val biometricTabLock: Flow<Boolean> = preferenceFlow("sp_biometric_incognito_tab_lock") {
+        sp.getBoolean("sp_biometric_incognito_tab_lock", false)
+    }
+
+    override val sessionPartitioning: Flow<Boolean> = preferenceFlow("sp_session_partitioning") {
+        sp.getBoolean("sp_session_partitioning", true)
+    }
+
+    override val torPrivateWindow: Flow<Boolean> = preferenceFlow("sp_tor_private_window") {
+        sp.getBoolean("sp_tor_private_window", false)
+    }
+
+    override val fingerprintProtection: Flow<Boolean> = preferenceFlow("sp_fingerprint_protection") {
+        sp.getBoolean("sp_fingerprint_protection", true)
+    }
+
+    override val webrtcProtection: Flow<Boolean> = preferenceFlow("sp_webrtc_protection") {
+        sp.getBoolean("sp_webrtc_protection", true)
+    }
+
+    override val dntGpc: Flow<Boolean> = preferenceFlow("sp_dnt_gpc") {
+        sp.getBoolean("sp_dnt_gpc", true)
+    }
+
+    override val trimReferrers: Flow<Boolean> = preferenceFlow("sp_trim_referrers") {
+        sp.getBoolean("sp_trim_referrers", true)
+    }
+
+    override val webauthnEnabled: Flow<Boolean> = preferenceFlow("sp_webauthn_enabled") {
+        sp.getBoolean("sp_webauthn_enabled", true)
+    }
+
+    override val httpsOnly: Flow<Boolean> = preferenceFlow("sp_https_only") {
+        sp.getBoolean("sp_https_only", false)
+    }
+
+    override val javaScriptEnabled: Flow<Boolean> = preferenceFlow("sp_javascript") {
+        sp.getBoolean("sp_javascript", true)
+    }
+
+    override val blockPopups: Flow<Boolean> = preferenceFlow("sp_block_popups") {
+        sp.getBoolean("sp_block_popups", true)
+    }
+
+    override val openRedirectsInBackground: Flow<Boolean> = preferenceFlow("sp_open_redirects_in_background") {
+        sp.getBoolean("sp_open_redirects_in_background", false)
+    }
+
+    override val privateDnsMode: Flow<String> = preferenceFlow("sp_private_dns_mode") {
+        sp.getString("sp_private_dns_mode", "OFF") ?: "OFF"
+    }
+
+    override val customDohUrl: Flow<String> = preferenceFlow("sp_custom_doh_url") {
+        sp.getString("sp_custom_doh_url", "") ?: ""
+    }
+
+    // ── Accessibility & Display ───────────────────────────────────────────────
+    override val touchHaptics: Flow<Boolean> = preferenceFlow("sp_touch_haptics") {
+        sp.getBoolean("sp_touch_haptics", true)
+    }
+
+    override val scrollHaptics: Flow<Boolean> = preferenceFlow("sp_scroll_haptics") {
+        sp.getBoolean("sp_scroll_haptics", true)
+    }
+
+    override val predictiveBack: Flow<Boolean> = preferenceFlow(PetalPredictiveJunction.KEY_PREDICTIVE_BACK_ENABLED) {
+        sp.getBoolean(PetalPredictiveJunction.KEY_PREDICTIVE_BACK_ENABLED, true)
+    }
+
+    override val depthBlur: Flow<Boolean> = preferenceFlow(PetalPredictiveJunction.KEY_DEPTH_BLUR_ENABLED) {
+        sp.getBoolean(PetalPredictiveJunction.KEY_DEPTH_BLUR_ENABLED, true)
+    }
+
+    override val fontSizeScale: Flow<Float> = preferenceFlow("sp_font_size_scale") {
+        sp.getFloat("sp_font_size_scale", 1.0f)
+    }
+
+    override val zoomLevelScale: Flow<Float> = preferenceFlow("sp_zoom_level_scale") {
+        sp.getFloat("sp_zoom_level_scale", 1.0f)
+    }
+
+    override val forceZoom: Flow<Boolean> = preferenceFlow("sp_force_enable_zoom") {
+        sp.getBoolean("sp_force_enable_zoom", true)
+    }
+
+    override val readerModeDetection: Flow<Boolean> = preferenceFlow("sp_reader_mode_detection") {
+        sp.getBoolean("sp_reader_mode_detection", true)
+    }
+
+    override val caretBrowsing: Flow<Boolean> = preferenceFlow("sp_caret_browsing") {
+        sp.getBoolean("sp_caret_browsing", false)
+    }
+
+    override val touchpadSwipeNav: Flow<Boolean> = preferenceFlow("sp_touchpad_swipe_nav") {
+        sp.getBoolean("sp_touchpad_swipe_nav", true)
+    }
+
+    override val addressBarSwipeTabs: Flow<Boolean> = preferenceFlow("sp_address_bar_swipe_tabs") {
+        sp.getBoolean("sp_address_bar_swipe_tabs", true)
+    }
+
+    override val addressBarQuickActions: Flow<Boolean> = preferenceFlow("sp_address_bar_quick_actions") {
+        sp.getBoolean("sp_address_bar_quick_actions", true)
+    }
+
+    override val addressBarHeight: Flow<String> = preferenceFlow("sp_address_bar_height") {
+        sp.getString("sp_address_bar_height", "COMPACT") ?: "COMPACT"
+    }
+
+    override val addressBarAction: Flow<String> = preferenceFlow("sp_address_bar_action") {
+        sp.getString("sp_address_bar_action", if (sp.getBoolean("sp_ai_search_address_bar", true)) "AI" else "NONE") ?: "AI"
+    }
+
+    // ── Experimental & Miscellaneous ──────────────────────────────────────────
+    override val appLanguage: Flow<String> = preferenceFlow("sp_app_language") {
+        sp.getString("sp_app_language", "system") ?: "system"
+    }
+
+    override val matchWebsiteLanguage: Flow<Boolean> = preferenceFlow("sp_match_website_language") {
+        sp.getBoolean("sp_match_website_language", true)
+    }
+
+    override val addressBarPosition: Flow<String> = preferenceFlow("sp_address_bar_position") {
+        sp.getString("sp_address_bar_position", "TOP") ?: "TOP"
+    }
+
+    override val appLockEnabled: Flow<Boolean> = preferenceFlow("sp_app_lock_enabled") {
+        sp.getBoolean("sp_app_lock_enabled", false)
+    }
+
+    override val appLockPasscode: Flow<String> = preferenceFlow("sp_app_lock_passcode") {
+        sp.getString("sp_app_lock_passcode", "") ?: ""
+    }
+
+    override val doubleBackExit: Flow<Boolean> = preferenceFlow("sp_double_back_exit") {
+        sp.getBoolean("sp_double_back_exit", true)
+    }
+
+    override val autoOpenApps: Flow<Boolean> = preferenceFlow("sp_auto_open_apps") {
+        sp.getBoolean("sp_auto_open_apps", false)
+    }
+
+    override val customTabsEnabled: Flow<Boolean> = preferenceFlow("sp_custom_tabs_enabled") {
+        sp.getBoolean("sp_custom_tabs_enabled", true)
+    }
+
+    override val customTabsEtp: Flow<Boolean> = preferenceFlow("sp_custom_tabs_etp") {
+        sp.getBoolean("sp_custom_tabs_etp", true)
+    }
+
+    override val checkUpdateOnLaunch: Flow<Boolean> = preferenceFlow("sp_check_update_on_launch") {
+        sp.getBoolean("sp_check_update_on_launch", true)
+    }
+
+    override val torrentEngineMode: Flow<String> = preferenceFlow("sp_torrent_engine") {
+        sp.getString("sp_torrent_engine", "1DM") ?: "1DM"
+    }
+
+    override val downloadManagerMode: Flow<String> = preferenceFlow(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE) {
+        sp.getString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP) ?: com.petal.browser.unit.ExternalDownloadManagerHelper.MODE_IN_APP
+    }
+
+    override val confirmDownloadDelete: Flow<Boolean> = preferenceFlow("sp_confirm_download_delete") {
+        sp.getBoolean("sp_confirm_download_delete", true)
+    }
+
+    override val deleteDownloadFile: Flow<Boolean> = preferenceFlow("sp_delete_download_file") {
+        sp.getBoolean("sp_delete_download_file", false)
+    }
+
+    override val autoPreviewDownloadedImages: Flow<Boolean> = preferenceFlow("sp_auto_preview_downloaded_images") {
+        sp.getBoolean("sp_auto_preview_downloaded_images", true)
+    }
+
+    override val liveUpdates: Flow<Boolean> = preferenceFlow("sp_live_updates") {
+        sp.getBoolean("sp_live_updates", true)
+    }
+
+    // ── Apple Duo (BETA) Animation ───────────────────────────────────────────
+    override val appleDuoEnabled: Flow<Boolean> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_ENABLED) {
+        sp.getBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_ENABLED, false)
+    }
+
+    override val appleDuoWebsites: Flow<Boolean> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_WEBSITES) {
+        sp.getBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_WEBSITES, true)
+    }
+
+    override val appleDuoUseSensor: Flow<Boolean> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_USE_SENSOR) {
+        sp.getBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_USE_SENSOR, true)
+    }
+
+    override val appleDuoManualTilt: Flow<Float> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_MANUAL_TILT) {
+        sp.getFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_MANUAL_TILT, 0f)
+    }
+
+    override val appleDuoAutoRecenter: Flow<Boolean> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_AUTO_RECENTER) {
+        sp.getBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_AUTO_RECENTER, true)
+    }
+
+    override val appleDuoEyeDistance: Flow<Float> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_EYE_DISTANCE) {
+        sp.getFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_EYE_DISTANCE, 450f)
+    }
+
+    override val appleDuoBlurSpread: Flow<Float> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_BLUR_SPREAD) {
+        sp.getFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_BLUR_SPREAD, 0.12f)
+    }
+
+    override val appleDuoDarkening: Flow<Float> = preferenceFlow(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_DARKENING) {
+        sp.getFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_DARKENING, 0.015f)
+    }
+
+    // ── Setters ───────────────────────────────────────────────────────────────
+    override suspend fun setAppFont(font: AppFont) {
+        sp.edit().putString("sp_app_font", font.name).apply()
+    }
+
+    override suspend fun setFontWidth(width: Float) {
+        sp.edit().putFloat("sp_font_width", width).apply()
+    }
+
+    override suspend fun setFontWeight(weight: Float) {
+        sp.edit().putInt("sp_font_weight", weight.toInt()).apply()
+    }
+
+    override suspend fun setFontRoundness(roundness: Float) {
+        sp.edit().putFloat("sp_font_roundness", roundness).apply()
+    }
+
+    override suspend fun setGsFlexPreset(preset: GSFlexPreset) {
+        sp.edit().putString("sp_gs_flex_preset", preset.name).apply()
+    }
+
+    override suspend fun setColorStyle(style: ColorStyle) {
+        sp.edit().putString("sp_color_style", style.name).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setPaletteId(id: String) {
+        sp.edit().putString("sp_palette_id", id).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setDynamicColor(enabled: Boolean) {
+        sp.edit().putBoolean("useDynamicColor", enabled).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setAmoledMode(enabled: Boolean) {
+        sp.edit().putBoolean("sp_amoled", enabled).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setThemeConfig(config: ThemeConfig) {
+        sp.edit().putString("sp_theme_config", config.name).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setFloatingTabBar(enabled: Boolean) {
+        sp.edit().putBoolean("sp_floating_tab_bar", enabled).apply()
+    }
+
+    override suspend fun setExpressiveColors(enabled: Boolean) {
+        sp.edit().putBoolean("sp_expressive_colors", enabled).apply()
+    }
+
+    override suspend fun setExpressiveBgShapes(enabled: Boolean) {
+        sp.edit().putBoolean("sp_expressive_bg_shapes", enabled).apply()
+    }
+
+    override suspend fun setExpressiveShapes35(enabled: Boolean) {
+        sp.edit().putBoolean(com.petal.browser.ui.theme.PetalMaterialShapes.PREF_EXPRESSIVE_SHAPES_ENABLED, enabled).apply()
+    }
+
+    override suspend fun setBgShapeChangeMode(mode: String) {
+        sp.edit().putString("sp_bg_shape_change_mode", mode).apply()
+    }
+
+    override suspend fun setBgShapeRotationMin(minutes: Int) {
+        sp.edit().putInt("sp_bg_shape_rotation_min", minutes).apply()
+    }
+
+    override suspend fun setHighRefreshRate(enabled: Boolean) {
+        sp.edit().putBoolean("sp_high_refresh_rate", enabled).apply()
+    }
+
+    override suspend fun setCustomFontName(name: String) {
+        sp.edit().putString("sp_custom_font_name", name).apply()
+    }
+
+    override suspend fun setLaunchRippleEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_launch_ripple_enabled", enabled).apply()
+    }
+
+    override suspend fun setMotionBlurEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_motion_blur_enabled", enabled).apply()
+    }
+
+    override suspend fun setMotionBlurScale(scale: Float) {
+        sp.edit().putFloat("sp_motion_blur_scale", scale).apply()
+    }
+
+    override suspend fun setLiquidGlassUnlocked(unlocked: Boolean) {
+        sp.edit().putBoolean("sp_liquid_glass_unlocked", unlocked).apply()
+    }
+
+    override suspend fun setLiquidGlassEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_liquid_glass_enabled", enabled).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setLiquidGlassAlpha(alpha: Float) {
+        sp.edit().putFloat("sp_liquid_glass_alpha", alpha).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setLiquidGlassSheen(sheen: Float) {
+        sp.edit().putFloat("sp_liquid_glass_sheen", sheen).apply()
+        com.petal.browser.widget.glance.PetalSearchGlanceWidgetUpdater.refresh(application)
+    }
+
+    override suspend fun setLiquidGlassTint(tint: String) {
+        sp.edit().putString("sp_liquid_glass_tint", tint).apply()
+    }
+
+    override suspend fun setLiquidGlassContainments(enabled: Boolean) {
+        sp.edit().putBoolean("sp_liquid_glass_containments", enabled).apply()
+    }
+
+    override suspend fun setLiquidGlassBottomNav(enabled: Boolean) {
+        sp.edit().putBoolean("sp_liquid_glass_bottom_nav", enabled).apply()
+    }
+
+    override suspend fun setLiquidGlassAddressBar(enabled: Boolean) {
+        sp.edit().putBoolean("sp_liquid_glass_address_bar", enabled).apply()
+    }
+
+    override suspend fun setLiquidGlassOverflowBlurBg(enabled: Boolean) {
+        sp.edit().putBoolean("sp_overflow_menu_blur_bg", enabled).apply()
+    }
+
+    override suspend fun setLiquidGlassBgMode(mode: String) {
+        sp.edit().putString("sp_liquid_glass_bg_mode", mode).apply()
+    }
+
+    override suspend fun setLiquidGlassBgImageUri(uri: String) {
+        sp.edit().putString("sp_liquid_glass_bg_image_uri", uri).apply()
+    }
+
+    override suspend fun setLiquidGlassBgDim(dim: Float) {
+        sp.edit().putFloat("sp_liquid_glass_bg_dim", dim).apply()
+    }
+
+    override suspend fun setLiquidGlassBgBlur(blur: Float) {
+        sp.edit().putFloat("sp_liquid_glass_bg_blur", blur).apply()
+    }
+
+    override suspend fun setSearchEngineIndex(index: String) {
+        // The Compose search-engine selector is authoritative. Disable the legacy
+        // single custom-engine switch when the user explicitly selects a provider.
+        sp.edit().putString("sp_search_engine", index).putBoolean("searchEngineSwitch", false).apply()
+    }
+
+    override suspend fun setHomepageType(type: String) {
+        sp.edit().putString("sp_home_type", type).apply()
+    }
+
+    override suspend fun setCustomHomepageUrl(url: String) {
+        sp.edit().putString("sp_custom_homepage_url", url).apply()
+    }
+
+    override suspend fun setBackgroundPlay(enabled: Boolean) {
+        sp.edit().putBoolean("sp_background_play", enabled).apply()
+    }
+
+    override suspend fun setAutoPip(enabled: Boolean) {
+        sp.edit().putBoolean("sp_auto_pip", enabled).apply()
+    }
+
+    override suspend fun setForceDarkMode(enabled: Boolean) {
+        sp.edit().putBoolean("sp_force_dark_mode", enabled).apply()
+    }
+
+    override suspend fun setEnableLiveSuggestions(enabled: Boolean) {
+        sp.edit().putBoolean("sp_enable_live_suggestions", enabled).apply()
+    }
+
+    override suspend fun setShowSearchEngineSelectorInOmnibox(enabled: Boolean) {
+        sp.edit().putBoolean("sp_show_search_engine_selector_in_omnibox", enabled).apply()
+    }
+
+    override suspend fun setAdBlockEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_ad_block", enabled)
+            .putBoolean("profileStandard_adBlock", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setBlockThirdPartyCookies(enabled: Boolean) {
+        sp.edit().putBoolean("sp_block_third_party_cookies", enabled)
+            .putBoolean("profileStandard_cookiesThirdParty", !enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setTotalCookieProtection(enabled: Boolean) {
+        sp.edit().putBoolean("sp_total_cookie_protection", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setCookieBannerAutoReject(enabled: Boolean) {
+        sp.edit().putBoolean("sp_cookie_banner_auto_reject", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setEtpStrict(enabled: Boolean) {
+        sp.edit().putBoolean("sp_etp_strict", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setBiometricTabLock(enabled: Boolean) {
+        sp.edit().putBoolean("sp_biometric_incognito_tab_lock", enabled).apply()
+    }
+
+    override suspend fun setSessionPartitioning(enabled: Boolean) {
+        sp.edit().putBoolean("sp_session_partitioning", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setTorPrivateWindow(enabled: Boolean) {
+        sp.edit().putBoolean("sp_tor_private_window", enabled).apply()
+    }
+
+    override suspend fun setFingerprintProtection(enabled: Boolean) {
+        sp.edit().putBoolean("sp_fingerprint_protection", enabled)
+            .putBoolean("profileStandard_fingerPrintProtection", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setWebrtcProtection(enabled: Boolean) {
+        sp.edit().putBoolean("sp_webrtc_protection", enabled)
+            .putBoolean("profileStandard_webrtcProtection", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setDntGpc(enabled: Boolean) {
+        sp.edit().putBoolean("sp_dnt_gpc", enabled)
+            .putBoolean("profileStandard_dnt", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setTrimReferrers(enabled: Boolean) {
+        sp.edit().putBoolean("sp_trim_referrers", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setWebauthnEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_webauthn_enabled", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setHttpsOnly(enabled: Boolean) {
+        sp.edit().putBoolean("sp_https_only", enabled)
+            .putBoolean("profileStandard_httpsOnly", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setJavaScriptEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_javascript", enabled)
+            .putBoolean("profileStandard_javascript", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setBlockPopups(enabled: Boolean) {
+        sp.edit().putBoolean("sp_block_popups", enabled)
+            .putBoolean("profileStandard_javascriptPopUp", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setOpenRedirectsInBackground(enabled: Boolean) {
+        sp.edit().putBoolean("sp_open_redirects_in_background", enabled).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setPrivateDnsMode(mode: String) {
+        sp.edit().putString("sp_private_dns_mode", mode).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setCustomDohUrl(url: String) {
+        sp.edit().putString("sp_custom_doh_url", url).apply()
+        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+    }
+
+    override suspend fun setTouchHaptics(enabled: Boolean) {
+        sp.edit().putBoolean("sp_touch_haptics", enabled).apply()
+    }
+
+    override suspend fun setScrollHaptics(enabled: Boolean) {
+        sp.edit().putBoolean("sp_scroll_haptics", enabled).apply()
+    }
+
+    override suspend fun setPredictiveBack(enabled: Boolean) {
+        PetalPredictiveJunction.setPredictiveBackEnabled(sp, enabled)
+    }
+
+    override suspend fun setDepthBlur(enabled: Boolean) {
+        PetalPredictiveJunction.setDepthBlurEnabled(sp, enabled)
+    }
+
+    override suspend fun setFontSizeScale(scale: Float) {
+        sp.edit().putFloat("sp_font_size_scale", scale).apply()
+    }
+
+    override suspend fun setZoomLevelScale(scale: Float) {
+        sp.edit().putFloat("sp_zoom_level_scale", scale).apply()
+    }
+
+    override suspend fun setForceZoom(enabled: Boolean) {
+        sp.edit().putBoolean("sp_force_enable_zoom", enabled).apply()
+    }
+
+    override suspend fun setReaderModeDetection(enabled: Boolean) {
+        sp.edit().putBoolean("sp_reader_mode_detection", enabled).apply()
+    }
+
+    override suspend fun setCaretBrowsing(enabled: Boolean) {
+        sp.edit().putBoolean("sp_caret_browsing", enabled).apply()
+    }
+
+    override suspend fun setTouchpadSwipeNav(enabled: Boolean) {
+        sp.edit().putBoolean("sp_touchpad_swipe_nav", enabled).apply()
+    }
+
+    override suspend fun setAddressBarSwipeTabs(enabled: Boolean) {
+        sp.edit().putBoolean("sp_address_bar_swipe_tabs", enabled).apply()
+    }
+
+    override suspend fun setAddressBarQuickActions(enabled: Boolean) {
+        sp.edit().putBoolean("sp_address_bar_quick_actions", enabled).apply()
+    }
+
+    override suspend fun setAddressBarHeight(height: String) {
+        sp.edit().putString("sp_address_bar_height", height).apply()
+    }
+
+    override suspend fun setAddressBarAction(action: String) {
+        sp.edit().putString("sp_address_bar_action", action).apply()
+    }
+
+    override suspend fun setAppLanguage(language: String) {
+        sp.edit().putString("sp_app_language", language).apply()
+    }
+
+    override suspend fun setMatchWebsiteLanguage(enabled: Boolean) {
+        sp.edit().putBoolean("sp_match_website_language", enabled).apply()
+    }
+
+    override suspend fun setAddressBarPosition(position: String) {
+        sp.edit().putString("sp_address_bar_position", position).apply()
+    }
+
+    override suspend fun setAppLockEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_app_lock_enabled", enabled).apply()
+    }
+
+    override suspend fun setAppLockPasscode(passcode: String) {
+        sp.edit().putString("sp_app_lock_passcode", passcode).apply()
+    }
+
+    override suspend fun setDoubleBackExit(enabled: Boolean) {
+        sp.edit().putBoolean("sp_double_back_exit", enabled).apply()
+    }
+
+    override suspend fun setAutoOpenApps(enabled: Boolean) {
+        sp.edit().putBoolean("sp_auto_open_apps", enabled).apply()
+    }
+
+    override suspend fun setCustomTabsEnabled(enabled: Boolean) {
+        sp.edit().putBoolean("sp_custom_tabs_enabled", enabled).apply()
+    }
+
+    override suspend fun setCustomTabsEtp(enabled: Boolean) {
+        sp.edit().putBoolean("sp_custom_tabs_etp", enabled).apply()
+    }
+
+    override suspend fun setCheckUpdateOnLaunch(enabled: Boolean) {
+        sp.edit().putBoolean("sp_check_update_on_launch", enabled).apply()
+    }
+
+    override suspend fun setTorrentEngineMode(mode: String) {
+        sp.edit().putString("sp_torrent_engine", mode).apply()
+    }
+
+    override suspend fun setDownloadManagerMode(mode: String) {
+        sp.edit().putString(com.petal.browser.unit.ExternalDownloadManagerHelper.PREF_DOWNLOAD_MANAGER_MODE, mode).apply()
+    }
+
+    override suspend fun setConfirmDownloadDelete(enabled: Boolean) {
+        sp.edit().putBoolean("sp_confirm_download_delete", enabled).apply()
+    }
+
+    override suspend fun setDeleteDownloadFile(enabled: Boolean) {
+        sp.edit().putBoolean("sp_delete_download_file", enabled).apply()
+    }
+
+    override suspend fun setAutoPreviewDownloadedImages(enabled: Boolean) {
+        sp.edit().putBoolean("sp_auto_preview_downloaded_images", enabled).apply()
+    }
+
+    override suspend fun setLiveUpdates(enabled: Boolean) {
+        sp.edit().putBoolean("sp_live_updates", enabled).apply()
+    }
+
+    override suspend fun setAppleDuoEnabled(enabled: Boolean) {
+        sp.edit().putBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_ENABLED, enabled).apply()
+    }
+
+    override suspend fun setAppleDuoWebsites(enabled: Boolean) {
+        sp.edit().putBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_WEBSITES, enabled).apply()
+    }
+
+    override suspend fun setAppleDuoUseSensor(enabled: Boolean) {
+        sp.edit().putBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_USE_SENSOR, enabled).apply()
+    }
+
+    override suspend fun setAppleDuoManualTilt(tilt: Float) {
+        sp.edit().putFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_MANUAL_TILT, tilt).apply()
+    }
+
+    override suspend fun setAppleDuoAutoRecenter(enabled: Boolean) {
+        sp.edit().putBoolean(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_AUTO_RECENTER, enabled).apply()
+    }
+
+    override suspend fun setAppleDuoEyeDistance(distance: Float) {
+        sp.edit().putFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_EYE_DISTANCE, distance).apply()
+    }
+
+    override suspend fun setAppleDuoBlurSpread(spread: Float) {
+        sp.edit().putFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_BLUR_SPREAD, spread).apply()
+    }
+
+    override suspend fun setAppleDuoDarkening(darkening: Float) {
+        sp.edit().putFloat(com.petal.browser.appleduo.AppleDuoManager.PREF_KEY_DARKENING, darkening).apply()
+    }
+}

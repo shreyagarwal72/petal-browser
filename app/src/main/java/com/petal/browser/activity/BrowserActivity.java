@@ -1,0 +1,7294 @@
+package com.petal.browser.activity;
+
+import static android.content.ContentValues.TAG;
+import static android.os.Build.VERSION.SDK_INT;
+import static android.view.View.GONE;
+import static android.view.View.INVISIBLE;
+import static android.view.View.VISIBLE;
+import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+
+import android.Manifest;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.graphics.Outline;
+import android.view.ViewOutlineProvider;
+import android.view.animation.PathInterpolator;
+import androidx.activity.BackEventCompat;
+import androidx.dynamicanimation.animation.DynamicAnimation;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
+import android.annotation.SuppressLint;
+import android.app.Activity;
+import androidx.appcompat.app.AppCompatDelegate;
+import android.app.Dialog;
+import android.app.DownloadManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.SearchManager;
+import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import androidx.activity.OnBackPressedCallback;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.view.LayoutInflater;
+import android.widget.PopupWindow;
+import android.media.MediaPlayer;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.print.PrintAttributes;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
+import android.provider.MediaStore;
+import android.provider.OpenableColumns;
+import android.speech.RecognizerIntent;
+import android.text.Editable;
+import android.text.TextWatcher;
+
+import com.petal.browser.compose.downloads.PetalDownloadBridge;
+import com.petal.browser.compose.home.PetalComposeBridge;
+import com.petal.browser.compose.home.PetalHomeActionHandler;
+import android.content.ServiceConnection;
+import android.os.IBinder;
+import android.util.Log;
+import android.util.TypedValue;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.webkit.ValueCallback;
+import android.webkit.WebBackForwardList;
+import android.webkit.WebChromeClient;
+import android.webkit.WebHistoryItem;
+import android.webkit.WebView;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.GridView;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.VideoView;
+
+import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.webkit.WebViewFeature;
+
+import com.google.android.material.badge.BadgeDrawable;
+import com.google.android.material.badge.BadgeUtils;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.navigation.NavigationBarView;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import org.json.JSONException;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.petal.browser.R;
+import com.petal.browser.browser.AlbumController;
+import com.petal.browser.browser.BrowserContainer;
+import com.petal.browser.browser.BrowserController;
+import com.petal.browser.browser.DataURIParser;
+import com.petal.browser.browser.List_standard;
+import com.petal.browser.database.FaviconHelper;
+import com.petal.browser.database.Record;
+import com.petal.browser.database.RecordAction;
+import com.petal.browser.dialogs.CustomRedirectsDialog;
+import com.petal.browser.objects.CustomRedirect;
+import com.petal.browser.objects.CustomSearchesHelper;
+import com.petal.browser.unit.BrowserUnit;
+import com.petal.browser.unit.HelperUnit;
+import com.petal.browser.unit.RecordUnit;
+import com.petal.browser.view.AdapterCustomSearches;
+import com.petal.browser.view.AdapterMenu;
+import com.petal.browser.view.GridAdapter;
+import com.petal.browser.view.GridItem;
+import com.petal.browser.view.MenuItem;
+import com.petal.browser.view.PetalToast;
+import com.petal.browser.view.AdapterRecord;
+import com.petal.browser.view.SwipeTouchListener;
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
+public class BrowserActivity extends AppCompatActivity implements BrowserController {
+
+    // Menus
+    public static final int INPUT_FILE_REQUEST_CODE = 1;
+    public AdapterRecord adapter;
+    public ImageButton fab_overview;
+    public ListView listView;
+
+    // Views
+    public TextInputEditText search_input;
+    public TextView appBar_title;
+    public View findInPageCompose;
+    public boolean isFindInPageShowing = false;
+    public String findInPageQuery = "";
+    @Deprecated
+    public static com.petal.browser.view.PetalGeckoView activeGeckoView = null;
+
+    public View customView;
+    public WebChromeClient.CustomViewCallback customViewCallback;
+    public com.petal.browser.media.PetalVideoPlayerOverlayBridge videoOverlayBridge;
+    public VideoView videoView;
+    public boolean isMediaPlaying = false;
+    public FloatingActionButton fab_menu;
+    public BadgeDrawable badgeDrawable;
+
+    // Layouts
+    public LinearProgressIndicator progressBar;
+    public com.petal.browser.ui.components.PullToRefreshFrameLayout contentFrame;
+    public boolean isOverlayScreenShowing = false;
+    public boolean isCustomFullscreenState = false;
+    /**
+     * True while a Compose overlay that is attached directly to the window decor view (e.g.
+     * App Lock, via PetalAppLockBridge) owns the current back gesture. Unlike
+     * isOverlayScreenShowing, this overlay lives outside contentFrame, so it is tracked
+     * separately and must NOT be wired into performBackNavigation's isOverlayScreenShowing
+     * branch (that branch calls removeOverlayViews()/showAlbum(), which would be
+     * wrong here). It exists solely to stop the Activity-level predictive back animator from
+     * running underneath the Compose-level one.
+     */
+    public boolean isDecorOverlayShowing = false;
+    /**
+     * Optional action to run instead of showAlbum() when performBackNavigation exits an overlay
+     * screen. Used when child overlays need to return to their parent overlay screen.
+     * Must be set BEFORE presentComposeScreen() and cleared by performBackNavigation().
+     */
+    public Runnable pendingOverlayBackAction = null;
+    private com.petal.browser.browser.PetalBrowserFeatures petalBrowserFeatures;
+    public LinearLayout tab_container;
+    public FrameLayout fullscreenHolder;
+    public com.petal.browser.compose.composable.PetalRefreshBarState refreshState = new com.petal.browser.compose.composable.PetalRefreshBarState();
+    public ListView list_search;
+    private android.animation.ValueAnimator contentPaddingAnimator = null;
+
+    // Others
+    public BottomNavigationView bottom_navigation;
+    public String overViewTab;
+    public Activity activity;
+    @SuppressLint("StaticFieldLeak")
+    public static Context context;
+    public SharedPreferences sp;
+    public List_standard listStandard;
+    public long newIcon;
+    public long filterBy;
+    public boolean filter;
+    public ValueCallback<Uri[]> filePathCallback = null;
+    public int statusBarTopInset = 0;
+    public AlbumController currentAlbumController = null;
+
+    public AlbumController getCurrentAlbumController() {
+        return currentAlbumController;
+    }
+
+    private com.petal.browser.browser.PetalTabViewController getActivePetalTabSurface() {
+        return currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController
+                ? (com.petal.browser.browser.PetalTabViewController) currentAlbumController : null;
+    }
+
+    public void observePetalTabSurface(com.petal.browser.browser.PetalTabViewController surface) {
+        surface.setOnBrowserStateChanged(state -> {
+            runOnUiThread(() -> {
+                if (currentAlbumController != surface) return;
+                String stateUrl = state.getUrl();
+                boolean isStateHome = isHomePage(stateUrl);
+                if (isStateHome != isPetalHomeSurfaceShowing) {
+                    showAlbum(surface, stateUrl);
+                    return;
+                }
+                updateAddressBar();
+                updateBackCallbackState();
+                updateOmniBox();
+                if (!isStateHome && Boolean.TRUE.equals(state.getLoading())) {
+                    updateProgress(Math.max(10, state.getProgress()));
+                } else {
+                    updateProgress(100);
+                }
+            });
+            return kotlin.Unit.INSTANCE;
+        });
+    }
+
+    private void navigateInCurrentTab(String url) {
+        if (currentAlbumController == null) {
+            addAlbum(getString(R.string.app_name), url, true);
+        } else {
+            showAlbum(currentAlbumController, url);
+        }
+    }
+
+    private void reloadCurrentBrowserTab() {
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).reload();
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reload();
+        } else if (activeGeckoView != null) {
+            activeGeckoView.reload();
+        }
+    }
+
+    public com.petal.browser.view.PetalGeckoView getGeckoView() {
+        return currentAlbumController instanceof com.petal.browser.view.PetalGeckoView ? (com.petal.browser.view.PetalGeckoView) currentAlbumController : null;
+    }
+
+    public void setCurrentAlbumController(AlbumController controller) {
+        this.currentAlbumController = controller;
+    }
+    public ValueCallback<Uri[]> mFilePathCallback;
+    public String mCameraPhotoPath = null;
+    public com.petal.browser.media.PetalMediaSessionService mediaService;
+    public boolean isMediaBound = false;
+    /**
+     * True during the very first onResume() that immediately follows onCreate().
+     * dispatchIntent() is called at the end of onCreate() (after all tabs are ready),
+     * so we must skip the redundant call in onResume() to avoid a double-dispatch
+     * or, worse, a no-op because setAction("") already cleared the intent action.
+     */
+    public boolean suppressResumeDispatch = false;
+    public boolean isAppLockLocked = false;
+    private boolean launchRippleTriggered = false;
+    /** True while the launch ripple is waiting to be fired from the splash-screen exit animation. */
+    private boolean splashRipplePending = false;
+
+    public static boolean isExternalOrWidgetLaunch(Intent intent) {
+        if (intent == null) return false;
+        if (intent.getBooleanExtra("open_downloads", false)) return true;
+        String action = intent.getAction();
+        if (action == null || action.isEmpty()) return false;
+        if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_SEARCH.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_AI_SEARCH.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_VOICE.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_LENS.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_SNAP_CAMERA.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_INCOGNITO.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_BOOKMARKS.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_DOWNLOADS.equals(action)
+                || com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_NEW_TAB.equals(action)) {
+            return true;
+        }
+        if (Intent.ACTION_VIEW.equals(action) || Intent.ACTION_SEND.equals(action)
+                || Intent.ACTION_WEB_SEARCH.equals(action) || Intent.ACTION_PROCESS_TEXT.equals(action)) {
+            return true;
+        }
+        return false;
+    }
+    /**
+     * A widget action (ACTION_OPEN_SEARCH / _AI_SEARCH / _VOICE) waiting to run once the
+     * window has genuine input focus. See {@link #runOrDeferPendingWidgetAction()}.
+     */
+    public com.petal.browser.media.PetalMediaBridge getActiveMediaBridge() {
+        try {
+            String playingTabId = com.petal.browser.engine.gecko.PetalEngineStore.getStore(this)
+                    .getState().getTabs().stream()
+                    .filter(tab -> tab.getMediaSessionState() != null
+                            && tab.getMediaSessionState().getController() != null)
+                    .map(mozilla.components.browser.state.state.TabSessionState::getId)
+                    .findFirst().orElse(null);
+            if (playingTabId != null) {
+                for (AlbumController controller : BrowserContainer.list()) {
+                    if (controller instanceof com.petal.browser.browser.PetalTabViewController
+                            && playingTabId.equals(((com.petal.browser.browser.PetalTabViewController) controller).getTabId())) {
+                        return ((com.petal.browser.browser.PetalTabViewController) controller).getMediaBridge();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            return ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).getMediaBridge();
+        }
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            return ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getMediaBridge();
+        }
+        return null;
+    }
+
+
+    private Runnable pendingWidgetAction = null;
+    private final ServiceConnection mediaConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            com.petal.browser.media.PetalMediaSessionService.LocalBinder binder = (com.petal.browser.media.PetalMediaSessionService.LocalBinder) service;
+            mediaService = binder.getService();
+            isMediaBound = true;
+            if (mediaService != null) {
+                mediaService.setMediaControlListener(new com.petal.browser.media.PetalMediaSessionService.MediaControlListener() {
+                    @Override
+                    public void onPlay() {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.playMedia();
+                        }
+                    }
+
+                    @Override
+                    public void onPause() {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.pauseMedia();
+                        }
+                    }
+
+                    @Override
+                    public void onStop() {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.pauseMedia();
+                        }
+                    }
+
+                    @Override
+                    public void onSeekTo(long positionMs) {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.seekMediaTo(positionMs);
+                        }
+                    }
+
+                    @Override
+                    public void onSpeedToggle(float newSpeed) {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.changeSpeed(newSpeed);
+                        }
+                    }
+
+                    @Override
+                    public void onMuteToggle() {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.toggleMute();
+                        }
+                    }
+
+                    @Override
+                    public void onSkip(int deltaSeconds) {
+                        com.petal.browser.media.PetalMediaBridge bridge = getActiveMediaBridge();
+                        if (bridge != null) {
+                            bridge.skip(deltaSeconds);
+                        }
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mediaService = null;
+            isMediaBound = false;
+        }
+    };
+
+    public static Context getAppContext() {
+        return context;
+    }
+
+    
+    public boolean canBrowserGoBack() {
+        com.petal.browser.browser.PetalTabViewController surface = getActivePetalTabSurface();
+        if (surface != null) return surface.canGoBack();
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            return ((com.petal.browser.view.PetalGeckoView) currentAlbumController).canGoBack();
+        }
+        return false;
+    }
+
+    @Deprecated
+    public boolean canNinjaGoBack() {
+        return canBrowserGoBack();
+    }
+
+
+    public void handleBackPress() {
+        runOnUiThread(this::performBackNavigation);
+    }
+    public AlertDialog dialogOverview;
+
+    private AlertDialog dialog_overflow;
+    private AlertDialog dialogCustomSearches;
+    private CardView appBar;
+    private View contentView;
+
+    // ---------------------------------------------------------------------
+    // Predictive back (native window) for the primary browsing surface.
+    // Ported from RvSystem-Monitor's aospSharedAxisPopExit transition
+    // (ui/navigation/Transitions.kt): a plain full-width slide + scale-down
+    // to 0.85, no fade, no preview underlay, no corner-radius clipping. This
+    // keeps the native browsing surface's gesture feel identical to every
+    // Compose screen in the app (Settings, Bookmarks, History, etc.), which
+    // now use the same values via PetalScreenWrapper.
+    // ---------------------------------------------------------------------
+    private View predictiveBackRoot;
+    private OnBackPressedCallback browserBackCallback;
+    private boolean predictiveBackGestureActive = false;
+    private float predictiveBackProgress = 0f;
+    // Which edge the in-flight gesture started from - must be remembered so the
+    // cancel/commit settle animation keeps sliding the same direction the finger
+    // was already moving in. Previously this was hardcoded to EDGE_LEFT in the
+    // settle animator, which snapped the root view to the wrong side (a visible
+    // direction-reversal glitch) whenever the user swiped from the right edge.
+    private int predictiveBackSwipeEdge = BackEventCompat.EDGE_LEFT;
+    private ValueAnimator predictiveBackSettleAnimator;
+    // Mirrors aospSharedAxisPopExit's targetScale = 0.85f
+    private static final float PB_MAX_SCALE_DELTA = 0.15f;
+    // Mirrors RvSystem's M3EmphasizedEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    private final PathInterpolator predictiveBackEasing = new PathInterpolator(0.2f, 0f, 0f, 1f);
+    // Mirrors RvSystem's AOSP_TRANSITION_DURATION
+    private static final int PB_TRANSITION_DURATION_MS = 350;
+    /**
+     * Set to true in handleOnBackStarted when isOverlayScreenShowing is true,
+     * so handleOnBackPressed knows the gesture was started over an overlay screen.
+     * The Compose PredictiveBackHandler inside the overlay will animate its own exit
+     * and call onBack() which runs showAlbum() (clearing isOverlayScreenShowing).
+     * handleOnBackPressed must NOT call performBackNavigation() in this case —
+     * it must only call resetPredictiveBackVisuals() to clear the root-view transform.
+     */
+    private boolean predictiveBackStartedOnOverlay = false;
+
+    public AlbumController nextAlbumController(boolean next) {
+        if (BrowserContainer.size() <= 1) return currentAlbumController;
+        List<AlbumController> list = BrowserContainer.list();
+        int index = list.indexOf(currentAlbumController);
+        if (next) {
+            index++;
+            if (index >= list.size()) index = 0; }
+        else {
+            index--;
+            if (index < 0) index = list.size() - 1; }
+        return list.get(index);
+    }
+
+    private class VideoCompletionListener implements MediaPlayer.OnCompletionListener, MediaPlayer.OnErrorListener {
+        @Override
+        public boolean onError(MediaPlayer mp, int what, int extra) {
+            return false;
+        }
+        @Override
+        public void onCompletion(MediaPlayer mp) {
+            onHideCustomView();
+        }
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    @Override
+    public void attachBaseContext(Context newBase) {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(newBase);
+        String themeConfig = sp.getString("sp_theme_config", "FOLLOW_SYSTEM");
+        if ("LIGHT".equals(themeConfig)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if ("DARK".equals(themeConfig)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
+
+        super.attachBaseContext(HelperUnit.applyLanguage(newBase));
+    }
+
+    /**
+     * Custom splash exit: fires the launch ripple from the splash icon's centre while the icon scales up and the
+     * splash fades away, so the splash dissolves into the ripple instead of cutting to the app.
+     */
+    private void playSplashExitWithRipple(androidx.core.splashscreen.SplashScreenViewProvider provider) {
+        try {
+            playSplashExitWithRippleInternal(provider);
+        } catch (Throwable t) {
+            // If anything in the custom exit animation throws, the splash view would otherwise stay on
+            // top of the app forever and the window would look blank/black. Always drop it.
+            Log.w(TAG, "Splash exit animation failed; removing splash immediately", t);
+            splashRipplePending = false;
+            try { provider.remove(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private void playSplashExitWithRippleInternal(androidx.core.splashscreen.SplashScreenViewProvider provider) {
+        final View splashView = provider.getView();
+        // Android 16 can hand back a splash provider whose icon view has already
+        // been detached during the exit callback. Treat it as unavailable and
+        // let the ripple fall back to the window centre instead of crashing.
+        View iconView;
+        try {
+            iconView = provider.getIconView();
+        } catch (RuntimeException ignored) {
+            iconView = null;
+        }
+        final boolean fireRipple = splashRipplePending && !isFinishing() && !isDestroyed();
+        splashRipplePending = false;
+
+        if (fireRipple) {
+            View decor = getWindow().getDecorView();
+            if (iconView != null && iconView.getWidth() > 0) {
+                int[] loc = new int[2];
+                iconView.getLocationInWindow(loc);
+                float cx = loc[0] + iconView.getWidth() / 2f;
+                float cy = loc[1] + iconView.getHeight() / 2f;
+                com.petal.browser.ui.layout.LiquidRippleEffect.trigger(decor, cx, cy);
+            } else {
+                com.petal.browser.ui.layout.LiquidRippleEffect.trigger(decor);
+            }
+        }
+
+        final long duration = fireRipple ? 450L : 200L;
+        final boolean[] removed = {false};
+        final Runnable removeOnce = () -> {
+            if (!removed[0]) {
+                removed[0] = true;
+                provider.remove();
+            }
+        };
+        if (fireRipple && iconView != null) {
+            iconView.animate()
+                    .scaleX(1.25f)
+                    .scaleY(1.25f)
+                    .setDuration(duration)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .start();
+        }
+        splashView.animate()
+                .alpha(0f)
+                .setDuration(duration)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                .withEndAction(removeOnce)
+                .start();
+        // Safety net so the splash can never get stuck if the animation is cancelled.
+        splashView.postDelayed(removeOnce, duration + 400L);
+    }
+
+    /** Restores input to the active browser surface after a decor-level transient UI closes. */
+    public void restoreBrowserInputFocus() {
+        try {
+            View decor = getWindow().getDecorView();
+            decor.setFocusableInTouchMode(true);
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.view.PetalGeckoView gecko = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                gecko.setVisibility(View.VISIBLE);
+                gecko.onResume();
+                gecko.requestFocus();
+            } else if (currentAlbumController != null && currentAlbumController.getAlbumView() != null) {
+                currentAlbumController.getAlbumView().setVisibility(View.VISIBLE);
+                currentAlbumController.getAlbumView().requestFocus();
+            }
+            if (contentFrame != null) {
+                contentFrame.setVisibility(View.VISIBLE);
+                contentFrame.requestFocus();
+            }
+            decor.requestFocus();
+        } catch (Throwable t) {
+            Log.d(TAG, "Failed to restore browser input focus", t);
+        }
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        final androidx.core.splashscreen.SplashScreen splashScreen =
+                androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
+        super.onCreate(savedInstanceState);
+        context = this;
+        activity = this;
+        com.petal.browser.unit.PetalHighRefreshRateManager.applyHighRefreshRate(this);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                NotificationChannel channelDownloads = new NotificationChannel("download_channel", "Downloads", NotificationManager.IMPORTANCE_HIGH);
+                channelDownloads.setDescription("Live real-time alerts for active downloads");
+                nm.createNotificationChannel(channelDownloads);
+                NotificationChannel channelGeneral = new NotificationChannel("1", "General", NotificationManager.IMPORTANCE_DEFAULT);
+                nm.createNotificationChannel(channelGeneral);
+            }
+        }
+        
+        sp = PreferenceManager.getDefaultSharedPreferences(context);
+        try {
+            com.petal.browser.profile.PetalProfileManager.INSTANCE.init(this);
+            com.petal.browser.wallpaper.PetalWallpaperManager.INSTANCE.init(this);
+        } catch (Throwable ignored) {}
+
+        // Blend the splash exit with the launch ripple: on a fresh launch the splash icon scales/fades out while
+        // the liquid ripple radiates from the icon's centre. Uses the same conditions as the launch ripple further
+        // below, which is skipped once this is armed. A timed fallback covers launches where no splash is shown.
+        if (savedInstanceState == null
+                && sp.getBoolean("sp_launch_ripple_enabled", true)
+                && !sp.getBoolean("sp_app_lock_enabled", false)
+                && !isExternalOrWidgetLaunch(getIntent())) {
+            launchRippleTriggered = true;
+            splashRipplePending = true;
+            splashScreen.setOnExitAnimationListener(this::playSplashExitWithRipple);
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (splashRipplePending && !isFinishing() && !isDestroyed()) {
+                    splashRipplePending = false;
+                    com.petal.browser.ui.layout.LiquidRippleEffect.trigger(getWindow().getDecorView());
+                }
+            }, 2500L);
+        }
+
+        com.petal.browser.unit.PetalSessionHistoryManager.initSession();
+        com.petal.browser.extensions.PetalExtensionManager.attach(context);
+        com.petal.browser.extensions.PetalBuiltInExtensionManager.installAll(context);
+
+        // Wire the extension-popup listener so browser/page-action popups (uBlock Origin,
+        // Bitwarden, etc.) are shown as a full-screen overlay when the extension's toolbar
+        // button is tapped. Without this the popup session is created but never displayed.
+        com.petal.browser.extensions.PetalExtensionManager.setPopupRequestListener(popup -> {
+            runOnUiThread(() -> {
+                try {
+                    final boolean[] popupCleanedUp = {false};
+                    final Runnable cleanupPopup = () -> {
+                        if (popupCleanedUp[0]) return;
+                        popupCleanedUp[0] = true;
+                        android.view.ViewGroup root = (android.view.ViewGroup) getWindow().getDecorView();
+                        android.view.View overlay = root.findViewWithTag("ext_popup_overlay");
+                        if (overlay != null) {
+                            overlay.clearFocus();
+                            root.removeView(overlay);
+                        }
+                        com.petal.browser.extensions.PetalExtensionManager.dismissPopup();
+                        // Explicitly reactivate the current browser tab session
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                            try {
+                                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).activate();
+                            } catch (Throwable ignored) {}
+                        }
+                        // Post focus restoration to ensure window focus queue is idle
+                        root.post(() -> restoreBrowserInputFocus());
+                    };
+                    android.view.View popupView =
+                        com.petal.browser.compose.extensions.PetalExtensionsBridge.createPopupView(
+                            this, popup,
+                            () -> {
+                                runOnUiThread(cleanupPopup);
+                                return kotlin.Unit.INSTANCE;
+                            }
+                        );
+                    popupView.setTag("ext_popup_overlay");
+                    android.view.ViewGroup rootDecor = (android.view.ViewGroup) getWindow().getDecorView();
+                    // Remove any stale popup overlay first
+                    android.view.View old = rootDecor.findViewWithTag("ext_popup_overlay");
+                    if (old != null) {
+                        old.clearFocus();
+                        rootDecor.removeView(old);
+                    }
+                    android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                    );
+                    rootDecor.addView(popupView, lp);
+                    popupView.requestFocus();
+                } catch (Exception e) {
+                    android.util.Log.e("BrowserActivity", "Failed to show extension popup overlay", e);
+                }
+            });
+        });
+
+        try {
+            Intent mediaServiceIntent = new Intent(this, com.petal.browser.media.PetalMediaSessionService.class);
+            bindService(mediaServiceIntent, mediaConnection, Context.BIND_AUTO_CREATE);
+        } catch (Exception e) {
+            Log.e(TAG, "Error binding PetalMediaSessionService", e);
+        }
+
+        if (sp.getBoolean("sp_app_lock_enabled", false)) {
+            isAppLockLocked = true;
+            String lockType = sp.getString("sp_app_lock_type", "FINGERPRINT");
+            if ("FINGERPRINT".equals(lockType) || sp.getBoolean("sp_biometric_lock", false)) {
+                com.petal.browser.security.BiometricLockManager.authenticate(
+                    this,
+                    "Petal Browser Locked",
+                    "Authenticate using biometric or PIN to continue",
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            // Success: user authenticated
+                            isAppLockLocked = false;
+                            launchRippleTriggered = true;
+                            com.petal.browser.ui.layout.LiquidRippleEffect.trigger(getWindow().getDecorView());
+                            runOrDeferPendingWidgetAction();
+                        }
+                    },
+                    new java.util.function.Consumer<String>() {
+                        @Override
+                        public void accept(String error) {
+                            PetalToast.show(BrowserActivity.this, "Authentication required: " + error, Toast.LENGTH_SHORT);
+                            finish();
+                        }
+                    }
+                );
+            } else if ("PASSWORD".equals(lockType)) {
+                com.petal.browser.compose.security.PetalAppLockBridge.showLockOverlay(
+                    this,
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            // Success: password unlocked
+                            isAppLockLocked = false;
+                            launchRippleTriggered = true;
+                            com.petal.browser.ui.layout.LiquidRippleEffect.trigger(getWindow().getDecorView());
+                            runOrDeferPendingWidgetAction();
+                        }
+                    },
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            finish();
+                        }
+                    }
+                );
+            }
+        }
+
+        try {
+            com.petal.browser.browser.PetalAdBlockEngine.ensureInitialized(context);
+        } catch (Exception ignored) {}
+        HelperUnit.initTheme(activity);
+        com.petal.browser.account.GoogleAccountManager.INSTANCE.init(this);
+        com.petal.browser.account.mozilla.FxAccountManager.Companion.getInstance().initialize(this);
+        com.petal.browser.unit.BackupUnit.performAutoVersionBackup(this);
+
+        if (sp.getBoolean("sp_screenOn", false)) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (sp.getBoolean("sp_standard_restart", false)) sp.edit().putString("profile", "profileStandard").apply();
+
+        sp.edit()
+                .putInt("restart_changed", 0)
+                .putBoolean("pdf_create", false)
+                .putBoolean("show_overview", true)
+                .putString("openBackground_dialog", "show").apply();
+
+        if (Objects.requireNonNull(sp.getString("start_tab", "3")).equals("4")) {
+            overViewTab = getString(R.string.album_title_history);
+        } else {
+            overViewTab = getString(R.string.album_title_bookmarks);
+        }
+
+        EdgeToEdge.enable(this);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+
+        browserBackCallback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackStarted(@NonNull androidx.activity.BackEventCompat backEvent) {
+                // Web content (especially GeckoView) may update gesture-exclusion rects
+                // while a page is loading. Clear them immediately when Android starts the
+                // predictive-back gesture so both websites and the Petal homepage receive it.
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetGestureExclusionRects();
+                }
+
+                predictiveBackStartedOnOverlay = isOverlayScreenShowing && !isDecorOverlayShowing && hasNonTabTopContent();
+                if (predictiveBackStartedOnOverlay) {
+                    predictiveBackSwipeEdge = backEvent.getSwipeEdge();
+                    // Compose owns the overlay animation; do not also transform the Activity root.
+                }
+            }
+
+            @Override
+            public void handleOnBackProgressed(@NonNull androidx.activity.BackEventCompat backEvent) {
+                // Compose PredictiveBackHandler owns overlay progress; Activity root remains stable.
+            }
+
+            @Override
+            public void handleOnBackPressed() {
+                com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                boolean overlayDismissedByGesture = predictiveBackStartedOnOverlay;
+                predictiveBackStartedOnOverlay = false;
+
+                // Check if an actual overlay screen is still showing in contentFrame
+                // Tab surfaces are retained (hidden, not detached), so the child at index 0 may be
+                // a hidden tab; the topmost *visible* child is what the user is actually seeing.
+                View topContent = getTopContentChild();
+                boolean isBrowserView = isTabSurface(topContent);
+                boolean isHomeComposeView = (topContent instanceof androidx.compose.ui.platform.ComposeView) && isPetalHomeSurfaceShowing;
+                boolean hasOverlayView = isOverlayScreenShowing || (topContent != null && !isBrowserView && !isHomeComposeView);
+
+                if (overlayDismissedByGesture && !hasOverlayView) {
+                    resetPredictiveBackVisuals();
+                } else {
+                    performBackNavigation();
+                    resetPredictiveBackVisuals();
+                }
+            }
+
+            @Override
+            public void handleOnBackCancelled() {
+                boolean wasOverlay = predictiveBackStartedOnOverlay;
+                predictiveBackStartedOnOverlay = false;
+                if (wasOverlay) {
+                    settlePredictiveBackGesture(false);
+                } else {
+                    resetPredictiveBackVisuals();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, browserBackCallback);
+        setContentView(R.layout.activity_main);
+        contentFrame = findViewById(R.id.main_content);
+        // Root cause of "back gesture does nothing on every website":
+        // every Compose overlay (omnibox, settings, history, tab switcher, ...) is mounted in
+        // contentFrame with ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed and a
+        // PetalPredictiveBackSurface / BackHandler inside. That strategy keeps the composition
+        // alive after the view is removed, so the overlay's OnBackPressedCallback stays
+        // registered on the Activity dispatcher with HIGHER priority than browserBackCallback
+        // and silently swallows every later back gesture (its onBack just re-shows the current
+        // page, which looks like nothing happened). Dispose the composition the moment the
+        // overlay leaves contentFrame so its back callback is unregistered.
+        contentFrame.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
+            @Override
+            public void onChildViewAdded(View parent, View child) { }
+
+            @Override
+            public void onChildViewRemoved(View parent, View child) {
+                disposeRemovedComposeOverlay(child);
+            }
+        });
+        // Never allow browser content to reserve the system back edges.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().getDecorView().post(() -> {
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetGestureExclusionRects();
+                }
+
+            });
+        }
+        predictiveBackRoot = findViewById(R.id.main);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            boolean isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+            int keyboardHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            // Retain transparent background on activity root so webpage content and spacing
+            // remain visible behind floating navigation bars without any black overlay strip.
+            WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+            String themeConfig = sp.getString("sp_theme_config", "FOLLOW_SYSTEM");
+            boolean isDarkTheme;
+            if ("DARK".equalsIgnoreCase(themeConfig)) {
+                isDarkTheme = true;
+            } else if ("LIGHT".equalsIgnoreCase(themeConfig)) {
+                isDarkTheme = false;
+            } else {
+                int nightMode = getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+                isDarkTheme = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+            }
+            controller.setAppearanceLightStatusBars(!isDarkTheme);
+            controller.setAppearanceLightNavigationBars(!isDarkTheme);
+
+            statusBarTopInset = systemBars.top;
+            navigationBarBottomInset = systemBars.bottom;
+            imeVisibleForBars = isKeyboardVisible;
+            v.setPadding(systemBars.left, 0, systemBars.right, isKeyboardVisible ? keyboardHeight : 0);
+
+            View addressBar = findViewById(R.id.compose_address_bar);
+            if (addressBar != null) {
+                boolean bottomAddressBar = "BOTTOM".equalsIgnoreCase(sp.getString("sp_address_bar_position", "TOP"));
+                addressBar.setPadding(0, bottomAddressBar ? 0 : systemBars.top, 0, 0);
+                addressBar.post(this::applyAddressBarPosition);
+            }
+
+            View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+            if (bottomNavContainer != null) {
+                bottomNavContainer.setPadding(0, 0, 0, 0);
+                if (isKeyboardVisible) {
+                    bottomNavContainer.setVisibility(View.GONE);
+                } else {
+                    applyBottomBarVisibilityForSurface();
+                }
+            }
+            return insets;
+        });
+
+        MaterialAlertDialogBuilder builderOverview = new MaterialAlertDialogBuilder(context);
+        View dialogViewOverview = View.inflate(context, R.layout.dialog_overview, null);
+        builderOverview.setView(dialogViewOverview);
+        dialogOverview = builderOverview.create();
+        bottom_navigation = dialogViewOverview.findViewById(R.id.bottom_navigation);
+        tab_container = dialogViewOverview.findViewById(R.id.listTabs);
+        HelperUnit.setupDialog(context, dialogOverview);
+
+        BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                try {
+                    String text = getString(R.string.app_done) + ". " + getString(R.string.menu_download) + "?";
+                    com.petal.browser.view.PetalToast.show(context, text, com.petal.browser.view.PetalToast.LENGTH_LONG, context.getString(R.string.app_ok), () -> showDownloads());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+
+        if (SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        }
+
+        initOmniBox();
+        initSearchOnSite();
+        initPullToRefresh();
+        initOverview();
+        hideSearch();
+        // NOTE: dispatchIntent() is deferred to AFTER tab session restoration below.
+        // Calling it here would run before activeGeckoView / currentAlbumController are
+        // initialized, so ACTION_VIEW would consume the intent (setAction("")) without
+        // actually loading the URL — causing the "only opens on 2nd launch" bug.
+
+        // Update check disabled (UpdateUnit removed)
+
+        // Tab Session Restoration & Rehydration
+        boolean tabsRestored = com.petal.browser.unit.PetalTabSessionManager.restoreSession(this);
+        // Keep Android Components' restore lifecycle in sync with Petal's richer
+        // tab/session restoration. Individual Gecko sessions are registered in
+        // BrowserStore as tabs are materialized; this action closes the restore
+        // phase for middleware and SessionStorage observers.
+        com.petal.browser.engine.gecko.PetalEngineStore.markRestoreComplete(this);
+
+        // If still no open tab, open default page
+        if (!tabsRestored && BrowserContainer.size() < 1) {
+            addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+        }
+
+        // Now that activeGeckoView and currentAlbumController are fully initialized,
+        // dispatch any incoming intent (e.g. ACTION_VIEW from an external link).
+        // We flag suppressResumeDispatch so onResume() won't double-dispatch it.
+        suppressResumeDispatch = true;
+        dispatchIntent(getIntent());
+
+        // Launch ripple effect: if enabled in settings, app lock is NOT enabled, and this is a normal app launch
+        // (not launched via notification, widget, or external URL view), trigger the fluid ripple animation.
+        boolean launchRipplePref = sp.getBoolean("sp_launch_ripple_enabled", true);
+        if (launchRipplePref && !sp.getBoolean("sp_app_lock_enabled", false) && !isExternalOrWidgetLaunch(getIntent()) && !launchRippleTriggered) {
+            launchRippleTriggered = true;
+            getWindow().getDecorView().post(() -> {
+                com.petal.browser.ui.layout.LiquidRippleEffect.trigger(getWindow().getDecorView());
+            });
+        }
+
+        // Welcome and Search Engine dialogs are displayed in onStart() to ensure the Activity window and decor view are fully attached.
+        updateBackCallbackState();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (petalBrowserFeatures == null) {
+            petalBrowserFeatures = new com.petal.browser.browser.PetalBrowserFeatures(this);
+        }
+        petalBrowserFeatures.start();
+        try {
+            com.petal.browser.account.GoogleAccountManager.INSTANCE.init(this);
+            com.petal.browser.account.mozilla.FxAccountManager.Companion.getInstance().initialize(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            com.petal.browser.ui.components.PetalCrashReportingBridge.showCrashRecoveryPromptIfNeeded(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (sp != null) {
+            int currentVersionCode = 0;
+            try {
+                currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            } catch (Exception ignored) {}
+
+            int lastAppVersionCode = sp.getInt("sp_last_app_version_code", 0);
+            boolean welcomeShown = sp.getBoolean("sp_welcome_shown", false);
+
+            if (lastAppVersionCode == 0 && !welcomeShown) {
+                // First install: record current version and mark welcome shown
+                sp.edit()
+                        .putInt("sp_last_app_version_code", currentVersionCode)
+                        .putBoolean("sp_welcome_shown", true)
+                        .apply();
+            } else if (lastAppVersionCode != 0 && currentVersionCode > lastAppVersionCode) {
+                // App updated: update saved version code and show one-time What's New popup
+                sp.edit().putInt("sp_last_app_version_code", currentVersionCode).apply();
+                com.petal.browser.ui.components.PetalUpdateSheetBridge.showWhatsNewUpdateDialog(this);
+            } else if (!welcomeShown) {
+                sp.edit().putBoolean("sp_welcome_shown", true).apply();
+            }
+            if (!sp.getBoolean("sp_setup_v2_done", false)) {
+                getWindow().getDecorView().post(() ->
+                        com.petal.browser.setup.PetalSetupBridge.showSetup(this));
+            }
+        }
+    }
+
+    private static final int VOICE_SEARCH_REQUEST_CODE = 1002;
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == VOICE_SEARCH_REQUEST_CODE && resultCode == Activity.RESULT_OK && data != null) {
+            ArrayList<String> matches = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (matches != null && !matches.isEmpty()) {
+                String query = matches.get(0);
+                if (query != null && !query.trim().isEmpty()) {
+                    String targetUrl = BrowserUnit.queryWrapper(this, query.trim());
+                    addAlbum(null, targetUrl, true);
+                }
+            }
+            return;
+        }
+        if (petalBrowserFeatures != null
+                && petalBrowserFeatures.onActivityResult(requestCode, resultCode, data)) {
+            return;
+        }
+        if (requestCode == INPUT_FILE_REQUEST_CODE) {
+            if (mFilePathCallback != null) {
+                Uri[] results = null;
+                if (resultCode == Activity.RESULT_OK) {
+                    if (data != null && (data.getDataString() != null || data.getClipData() != null || data.getData() != null)) {
+                        String dataString = data.getDataString();
+                        if (dataString != null) {
+                            results = new Uri[]{Uri.parse(dataString)};
+                        } else if (data.getData() != null) {
+                            results = new Uri[]{data.getData()};
+                        } else if (data.getClipData() != null) {
+                            final int count = data.getClipData().getItemCount();
+                            results = new Uri[count];
+                            for (int i = 0; i < count; i++) {
+                                results[i] = data.getClipData().getItemAt(i).getUri();
+                            }
+                        }
+                    } else if (mCameraPhotoPath != null) {
+                        java.io.File file = new java.io.File(mCameraPhotoPath);
+                        if (file.exists() && file.length() > 0) {
+                            results = new Uri[]{Uri.fromFile(file)};
+                        }
+                    }
+                }
+                mFilePathCallback.onReceiveValue(results);
+                mFilePathCallback = null;
+            }
+            return;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (petalBrowserFeatures != null) {
+            petalBrowserFeatures.onPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        suppressResumeDispatch = true;
+        dispatchIntent(intent);
+    }
+
+    @Override
+    public void onResume() {
+        if (browserBackCallback != null) browserBackCallback.setEnabled(true);
+        super.onResume();
+        predictiveBackStartedOnOverlay = false;
+        resetRefreshState();
+        applyAddressBarPosition();
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
+        }
+        try {
+            com.petal.browser.engine.gecko.PetalEngineStore.onAppResume(this);
+            com.petal.browser.engine.gecko.PetalTabSuspender.checkAndSuspendInactiveTabs(this, currentAlbumController);
+        } catch (Throwable ignored) {}
+        if (sp.getBoolean("sp_camera", false)) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
+            }
+        }
+        if (sp.getInt("restart_changed", 1) == 1) {
+            triggerRebirth(context);
+        }
+        if (sp.getBoolean("pdf_create", false)) {
+            sp.edit().putBoolean("pdf_create", false).apply();
+            String text = getString(R.string.app_done) + ". " + getString(R.string.menu_download) +"?";
+            com.petal.browser.view.PetalToast.show(context, text, com.petal.browser.view.PetalToast.LENGTH_SHORT, context.getString(R.string.app_ok), () -> showDownloads());
+        }
+        // Skip the first post-onCreate resume — dispatchIntent() already ran at the
+        // end of onCreate() once all tabs were ready. Every subsequent resume (coming
+        // back from another app, screen-off, etc.) should still dispatch normally.
+        // (Widget actions no longer need special handling here — dispatchIntent()
+        // now defers them itself via contentFrame.post(), regardless of whether it
+        // was called from onCreate() or onNewIntent().)
+        if (suppressResumeDispatch) {
+            suppressResumeDispatch = false;
+        } else {
+            dispatchIntent(getIntent());
+        }
+        View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+        if (bottomNavContainer != null) {
+            bottomNavContainer.setTranslationY(0f);
+            applyBottomBarVisibilityForSurface();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        try {
+            if (isMediaBound) {
+                try {
+                    unbindService(mediaConnection);
+                    isMediaBound = false;
+                } catch (Exception ignored) {}
+            }
+            NotificationManager notificationManager = (NotificationManager) getApplicationContext().getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.cancel(1);
+            }
+            BrowserContainer.clear();
+            if (sp != null && (sp.getBoolean("sp_clear_quit", false) || sp.getBoolean("sp_clear_on_exit", false))) {
+                BrowserUnit.clearOnExit(this);
+            }
+            if (sp != null && sp.getBoolean("sp_backup_quit", false)) {
+                com.petal.browser.unit.BackupUnit.backupData(activity, 0);
+            }
+            com.petal.browser.media.BrowserMediaDelegate.unregisterPipReceiver(this);
+        } catch (Exception e) {
+            Log.e(TAG, "Error in BrowserActivity.onDestroy", e);
+        }
+        super.onDestroy();
+    }
+
+    @Override
+    public void onStop() {
+        if (petalBrowserFeatures != null) petalBrowserFeatures.stop();
+        try {
+            if (isFinishing() && sp != null && (sp.getBoolean("sp_clear_quit", false) || sp.getBoolean("sp_clear_on_exit", false))) {
+                BrowserUnit.clearOnExit(this);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error in BrowserActivity.onStop", e);
+        }
+        super.onStop();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        try {
+            com.petal.browser.engine.gecko.PetalGeckoRuntime.onTrimMemory(this, level);
+            com.petal.browser.engine.gecko.PetalEngineStore.onLowMemory(this, level);
+            if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+                com.petal.browser.unit.TabThumbnailCache.clearMemory();
+            }
+        } catch (Throwable t) {
+            Log.d(TAG, "Error in onTrimMemory: " + t.getMessage());
+        }
+        // Firefox-grade tab suspension under memory pressure:
+        // Levels RUNNING_LOW (10), RUNNING_CRITICAL (15), and COMPLETE (80)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
+            try {
+                // Critical memory pressure: preserve only the foreground tab, suspend all others
+                com.petal.browser.engine.gecko.PetalTabSuspender.trimBackgroundTabs(this, currentAlbumController, 0);
+            } catch (Exception e) {
+                Log.e(TAG, "Error trimming background tabs on critical memory", e);
+            }
+        } else if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            try {
+                // Moderate memory pressure: preserve foreground tab + top 2 active tabs
+                com.petal.browser.engine.gecko.PetalTabSuspender.trimBackgroundTabs(this, currentAlbumController, 2);
+            } catch (Exception e) {
+                Log.e(TAG, "Error trimming background tabs on low memory", e);
+            }
+        }
+    }
+
+    private long lastBackPressTime = 0;
+    // The native Home surface is rendered over an about:blank browser document.
+    // Keep explicit UI state so Back never follows Gecko history into a blank page.
+    private boolean isPetalHomeSurfaceShowing = false;
+    public boolean isPetalHomeSurfaceShowing() {
+        return isPetalHomeSurfaceShowing || isCurrentTabHomeOrBlank();
+    }
+    // Monotonic token used to invalidate queued surface-attachment callbacks. A queued
+    // GeckoView add must never re-attach an old tab after showAlbum() has switched tabs.
+    private long albumSurfaceGeneration = 0L;
+
+    /**
+     * Disposes the composition of a ComposeView that was just removed from contentFrame.
+     * Posted so it never runs re-entrantly inside the Compose callback that triggered the
+     * removal, and skipped if the same view was re-attached in the meantime (a re-attached
+     * ComposeView would simply rebuild its composition on the next measure anyway).
+     * Retained tab surfaces (PetalGeckoView) are not ComposeViews and are unaffected.
+     */
+    private void disposeRemovedComposeOverlay(View child) {
+        if (!(child instanceof androidx.compose.ui.platform.ComposeView)) return;
+        final androidx.compose.ui.platform.ComposeView composeView = (androidx.compose.ui.platform.ComposeView) child;
+        Runnable dispose = () -> {
+            if (composeView.getParent() != null) return;
+            try {
+                composeView.disposeComposition();
+            } catch (Throwable t) {
+                Log.w(TAG, "Failed to dispose removed Compose overlay", t);
+            }
+        };
+        if (contentFrame != null) {
+            contentFrame.post(dispose);
+        } else {
+            new Handler(android.os.Looper.getMainLooper()).post(dispose);
+        }
+    }
+
+    /**
+     * The actual back-navigation decision logic. Shared between the legacy KEYCODE_BACK
+     * path (3-button nav / hardware back) and the OnBackPressedCallback path (gesture
+     * nav / predictive back) below, so both routes behave identically.
+     */
+    public void performBackNavigation() {
+        if (isOverlayScreenShowing && isTabSurface(getTopContentChild())) {
+            isOverlayScreenShowing = false;
+            pendingOverlayBackAction = null;
+        }
+        
+
+        View currentFocus = getCurrentFocus();
+        boolean isKeyboardVisible = false;
+        View mainView = findViewById(R.id.main);
+        if (mainView != null) {
+            WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(mainView);
+            if (insets != null) {
+                // The IME-visible bit from WindowInsetsCompat can transiently misreport true
+                // during a predictive-back gesture, since Android runs its own inset-animation
+                // transition for the swipe at the same time and getRootWindowInsets() can return
+                // a stale pre-gesture snapshot. A genuinely open keyboard always has the IME
+                // actively serving an input connection, so cross-check that too - this is what
+                // let a swipe-back silently no-op (only calling the harmless-looking
+                // hideSoftKeyboard) on pages where the on-screen back button, called outside any
+                // gesture/inset transition, navigated correctly every time. isAcceptingText()
+                // reflects the real IME service state rather than a cached insets snapshot, and
+                // (unlike checking for a focused EditText) it still recognizes a focused HTML
+                // input inside PetalGeckoView, so typing-then-back still just closes
+                // the keyboard there as before.
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                boolean imeActuallyServing = imm != null && imm.isAcceptingText();
+                isKeyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime()) && imeActuallyServing;
+            }
+        }
+        if (isKeyboardVisible) {
+            HelperUnit.hideSoftKeyboard(this, currentFocus);
+            return;
+        }
+
+        // The Petal home page is an app-owned start surface, not a normal web
+        // history entry. Gecko can report back history here because the home
+        // document was reached from an initial about:blank/session bootstrap.
+        // Calling goBack() in that state navigates to that blank document,
+        // which is the blank page seen when Back is pressed on Home. Always
+        // handle Home before consulting Gecko's back-history state.
+        String currentUrl = currentAlbumController != null
+                ? currentAlbumController.getUrl()
+                : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+
+        // ── Tier 1: Fullscreen / HTML5 Video / Web Custom View ──
+        if (fullscreenHolder != null || customView != null || videoView != null) {
+            onHideCustomView();
+            return;
+        }
+        if (videoOverlayBridge != null) {
+            try {
+                videoOverlayBridge.detachOverlay();
+            } catch (Exception ignored) {}
+            videoOverlayBridge = null;
+            setCustomFullscreen(false);
+            return;
+        }
+        if (isCustomFullscreenState) {
+            setCustomFullscreen(false);
+            return;
+        }
+
+        // ── Tier 2: Dialogs, Search-on-site & Modal Overlays ──
+        if (dialogOverview != null && dialogOverview.isShowing()) {
+            hideOverview();
+            return;
+        }
+        if (isFindInPageShowing) {
+            closeFindInPage();
+            return;
+        }
+        if (isOverlayScreenShowing) {
+            isOverlayScreenShowing = false;
+            removeOverlayViews();
+            Runnable backAction = pendingOverlayBackAction;
+            pendingOverlayBackAction = null;
+            if (backAction != null) {
+                backAction.run();
+            } else {
+                showAlbum(currentAlbumController);
+            }
+            if (contentFrame != null && getTopContentChild() == null) {
+                showAlbum(currentAlbumController);
+            }
+            updatePersistentBottomNav();
+            updateOmniBox();
+            updateBackCallbackState();
+            return;
+        }
+
+        // ── Tier 2.5: Clear Web Text Selection (Firefox Parity) ──
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+            if (gv.canClearSelection()) {
+                gv.clearWebSelection();
+                return;
+            }
+        }
+
+        // ── Tier 3: Website History Traversal (Firefox / GeckoView Parity) ──
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            com.petal.browser.browser.PetalTabViewController surface = getActivePetalTabSurface();
+            if (surface != null) {
+                if (surface.canGoBack()) sp.edit().putBoolean("backPressed", true).apply();
+                surface.processBackPressed(() -> {
+                    runOnUiThread(() -> {
+                        if (getActivePetalTabSurface() == surface) performPetalTabBackFallback(currentUrl);
+                    });
+                    return kotlin.Unit.INSTANCE;
+                });
+                return;
+            }
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+            if (gv.canGoBack()) {
+                sp.edit().putBoolean("backPressed", true).apply();
+                // NOTE: Do NOT call gv.stopLoading() here — it cancels GeckoView history traversal
+                // on SPAs (React Router, Next.js, etc.) making the back button appear broken. (#25)
+                gv.goBack();
+                updateOmniBox();
+                updateBackCallbackState();
+                return;
+            }
+        } else if (activeGeckoView != null && activeGeckoView.canGoBack()) {
+            sp.edit().putBoolean("backPressed", true).apply();
+            activeGeckoView.stopLoading();
+            activeGeckoView.goBack();
+            updateOmniBox();
+            updateBackCallbackState();
+            return;
+        }
+
+        performPetalTabBackFallback(currentUrl);
+    }
+
+    private void performPetalTabBackFallback(String currentUrl) {
+        // ── Tier 4: Intra-Tab Home Fallback ──
+        // If on a web document with no history, navigate back to this tab's start surface
+        if (!isPetalHomeSurfaceShowing && !isHomePage(currentUrl) && currentUrl != null && !currentUrl.isEmpty() && !currentUrl.equalsIgnoreCase("about:blank")) {
+            String homeUrl = BrowserUnit.getEffectiveHomepageUrl(this);
+            if (homeUrl == null || homeUrl.trim().isEmpty()) homeUrl = "about:blank";
+            if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).stopLoading();
+            } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).stopLoading();
+            } else if (activeGeckoView != null) {
+                activeGeckoView.stopLoading();
+            }
+            showAlbum(currentAlbumController, homeUrl);
+            updateOmniBox();
+            updateBackCallbackState();
+            return;
+        }
+
+        // ── Tier 5: Multi-Tab Closure & Exit Confirmation ──
+        // If on the Home surface with multiple tabs open, close current tab and return to previous tab
+        if (BrowserContainer.size() > 1 && currentAlbumController != null) {
+            removeAlbum(currentAlbumController);
+            return;
+        }
+
+        // Last tab on Home surface: confirm exit or finish task
+        boolean requireConfirm = sp.getBoolean("sp_close_browser_confirm", true);
+        if (!requireConfirm) {
+            finishAndRemoveTask();
+        } else {
+            showExitConfirmationDialog();
+        }
+    }
+
+    private void showExitConfirmationDialog() {
+        if (isFinishing() || isDestroyed()) return;
+        com.petal.browser.ui.components.PetalExitConfirmationDialog.show(this,
+                () -> finishAndRemoveTask());
+        lastBackPressTime = 0L;
+    }
+
+    /**
+     * Fires once at gesture start: just cancels any settle animation still running from a
+     * previous gesture, so a quick double-swipe doesn't fight itself for control of the root
+     * view. There is no preview underlay to prepare - RvSystem-Monitor's predictive transitions
+     * don't have one, so neither does this.
+     */
+    public void beginPredictiveBackGesture() {
+        if (!isOverlayScreenShowing || isDecorOverlayShowing) return;
+        if (predictiveBackSettleAnimator != null) {
+            predictiveBackSettleAnimator.cancel();
+            predictiveBackSettleAnimator = null;
+        }
+    }
+
+    /**
+     * Applies the live, per-frame transform for the in-progress gesture: a full-width slide
+     * toward the swipe edge plus a scale-down to 0.85, matching RvSystem-Monitor's
+     * aospSharedAxisPopExit exactly (ui/navigation/Transitions.kt) - the slide uses its cubic
+     * ease-in (f*f*f) and the scale uses its M3 emphasized easing. No fade, no corner-radius
+     * clip, no preview underlay - PetalScreenWrapper (PetalPredictiveJunction.kt) applies the
+     * identical curve to every Compose screen so the native browsing surface feels the same.
+     */
+    public void applyPredictiveBackTransform(float progress, int swipeEdge) {
+        if (!isOverlayScreenShowing || isDecorOverlayShowing) return;
+        if (predictiveBackRoot == null) return;
+        predictiveBackProgress = progress;
+
+        // Android 14 pure predictive back: smooth cubic-bezier progress and gentle edge translation
+        float scaleEased = predictiveBackEasing.getInterpolation(progress);
+        float translateXFactor = swipeEdge == BackEventCompat.EDGE_RIGHT ? -1f : 1f;
+        float scale = 1f - (0.10f * scaleEased);
+
+        predictiveBackRoot.setScaleX(scale);
+        predictiveBackRoot.setScaleY(scale);
+        predictiveBackRoot.setTranslationX(predictiveBackRoot.getWidth() * translateXFactor * (progress * 0.35f));
+    }
+
+    /**
+     * Settles the gesture once the finger lifts, using RvSystem's transition duration (350ms)
+     * and easing throughout - cancelled gestures relax back to identity, committed gestures
+     * finish sliding off before the real {@link #performBackNavigation()} fires.
+     */
+    public void settlePredictiveBackGesture(boolean committed) {
+        if (!isOverlayScreenShowing || isDecorOverlayShowing) return;
+        if (predictiveBackRoot == null) return;
+
+        if (predictiveBackSettleAnimator != null) {
+            predictiveBackSettleAnimator.cancel();
+            predictiveBackSettleAnimator = null;
+        }
+
+        if (!committed) {
+            ValueAnimator cancelAnim = ValueAnimator.ofFloat(predictiveBackProgress, 0f);
+            cancelAnim.setDuration(PB_TRANSITION_DURATION_MS);
+            cancelAnim.setInterpolator(predictiveBackEasing);
+            cancelAnim.addUpdateListener(anim -> applyPredictiveBackTransform((float) anim.getAnimatedValue(), predictiveBackSwipeEdge));
+            cancelAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    resetPredictiveBackVisuals();
+                }
+            });
+            predictiveBackSettleAnimator = cancelAnim;
+            cancelAnim.start();
+            return;
+        }
+
+        ValueAnimator commitAnim = ValueAnimator.ofFloat(predictiveBackProgress, 1f);
+        commitAnim.setDuration(PB_TRANSITION_DURATION_MS);
+        commitAnim.setInterpolator(predictiveBackEasing);
+        commitAnim.addUpdateListener(anim -> applyPredictiveBackTransform((float) anim.getAnimatedValue(), predictiveBackSwipeEdge));
+        commitAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                performBackNavigation();
+                resetPredictiveBackVisuals();
+            }
+        });
+        predictiveBackSettleAnimator = commitAnim;
+        commitAnim.start();
+    }
+
+    public void updateBackCallbackState() {
+        if (browserBackCallback == null) return;
+        boolean hasOverlay = isOverlayScreenShowing || hasNonTabTopContent();
+        boolean hasDialog = (dialogOverview != null && dialogOverview.isShowing()) || isFindInPageShowing || (customView != null) || (fullscreenHolder != null) || (videoView != null);
+        boolean hasWebBack = canBrowserGoBack()
+                || (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView
+                && ((com.petal.browser.view.PetalGeckoView) currentAlbumController).hasBackHistory())
+                || (activeGeckoView != null && activeGeckoView.canGoBack());
+        String curUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+        boolean isWebPageNotHome = !isPetalHomeSurfaceShowing && !isHomePage(curUrl) && curUrl != null && !curUrl.isEmpty() && !curUrl.equalsIgnoreCase("about:blank");
+        boolean hasMultipleTabs = BrowserContainer.size() > 1;
+
+        boolean requireConfirmExit = sp != null && sp.getBoolean("sp_double_back_exit", false);
+
+        // Always keep browserBackCallback enabled while the activity has content.
+        // Android's predictive gesture navigation drops the back gesture if this is false,
+        // prematurely exiting the app. performBackNavigation() handles overlays, fullscreen,
+        // text selection, website history, home fallback, multi-tab closure, and exit dialog.
+        browserBackCallback.setEnabled(true);
+    }
+
+    public void resetPredictiveBackVisuals() {
+        predictiveBackProgress = 0f;
+        predictiveBackSwipeEdge = BackEventCompat.EDGE_LEFT;
+        if (predictiveBackRoot != null) {
+            predictiveBackRoot.setScaleX(1f);
+            predictiveBackRoot.setScaleY(1f);
+            predictiveBackRoot.setTranslationX(0f);
+        }
+        predictiveBackSettleAnimator = null;
+    }
+
+    /**
+     * Forward-navigation entrance for a Compose screen mounted into contentFrame
+     * (Settings, Downloads, History, Bookmarks, Account Sync, Omnibox, etc.).
+     *
+     * Previously these screens were added with contentFrame.addView(view) and no
+     * animation at all - only the predictive-back *exit* was animated, so pushing
+     * forward into a screen was an instant, jarring snap while going back was smooth.
+     * This mirrors aospSharedAxisEnter (ui/navigation/Transitions.kt, ported 1:1 from
+     * RvSystem-Monitor / PetalTransitions.kt): slide in from 1/3 screen width + fade,
+     * 350ms, M3 emphasized easing - the same curve every predictive-back exit already
+     * uses, so push and pop now feel like a matched pair instead of two different apps.
+     */
+    public void presentComposeScreen(View screen) {
+        presentComposeScreen(screen, true);
+    }
+
+    public void presentComposeScreen(View screen, boolean animate) {
+        screen.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+        isOverlayScreenShowing = true;
+        if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+        if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+        if (appBar != null) appBar.setVisibility(GONE);
+        View appBar_buttons = findViewById(R.id.appBar_buttons);
+        if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+        View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+        View bottomNav = findViewById(R.id.bottom_nav_compose);
+        if (bottomNavContainer != null) bottomNavContainer.setVisibility(GONE);
+        if (bottomNav != null) bottomNav.setVisibility(GONE);
+        View fabBubble = findViewById(R.id.fab_bubble);
+        if (fabBubble != null) fabBubble.setVisibility(GONE);
+        hideRefreshAndProgressOverlays();
+
+        if (animate) {
+            screen.setAlpha(0f);
+            contentFrame.addView(screen);
+            screen.post(() -> com.petal.browser.motion.PetalMotion.enter(
+                    screen, PB_TRANSITION_DURATION_MS));
+        } else {
+            screen.setAlpha(1f);
+            screen.setTranslationX(0f);
+            contentFrame.addView(screen);
+        }
+        updateBackCallbackState();
+        // Apple Duo: overlay screens are not websites — suspend the fold effect.
+        try {
+            com.petal.browser.appleduo.AppleDuoManager.INSTANCE.onContentSwitched(false);
+            com.petal.browser.ui.components.PetalNetworkStatusBridge.INSTANCE.setWebsiteActive(false);
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                return true;
+            } else if (event.getAction() == KeyEvent.ACTION_UP) {
+                if (!event.isCanceled()) {
+                    com.petal.browser.haptics.PetalHapticEngine.getInstance(this).playClick(this);
+                    performBackNavigation();
+                    resetPredictiveBackVisuals();
+                }
+                return true;
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_MENU:
+                String title = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+                String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+                showOverflow(null, null, 0, title, url, null, null, 0);
+                return true;
+            case KeyEvent.KEYCODE_F7:
+                boolean caretState = com.petal.browser.accessibility.PetalAccessibilityEngine.toggleCaretBrowsing(this, activeGeckoView);
+                com.petal.browser.view.PetalToast.show(this, caretState ? "Caret browsing ON (F7)" : "Caret browsing OFF (F7)");
+                return true;
+            case KeyEvent.KEYCODE_BACK:
+                performBackNavigation();
+                return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        try {
+            boolean isPipSupported = getPackageManager().hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE);
+            boolean isAutoPipEnabled = sp.getBoolean("sp_auto_pip", true);
+            boolean isPipPermissionAsked = sp.getBoolean("sp_pip_asked", false);
+            boolean hasMediaPlaying = isMediaPlaying || customView != null || fullscreenHolder != null || videoView != null;
+
+            if (isPipSupported && hasMediaPlaying) {
+                if (!isPipPermissionAsked) {
+                    sp.edit().putBoolean("sp_pip_asked", true).apply();
+                    MaterialAlertDialogBuilder pipBuilder = new MaterialAlertDialogBuilder(this)
+                            .setIcon(com.petal.browser.R.drawable.icon_alert)
+                            .setTitle("Picture-in-Picture Permission")
+                            .setMessage("Would you like Petal Browser to automatically enter Picture-in-Picture mode when minimizing the app during video playback?")
+                            .setPositiveButton("Allow", (dialog, which) -> {
+                                sp.edit().putBoolean("sp_auto_pip", true).apply();
+                                triggerSystemPipMode();
+                            })
+                            .setNegativeButton("Don't Allow", (dialog, which) -> {
+                                sp.edit().putBoolean("sp_auto_pip", false).apply();
+                            });
+                    androidx.appcompat.app.AlertDialog pipDialog = pipBuilder.create();
+                    HelperUnit.setupDialog(this, pipDialog);
+                    pipDialog.show();
+                } else if (isAutoPipEnabled) {
+                    triggerSystemPipMode();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updatePipParams(boolean enableAutoEnter) {
+        com.petal.browser.media.BrowserMediaDelegate.updatePipParams(this, enableAutoEnter);
+    }
+
+    public void triggerSystemPipMode() {
+        com.petal.browser.media.BrowserMediaDelegate.triggerSystemPipMode(this);
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, android.content.res.Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (petalBrowserFeatures != null) petalBrowserFeatures.onPictureInPictureModeChanged(isInPictureInPictureMode);
+        try {
+            View composeAddressBar = findViewById(R.id.compose_address_bar);
+            View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+            View bottomNavCompose = findViewById(R.id.bottom_nav_compose);
+            View refreshBarCompose = findViewById(R.id.refresh_bar_compose);
+            View mainProgressBar = findViewById(R.id.main_progress_bar_compose);
+            View downloadBannerCompose = findViewById(R.id.download_banner_compose);
+            View fabShowAppBar = findViewById(R.id.fab_showAppBar);
+
+            View fabMenu = findViewById(R.id.fab_menu);
+            View fabShare = findViewById(R.id.fab_share);
+            View fabBubble = findViewById(R.id.fab_bubble);
+
+            if (isInPictureInPictureMode) {
+                if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+                if (bottomNavContainer != null) bottomNavContainer.setVisibility(GONE);
+                if (bottomNavCompose != null) bottomNavCompose.setVisibility(GONE);
+                if (refreshBarCompose != null) refreshBarCompose.setVisibility(GONE);
+                if (mainProgressBar != null) mainProgressBar.setVisibility(GONE);
+                if (downloadBannerCompose != null) downloadBannerCompose.setVisibility(GONE);
+                closeFindInPage();
+                if (fabShowAppBar != null) fabShowAppBar.setVisibility(GONE);
+                if (appBar != null) appBar.setVisibility(GONE);
+                if (fabMenu != null) fabMenu.setVisibility(GONE);
+                if (fabShare != null) fabShare.setVisibility(GONE);
+                if (fabBubble != null) fabBubble.setVisibility(GONE);
+
+                // In PiP mode, hide the video player overlay so Compose controls don't clutter the mini window
+                if (videoOverlayBridge != null) {
+                    videoOverlayBridge.setOverlayVisible(false);
+                }
+
+                // Update PiP actions on entry
+                updatePipParams(isMediaPlaying);
+
+                // Inject CSS into active webview to isolate video frame & remove webpage headers/sidebars/popups in PiP mode
+                if (activeGeckoView != null && customView == null) {
+                    activeGeckoView.evaluateJavascript(
+                        "(function() {" +
+                        "   var style = document.getElementById('petal-pip-style');" +
+                        "   if (!style) {" +
+                        "       style = document.createElement('style');" +
+                        "       style.id = 'petal-pip-style';" +
+                        "       style.innerHTML = 'html, body { background: #000 !important; margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; overflow: hidden !important; } ' +" +
+                        "                         'video { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; z-index: 2147483647 !important; object-fit: contain !important; background: #000 !important; margin: 0 !important; } ' +" +
+                        "                         'header, footer, nav, sidebar, .ytp-chrome-top, .ytp-gradient-top, .ytp-show-cards-title, .html5-video-player > *:not(video) { display: none !important; opacity: 0 !important; }';" +
+                        "       (document.head || document.documentElement).appendChild(style);" +
+                        "   }" +
+                        "})();", null
+                    );
+                }
+            } else {
+                applyAddressBarPosition();
+                applyBottomBarVisibilityForSurface();
+                if (refreshBarCompose != null) refreshBarCompose.setVisibility(VISIBLE);
+                if (mainProgressBar != null) mainProgressBar.setVisibility(VISIBLE);
+
+                // Restore video player overlay if returning from PiP
+                if (videoOverlayBridge != null) {
+                    videoOverlayBridge.setOverlayVisible(true);
+                }
+
+                // Remove PiP video isolation CSS upon exiting PiP mode
+                if (activeGeckoView != null) {
+                    activeGeckoView.evaluateJavascript(
+                        "(function() {" +
+                        "   var style = document.getElementById('petal-pip-style');" +
+                        "   if (style) style.remove();" +
+                        "})();", null
+                    );
+                }
+                updatePersistentBottomNav();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void onTabUrlStarted(com.petal.browser.browser.AlbumController webView, String url) {
+        runOnUiThread(() -> {
+            if (webView != activeGeckoView) return;
+
+            boolean isHome = isHomePage(url);
+            View albumView = webView != null ? webView.getAlbumView() : null;
+            boolean alreadyAttached = currentAlbumController == webView
+                    && contentFrame != null
+                    && albumView != null
+                    && albumView.getParent() == contentFrame
+                    && albumView.getVisibility() == VISIBLE
+                    && getTopContentChild() == albumView;
+
+            if (alreadyAttached && !isHome) {
+                updateAddressBar();
+                updatePersistentBottomNav();
+            } else if (isPetalHomeSurfaceShowing && isHome) {
+                // Fix (Bug 2): the Compose home surface is already live. A GeckoView
+                // about:blank callback fired while it was displaying. Do NOT replace the
+                // live Compose home with a new one — that causes a blank flash during
+                // the rebuild cycle. Just refresh the nav chrome.
+                updateAddressBar();
+                updatePersistentBottomNav();
+            } else {
+                showAlbum(currentAlbumController, url);
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Retained tab surfaces
+    //
+    // Every tab's browser surface (PetalGeckoView album view) is added to
+    // contentFrame exactly once, the first time that tab is shown, and then stays attached
+
+    // for the life of the tab. Switching tabs toggles View.VISIBLE / View.GONE and
+    // suspends/resumes the outgoing/incoming GeckoSession via setActive(false/true) (done
+    // by AlbumController.deactivate()/activate()). The view is never detached from the
+    // window on a switch, so GeckoView.onAttachedToWindow()/Display.acquire() only runs on
+    // the first attach (which is still guarded by attachAlbumViewSafely's insets retry).
+    //
+    // Everything else in contentFrame (Compose Home, incognito Home, Settings/History/...
+    // overlays) is transient and is added/removed as before.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** Album views that have been mounted in contentFrame as retained tab surfaces. */
+    private final java.util.Set<View> retainedTabSurfaces =
+            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<View, Boolean>());
+
+    /** True if {@code v} is a browser surface that must be hidden, never detached, on a tab switch. */
+    private boolean isTabSurface(View v) {
+        return v != null
+                && (v instanceof com.petal.browser.browser.PetalTabViewController
+                || v instanceof com.petal.browser.view.PetalGeckoView
+                || retainedTabSurfaces.contains(v));
+    }
+
+
+    /** The topmost child of contentFrame that is not View.GONE, or null if nothing is visible. */
+    private View getTopContentChild() {
+        if (contentFrame == null) return null;
+        for (int i = contentFrame.getChildCount() - 1; i >= 0; i--) {
+            View child = contentFrame.getChildAt(i);
+            if (child.getVisibility() != GONE) return child;
+        }
+        return null;
+    }
+
+    /** True when the topmost visible child of contentFrame is an overlay/Home view, not a tab surface. */
+    private boolean hasNonTabTopContent() {
+        View top = getTopContentChild();
+        return top != null && !isTabSurface(top);
+    }
+
+    /** Hides (View.GONE) every retained tab surface except {@code keep}. Never detaches anything. */
+    private void hideTabSurfacesExcept(View keep) {
+        if (contentFrame == null) return;
+        for (int i = 0; i < contentFrame.getChildCount(); i++) {
+            View child = contentFrame.getChildAt(i);
+            if (child != keep && isTabSurface(child) && child.getVisibility() != GONE) {
+                child.setVisibility(GONE);
+            }
+        }
+    }
+
+    /**
+     * Removes every non-tab child (Compose Home, incognito Home, Settings/History/... overlays)
+     * from contentFrame. Tab surfaces are left exactly as they are, so a visible tab is not
+     * disturbed and a hidden one is not detached.
+     */
+    private void removeOverlayViews() {
+        if (contentFrame == null) return;
+        for (int i = contentFrame.getChildCount() - 1; i >= 0; i--) {
+            View child = contentFrame.getChildAt(i);
+            if (!isTabSurface(child)) contentFrame.removeViewAt(i);
+        }
+    }
+
+    /**
+     * Replacement for {@code contentFrame.removeAllViews()} at sites that mount a native
+     * screen (Home, Settings, Downloads, tab switcher, ...): removes transient views and
+     * hides every tab surface, but keeps the tab surfaces attached so showing the tab again
+     * is a visibility flip rather than a fresh attach.
+     */
+    public void clearContentFrameKeepingTabs() {
+        removeOverlayViews();
+        hideTabSurfacesExcept(null);
+    }
+
+    /**
+     * Permanently unmounts a closed tab's surface. Must run before the tab's destroy() so a
+     * dead surface does not linger in contentFrame as a hidden child.
+     */
+    private void detachTabSurface(AlbumController controller) {
+        if (controller == null) return;
+        View v = controller.getAlbumView();
+        if (v == null) return;
+        retainedTabSurfaces.remove(v);
+        if (contentFrame != null && v.getParent() == contentFrame) {
+            contentFrame.removeView(v);
+        }
+    }
+
+    /**
+     * If a freshly shown tab surface still measures 0px high after layout (mainContent padding
+     * computed from a not-yet-measured bottom nav), re-apply the address bar position so the
+     * heights are recomputed from the now-measured views.
+     */
+    private void scheduleSurfaceHeightCheck(final android.view.ViewGroup targetFrame,
+                                            final View av,
+                                            final AlbumController targetController) {
+        targetFrame.post(() -> {
+            if (currentAlbumController == targetController && targetFrame == contentFrame) {
+                if (av.getHeight() == 0 && av.getVisibility() == android.view.View.VISIBLE) {
+                    android.util.Log.w("BrowserActivity",
+                            "attachAlbumViewSafely: child height=0 after layout — re-applying position");
+                    applyAddressBarPosition();
+                }
+            }
+        });
+    }
+
+    /**
+     * Mounts an album's view (PetalGeckoView container) in {@code targetFrame} the
+     * first time the tab is shown, defending against the GeckoView "attach before WindowInsets are dispatched" NPE
+     * (see the caller for the full explanation) that otherwise leaves the frame with zero
+     * children — i.e. a blank web page or blank home surface.
+     *
+     * Retries for up to {@code MAX_ATTACH_ATTEMPTS} frames while insets are still null, and
+     * wraps every actual addView() call in a try/catch so that if GeckoView throws anyway
+     * (insets race, transient native state) we retry on the next frame instead of aborting
+     * and leaving the user staring at an empty container.
+     *
+     * This is the cold path only. If {@code av} is already a child of {@code targetFrame}
+     * (every tab after its first display) nothing is attached or detached here: the view is
+     * simply made visible. Other tabs' surfaces are hidden, not removed.
+     */
+    private static final int MAX_ATTACH_ATTEMPTS = 10; // 10 × 32ms = 320ms max (was 5)
+
+    private void attachAlbumViewSafely(
+            final android.view.ViewGroup targetFrame,
+            final android.view.View av,
+            final AlbumController targetController,
+            final int attempt) {
+        if (targetFrame == null || av == null) return;
+        if (currentAlbumController != targetController || targetFrame != contentFrame) return;
+
+        try {
+            // GeckoView's compositor reads root WindowInsets while it is attached.
+            // On Android 16/ColorOS-style window managers, adding the view before the
+            // first insets dispatch can leave GeckoView attached without a usable
+            // compositor surface, producing a permanent black/blank page. Wait for
+            // the actual window insets instead of attaching too early.
+            if (av instanceof com.petal.browser.view.PetalGeckoView) {
+                android.view.WindowInsets rootInsets = targetFrame.getRootWindowInsets();
+                if (rootInsets == null) {
+                    if (attempt < MAX_ATTACH_ATTEMPTS) {
+                        targetFrame.postDelayed(() ->
+                                attachAlbumViewSafely(targetFrame, av, targetController, attempt + 1), 32L);
+                    } else {
+                        android.util.Log.w("BrowserActivity", "GeckoView attach deferred: root WindowInsets still unavailable");
+                        targetFrame.post(() -> {
+                            if (currentAlbumController == targetController && targetFrame == contentFrame) {
+                                attachAlbumViewSafely(targetFrame, av, targetController, 0);
+                            }
+                        });
+                    }
+                    return;
+                }
+            }
+
+            if (av.getParent() != null && av.getParent() != targetFrame) {
+                ((android.view.ViewGroup) av.getParent()).removeView(av);
+            }
+            if (av.getParent() != targetFrame) {
+                // First display of this tab: hide (don't detach) the other tabs' surfaces and
+                // drop any transient Home/overlay views, then add this surface once.
+                hideTabSurfacesExcept(av);
+                removeOverlayViews();
+                // Guard: if LayoutParams were somehow lost (e.g. after removeView on some
+                // OEM implementations), ensure MATCH_PARENT before addView so the content
+                // surface fills the available frame instead of measuring to 0.
+                android.view.ViewGroup.LayoutParams avLp = av.getLayoutParams();
+                if (avLp == null) {
+                    av.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+                }
+                targetFrame.addView(av);
+                retainedTabSurfaces.add(av);
+            }
+            targetFrame.setVisibility(android.view.View.VISIBLE);
+            targetFrame.setAlpha(1f);
+            av.setVisibility(android.view.View.VISIBLE);
+            av.setAlpha(1f);
+            targetFrame.requestLayout();
+            // Safety net: if GeckoView/ComposeView still measures at height=0 after one
+            // frame (can happen when mainContent.setPadding() was called with an incorrect
+            // bottomNavHeight before layout settled), re-apply address bar position which
+            // will re-compute heights from the now-measured views and call requestLayout()
+            // again — correcting the content area to fill the available space.
+            scheduleSurfaceHeightCheck(targetFrame, av, targetController);
+            // Some OEM window managers complete the first attach with a visible but
+            // zero-sized compositor child. Re-activate and remeasure the surface after
+            // layout settles instead of leaving the user on a permanent blank page.
+            targetFrame.postDelayed(() -> {
+                if (currentAlbumController != targetController || av.getParent() != targetFrame) return;
+                if (av.getWidth() == 0 || av.getHeight() == 0) {
+                    av.requestLayout();
+                    targetFrame.requestLayout();
+                    applyAddressBarPosition();
+                }
+                if (av instanceof com.petal.browser.view.PetalGeckoView && av.isShown()) {
+                    ((com.petal.browser.view.PetalGeckoView) av).onResume();
+                    av.invalidate();
+                }
+            }, 180L);
+        } catch (Exception e) {
+            android.util.Log.w("BrowserActivity", "attachAlbumViewSafely: addView failed, retrying (attempt " + attempt + ")", e);
+            if (attempt < MAX_ATTACH_ATTEMPTS) {
+                targetFrame.postDelayed(() ->
+                        attachAlbumViewSafely(targetFrame, av, targetController, attempt + 1), 32L);
+            } else {
+                // Fix (Bug 4): all timed retries exhausted. Register a ViewTreeObserver
+                // listener so we attach the moment the window layout stabilises — this
+                // covers OEM skins (ColorOS, MIUI, EMUI) that dispatch WindowInsets after
+                // the 320ms retry window.
+                android.util.Log.w("BrowserActivity", "attachAlbumViewSafely: max retries exhausted, using ViewTreeObserver fallback");
+                targetFrame.getViewTreeObserver().addOnGlobalLayoutListener(
+                    new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                        @Override
+                        public void onGlobalLayout() {
+                            targetFrame.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                            if (currentAlbumController != targetController
+                                    || targetFrame != contentFrame) return;
+                            try {
+                                if (av.getParent() != null && av.getParent() != targetFrame)
+                                    ((android.view.ViewGroup) av.getParent()).removeView(av);
+                                if (av.getParent() != targetFrame) {
+                                    hideTabSurfacesExcept(av);
+                                    removeOverlayViews();
+                                    targetFrame.addView(av);
+                                    retainedTabSurfaces.add(av);
+                                }
+                                targetFrame.setVisibility(android.view.View.VISIBLE);
+                                targetFrame.setAlpha(1f);
+                                av.setVisibility(android.view.View.VISIBLE);
+                                av.setAlpha(1f);
+                            } catch (Exception ignored) {}
+                        }
+                    });
+            }
+        }
+    }
+
+    private boolean incognitoBiometricUnlocked = false;
+
+    @Override
+    public synchronized void showAlbum(AlbumController controller) {
+        showAlbum(controller, null);
+    }
+
+    public synchronized void showAlbum(AlbumController controller, String overrideUrl) {
+        if (controller == null) {
+            if (BrowserContainer.size() > 0) {
+                controller = BrowserContainer.get(0);
+            } else {
+                addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+                return;
+            }
+        }
+        if (controller == null) return;
+
+        // Biometric Tab Lock: If target is incognito, preference enabled, and session not yet unlocked
+        if (controller.isIncognito() && sp.getBoolean("sp_biometric_incognito_tab_lock", false) && !incognitoBiometricUnlocked) {
+            final AlbumController finalTarget = controller;
+            final String finalOverrideUrl = overrideUrl;
+            com.petal.browser.security.BiometricLockManager.authenticate(
+                this,
+                "Incognito Tabs Locked",
+                "Unlock with your fingerprint or device PIN to access private browsing",
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        incognitoBiometricUnlocked = true;
+                        showAlbum(finalTarget, finalOverrideUrl);
+                    }
+                },
+                new java.util.function.Consumer<String>() {
+                    @Override
+                    public void accept(String error) {
+                        PetalToast.show(BrowserActivity.this, "Authentication required to view private tabs", Toast.LENGTH_SHORT);
+                    }
+                }
+            );
+            return;
+        }
+
+        // Fix (Bug 6): reset the flag immediately so concurrent GeckoView callbacks
+        // or onTabUrlStarted() callers never read a stale 'true' while a new surface
+        // (website or a different home) is being set up.
+        isPetalHomeSurfaceShowing = false;
+
+        final long surfaceGeneration = ++albumSurfaceGeneration;
+
+        // Saved background tabs are lightweight placeholders. Materialize exactly
+        // the selected slot when it is first shown, preserving its position/ID.
+        if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+            com.petal.browser.browser.PlaceholderAlbumController placeholder =
+                    (com.petal.browser.browser.PlaceholderAlbumController) controller;
+            int slot = BrowserContainer.indexOf(controller);
+            if (slot < 0) return;
+            String savedTitle = placeholder.getTitle();
+            String savedUrl = placeholder.getUrl();
+            String targetUrl = overrideUrl != null ? overrideUrl : savedUrl;
+            String effectiveId = (placeholder.getTabId() != null && !placeholder.getTabId().isEmpty())
+                    ? placeholder.getTabId()
+                    : "tab_" + System.currentTimeMillis() + "_" + Math.abs(java.util.UUID.randomUUID().hashCode());
+
+            kotlin.Pair<mozilla.components.browser.state.state.TabSessionState, mozilla.components.concept.engine.EngineSession> sessionPair =
+                com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
+                    this,
+                    effectiveId,
+                    targetUrl != null ? targetUrl : "about:blank",
+                    savedTitle != null ? savedTitle : getString(R.string.app_name),
+                    placeholder.isIncognito(),
+                    true
+                );
+
+            com.petal.browser.browser.PetalTabViewController materialized =
+                    new com.petal.browser.browser.PetalTabViewController(this);
+            materialized.bindTab(sessionPair.getFirst());
+            materialized.attachLifecycle(this);
+            observePetalTabSurface(materialized);
+            if (placeholder.getTabGroupId() != null && !placeholder.getTabGroupId().isEmpty()) {
+                materialized.setTabGroupId(placeholder.getTabGroupId());
+                materialized.setTabGroupTitle(placeholder.getTabGroupTitle());
+            }
+            BrowserContainer.replace(slot, materialized);
+            controller = materialized;
+            if (targetUrl != null && !targetUrl.isEmpty() && !isHomePage(targetUrl)) {
+                materialized.loadUrl(targetUrl);
+            } else {
+                materialized.loadUrl("about:blank");
+            }
+        }
+
+        // Captured as final so it can be safely referenced from the lambdas below
+        // (controller itself is reassigned earlier in this method and is not
+        // effectively final).
+        final AlbumController resolvedController = controller;
+
+        View av = controller.getAlbumView();
+        // Suspend the outgoing tab (GeckoSession.setActive(false) via deactivate()) while its
+        // surface is still visible; it is hidden (View.GONE), not detached, further below.
+        // Re-showing the tab that is already current (overlay dismissal, onTabUrlStarted)
+        // must not cycle its session inactive->active: that pauses and resumes compositing
+        // for no reason and is itself a source of visible flicker.
+        if (currentAlbumController != null && currentAlbumController != controller) {
+            
+            currentAlbumController.deactivate();
+        }
+        currentAlbumController = controller;
+        if (contentFrame != null) {
+            contentFrame.setEnabled(true);
+        }
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            String tabId = ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).getTabId();
+            if (tabId != null) com.petal.browser.engine.gecko.PetalEngineStore.selectTab(this, tabId);
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            com.petal.browser.engine.gecko.PetalEngineStore.selectTab(this, ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getTabId());
+        }
+        
+        currentAlbumController.activate();
+        // Always restore the host container before mounting a new surface. Predictive-back,
+        // pull-to-refresh and other transitions may temporarily transform this container.
+        // Leaving one of those transforms behind makes the next Home/browser surface look
+        // like a completely blank page even though the child is present.
+        // Only transient views (Home/overlays) are removed below; retained tab surfaces stay
+        // attached and are switched by visibility in the branch that follows.
+        contentFrame.setAlpha(1f);
+        contentFrame.setScaleX(1f);
+        contentFrame.setScaleY(1f);
+        contentFrame.setTranslationX(0f);
+        contentFrame.setTranslationY(0f);
+        removeOverlayViews();
+        isOverlayScreenShowing = false;
+
+        View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+        View bottomNavCompose = findViewById(R.id.bottom_nav_compose);
+        if (bottomNavContainer != null) bottomNavContainer.setTranslationY(0f);
+        if (bottomNavCompose != null) bottomNavCompose.setTranslationY(0f);
+
+        String url = overrideUrl != null ? overrideUrl : (currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : ""));
+        boolean isAdoptedPopupTab = false;
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            isAdoptedPopupTab = ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).isAdoptedPopup();
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            isAdoptedPopupTab = ((com.petal.browser.view.PetalGeckoView) currentAlbumController).isAdoptedPopup();
+        }
+        // Home is a native Compose surface backed by an about:blank Gecko/WebView
+        // document, so the controller URL alone cannot reliably describe what is visible.
+        // If this tab was adopted as a popup window/session, never treat it as the home page.
+        isPetalHomeSurfaceShowing = !isAdoptedPopupTab && isHomePage(url);
+        // Now that we know whether this is home or a website, set the bar accordingly.
+        applyBottomBarVisibilityForSurface();
+        boolean isIncognitoTab = currentAlbumController != null
+                ? currentAlbumController.isIncognito()
+                : (activeGeckoView != null && activeGeckoView.isIncognito());
+        if (isIncognitoTab) {
+            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.enableIncognitoSecurity(this);
+        } else {
+            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.disableIncognitoSecurity(this);
+        }
+        com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
+
+        if (isIncognitoTab && !isAdoptedPopupTab && (isHomePage(url) || "petal://incognito".equalsIgnoreCase(url))) {
+            View incognitoHome = com.petal.browser.compose.incognito.PetalIncognitoBridge.createIncognitoHomeView(
+                this,
+                () -> {
+                    try {
+                        showOmniboxPage("");
+                    } catch (Exception ignored) {}
+                },
+                () -> closeAllIncognitoTabs()
+            );
+            clearContentFrameKeepingTabs();
+            isOverlayScreenShowing = false;
+            incognitoHome.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            contentFrame.addView(incognitoHome);
+            if (appBar != null) appBar.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            updatePersistentBottomNav();
+        } else if (!isAdoptedPopupTab && isHomePage(url)) {
+            if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).stopLoading();
+            } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).resetToHome();
+            } else if (activeGeckoView != null) {
+                activeGeckoView.stopLoading();
+                if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl("about:blank");
+            }
+            View composeView = PetalComposeBridge.createComposeHomeView(this, BrowserContainer.size(), new PetalHomeActionHandler() {
+                @Override
+                public void onSearch(String query) {
+                    if (query != null && !query.trim().isEmpty()) {
+                        boolean isIncog = currentAlbumController != null && currentAlbumController.isIncognito();
+                        performSearchWithFixerPrompt(query.trim(), isIncog, targetUrl -> {
+                            if (currentAlbumController != null) {
+                                showAlbum(currentAlbumController, targetUrl);
+                            } else if (activeGeckoView != null) {
+                                showAlbum(currentAlbumController, targetUrl);
+                            } else {
+                                addAlbum(null, targetUrl, true, isIncog);
+                            }
+                        });
+                    } else {
+                        try {
+                            showOmniboxPage("");
+                        } catch (Exception ignored) {}
+                    }
+                }
+
+                @Override
+                public void onOpenUrl(String u) {
+                    if (u != null && u.contains("category=api_integrations")) {
+                        openApiIntegrationsHub();
+                        return;
+                    }
+                    String targetUrl = u;
+                    if (targetUrl != null && !targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+                        targetUrl = BrowserUnit.queryWrapper(BrowserActivity.this, u);
+                    }
+                    if (currentAlbumController != null) {
+                        showAlbum(currentAlbumController, targetUrl);
+                    } else if (activeGeckoView != null) {
+                        showAlbum(currentAlbumController, targetUrl);
+                    }
+                }
+
+                @Override
+                public void onAddShortcut() {
+                    runOnUiThread(() -> {
+                        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(BrowserActivity.this);
+                        builder.setTitle("Add Custom Shortcut");
+                        LinearLayout layout = new LinearLayout(BrowserActivity.this);
+                        layout.setOrientation(LinearLayout.VERTICAL);
+                        layout.setPadding(48, 24, 48, 24);
+
+                        final EditText inputTitle = new EditText(BrowserActivity.this);
+                        inputTitle.setHint("Shortcut Name (e.g. Google)");
+                        layout.addView(inputTitle);
+
+                        final EditText inputUrl = new EditText(BrowserActivity.this);
+                        inputUrl.setHint("Website URL (e.g. https://google.com)");
+                        String activeU = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : null);
+                        String activeT = currentAlbumController != null ? currentAlbumController.getTitle() : (activeGeckoView != null ? activeGeckoView.getTitle() : null);
+                        if (activeU != null && !isHomePage(activeU)) {
+                            inputUrl.setText(activeU);
+                            if (activeT != null) {
+                                inputTitle.setText(activeT);
+                            }
+                        }
+                        layout.addView(inputUrl);
+
+                        builder.setView(layout);
+                        builder.setPositiveButton("Add", (dialog, which) -> {
+                            String title = inputTitle.getText().toString().trim();
+                            String url = inputUrl.getText().toString().trim();
+                            if (!url.isEmpty()) {
+                                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                                    url = "https://" + url;
+                                }
+                                if (title.isEmpty()) title = HelperUnit.domain(url);
+
+                                try {
+                                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(BrowserActivity.this);
+                                    String jsonStr = sp.getString("sp_custom_home_shortcuts_json_v3", null);
+                                    org.json.JSONArray array = jsonStr != null ? new org.json.JSONArray(jsonStr) : new org.json.JSONArray();
+                                    org.json.JSONObject newObj = new org.json.JSONObject();
+                                    newObj.put("label", title);
+                                    newObj.put("url", url);
+                                    newObj.put("siteId", "globe");
+                                    newObj.put("color", "#4285F4");
+                                    if (array.length() >= 5) {
+                                        array.put(4, newObj);
+                                    } else {
+                                        array.put(newObj);
+                                    }
+                                    sp.edit().putString("sp_custom_home_shortcuts_json_v3", array.toString()).apply();
+                                    updateOmniBox();
+                                } catch (Exception ignored) {}
+                            }
+                        });
+                        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+                        builder.show();
+                    });
+                }
+
+                @Override
+                public void onNewTab() {
+                    addAlbum(getString(R.string.app_name), "about:blank", true);
+                }
+
+                @Override
+                public void onOpenBookmarks() {
+                    showOverview();
+                }
+
+                @Override
+                public void onOpenHistory() {
+                    showOverview();
+                }
+
+                @Override
+                public void onOpenDownloads() {
+                    try {
+                        captureBrowserMainPreview();
+                        clearContentFrameKeepingTabs();
+                        hideRefreshAndProgressOverlays();
+                        View downloadView = PetalDownloadBridge.createDownloadView(BrowserActivity.this, () -> {
+                            showAlbum(currentAlbumController);
+                            return kotlin.Unit.INSTANCE;
+                        });
+                        presentComposeScreen(downloadView);
+                    } catch (Exception ignored) {}
+                }
+
+                @Override
+                public void onOpenSettings() {
+                    String title = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+                    String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+                    showOverflow(null, null, 0, title, url, null, null, 0);
+                }
+
+                @Override
+                public void onOpenTabsOverview() {
+                    showOverview();
+                }
+
+                @Override
+                public void onOpenAccountSync() {
+                    showAccountSyncScreen();
+                }
+            });
+            clearContentFrameKeepingTabs();
+            isOverlayScreenShowing = false;
+            contentFrame.setVisibility(VISIBLE);
+            contentFrame.setAlpha(1f);
+            composeView.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+            composeView.setVisibility(VISIBLE);
+            composeView.setAlpha(1f);
+            composeView.setTranslationX(0f);
+            composeView.setTranslationY(0f);
+            composeView.setScaleX(1f);
+            composeView.setScaleY(1f);
+            contentFrame.addView(composeView);
+            composeView.bringToFront();
+            composeView.requestLayout();
+            composeView.post(() -> {
+                if (currentAlbumController == resolvedController && isPetalHomeSurfaceShowing) {
+                    composeView.setVisibility(VISIBLE);
+                    composeView.setAlpha(1f);
+                    composeView.bringToFront();
+                    composeView.requestLayout();
+                    composeView.invalidate();
+                    contentFrame.invalidate();
+                    if (composeView.getHeight() == 0) {
+                        android.util.Log.w("BrowserActivity",
+                                "showAlbum: home ComposeView height=0 — re-applying address bar position");
+                        applyAddressBarPosition();
+                    }
+                }
+            });
+            if (appBar != null) appBar.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            updatePersistentBottomNav();
+        } else {
+            // Swap tab surfaces by visibility, never by detaching: the outgoing tab's surface
+            // goes View.GONE (its session was already setActive(false)), the incoming tab's
+            // surface goes View.VISIBLE. This is the same code path for PetalGeckoView and
+            // tabs.
+            hideTabSurfacesExcept(av);
+            removeOverlayViews();
+            if (av.getParent() == contentFrame) {
+                // Warm path: this tab's surface is already mounted. No removeView/addView, no
+                // GeckoView.onAttachedToWindow(), no insets wait - just show it.
+                av.setVisibility(VISIBLE);
+                av.bringToFront();
+                scheduleSurfaceHeightCheck(contentFrame, av, controller);
+                // activate() ran while the view was still GONE, so requestFocus() inside it
+                // could not take focus; hand focus to the now-visible surface.
+                av.requestFocus();
+            } else {
+                // Cold path (first time this tab is shown, including first launch): mount once.
+                if (av.getParent() != null) {
+                    // Stray parent other than contentFrame; a view can only have one.
+                    ((android.view.ViewGroup) av.getParent()).removeView(av);
+                }
+                av.setLayoutParams(new android.widget.FrameLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                ));
+                attachAlbumViewSafely(contentFrame, av, controller, 0);
+            }
+            av.bringToFront();
+            // Keep the live browser surface stable. GeckoView/WebView owns its compositor;
+            // alpha/scale animations during attach/resume can produce a persistent blank
+            // surface. App-level animations are applied to native overlays instead.
+            av.setAlpha(1f);
+            av.setVisibility(VISIBLE);
+            av.setTranslationX(0f);
+            av.setTranslationY(0f);
+            av.setScaleX(1f);
+            av.setScaleY(1f);
+            contentFrame.setVisibility(VISIBLE);
+            contentFrame.setAlpha(1f);
+            if (appBar != null) appBar.setVisibility(VISIBLE);
+            View downloadBanner = findViewById(R.id.download_banner_compose);
+            if (downloadBanner != null) downloadBanner.setVisibility(VISIBLE);
+
+            if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                com.petal.browser.browser.PetalTabViewController surface = getActivePetalTabSurface();
+                String currentUrl = surface != null ? surface.getUrl() : "";
+                String targetUrl = overrideUrl != null && !overrideUrl.isEmpty() ? overrideUrl : currentUrl;
+                if (surface != null && targetUrl != null && !targetUrl.isEmpty()
+                        && !isHomePage(targetUrl) && !"about:blank".equalsIgnoreCase(targetUrl)
+                        && !targetUrl.equals(currentUrl)) {
+                    surface.loadUrl(targetUrl);
+                }
+            } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.view.PetalGeckoView geckoView = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                activeGeckoView = geckoView;
+                geckoView.setBrowserController(this);
+                String currentUrl = geckoView.getUrl();
+                String albumSavedUrl = null;
+                try {
+                    albumSavedUrl = geckoView.getAlbumUrl();
+                } catch (Exception ignored) {}
+
+                String targetUrl = (overrideUrl != null && !overrideUrl.isEmpty()) ? overrideUrl : (currentUrl != null && !currentUrl.isEmpty() ? currentUrl : albumSavedUrl);
+
+                if (targetUrl != null && !targetUrl.isEmpty() && !isHomePage(targetUrl) && !"about:blank".equalsIgnoreCase(targetUrl)) {
+                    // Only loadUrl if the tab is truly uninitialized, blank, or an explicit override URL was provided.
+                    // If the tab is already on targetUrl or actively loading, do not abort its network request mid-flight.
+                    boolean isDifferentTarget = overrideUrl != null && !overrideUrl.isEmpty() && !overrideUrl.equalsIgnoreCase(currentUrl);
+                    boolean isBlankOrEmpty = currentUrl == null || currentUrl.isEmpty() || "about:blank".equalsIgnoreCase(currentUrl);
+                    if (isBlankOrEmpty || isDifferentTarget) {
+                        geckoView.loadUrl(targetUrl);
+                    } else {
+                        geckoView.onResume();
+                    }
+                } else if (currentUrl != null && !currentUrl.isEmpty() && !isHomePage(currentUrl)) {
+                    geckoView.onResume();
+                }
+
+                // One place decides: the same call the other listener (BrowserWebViewController) makes.
+                geckoView.setOnScrollChangeListener(new com.petal.browser.view.PetalGeckoView.OnScrollChangeListener() {
+                    @Override
+                    public void onScrollDown() {
+                        animateAddressBarCollapse(true);
+                    }
+
+                    @Override
+                    public void onScrollUp() {
+                        animateAddressBarCollapse(false);
+                    }
+                });
+            } else if (activeGeckoView != null) {
+                activeGeckoView.setBrowserController(this);
+                String currentUrl = activeGeckoView.getUrl();
+                String albumSavedUrl = null;
+                try {
+                    albumSavedUrl = activeGeckoView.getAlbumUrl();
+                } catch (Exception ignored) {}
+
+                String targetUrl = (overrideUrl != null && !overrideUrl.isEmpty()) ? overrideUrl : (currentUrl != null && !currentUrl.isEmpty() ? currentUrl : albumSavedUrl);
+
+                if ((currentUrl == null || currentUrl.isEmpty() || "about:blank".equalsIgnoreCase(currentUrl)) &&
+                    (targetUrl != null && !targetUrl.isEmpty() && !isHomePage(targetUrl) && !"about:blank".equalsIgnoreCase(targetUrl))) {
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(targetUrl);
+                } else if (overrideUrl != null && !overrideUrl.isEmpty() && !overrideUrl.equalsIgnoreCase(currentUrl) && !isHomePage(overrideUrl) && !"about:blank".equalsIgnoreCase(overrideUrl)) {
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(overrideUrl);
+                } else if (currentUrl != null && !currentUrl.isEmpty() && !isHomePage(currentUrl)) {
+                    activeGeckoView.onResume();
+                    activeGeckoView.resumeTimers();
+                }
+
+            }
+        }
+        updateOmniBox();
+        applyAddressBarPosition();
+        updatePersistentBottomNav();
+        updateBackCallbackState();
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            com.petal.browser.browser.PetalTabViewController tabSurface = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
+            com.petal.browser.browser.PetalTabViewController.State s = tabSurface.currentState();
+            if (s != null && Boolean.TRUE.equals(s.getLoading())) {
+                updateProgress(Math.max(10, s.getProgress()));
+            } else {
+                updateProgress(100);
+            }
+        }
+        View refreshBarCompose = findViewById(R.id.refresh_bar_compose);
+        if (refreshBarCompose != null) {
+            refreshBarCompose.bringToFront();
+            refreshBarCompose.requestLayout();
+        }
+
+        // Apple Duo & Network Status: attach active view and update website active state
+        try {
+            View rootLayout = findViewById(R.id.main);
+            boolean isWebsiteContent = !isPetalHomeSurfaceShowing && !isOverlayScreenShowing;
+            com.petal.browser.appleduo.AppleDuoManager.INSTANCE.attachTargetView(rootLayout, isWebsiteContent);
+            com.petal.browser.ui.components.PetalNetworkStatusBridge.INSTANCE.setWebsiteActive(isWebsiteContent);
+        } catch (Exception ignored) {}
+
+        // Inactive Tabs: Record active tab access
+        try {
+            if (currentAlbumController != null) {
+                String currentTabId = String.valueOf(currentAlbumController.hashCode());
+                if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                    String boundId = ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).getTabId();
+                    if (boundId != null && !boundId.isEmpty()) currentTabId = boundId;
+                } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    String boundId = ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getTabId();
+                    if (boundId != null && !boundId.isEmpty()) currentTabId = boundId;
+                }
+                com.petal.browser.compose.tabs.PetalInactiveTabManager.INSTANCE.recordTabAccess(this, currentTabId);
+                com.petal.browser.compose.tabs.PetalInactiveTabManager.INSTANCE.recordTabAccess(this, String.valueOf(currentAlbumController.hashCode()));
+            }
+        } catch (Exception ignored) {}
+    }
+
+    public void updatePersistentBottomNav() {
+        try {
+            boolean inPip = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && isInPictureInPictureMode();
+            if (inPip) {
+                View bnc = findViewById(R.id.bottom_nav_container);
+                View bnv = findViewById(R.id.bottom_nav_compose);
+                if (bnc != null) bnc.setVisibility(GONE);
+                if (bnv != null) bnv.setVisibility(GONE);
+                return;
+            }
+            if (getIntent() != null && getIntent().getBooleanExtra("pwa_mode", false)) {
+                View bnc = findViewById(R.id.bottom_nav_container);
+                View bnv = findViewById(R.id.bottom_nav_compose);
+                if (bnc != null) bnc.setVisibility(GONE);
+                if (bnv != null) bnv.setVisibility(GONE);
+                return;
+            }
+            if (isOverlayScreenShowing || isCustomFullscreenState || videoOverlayBridge != null || customView != null) {
+                View bnc = findViewById(R.id.bottom_nav_container);
+                View bnv = findViewById(R.id.bottom_nav_compose);
+                if (bnc != null) bnc.setVisibility(GONE);
+                if (bnv != null) bnv.setVisibility(GONE);
+                return;
+            }
+            View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+            if (bottomNavContainer != null && !isAddressBarCollapsed) {
+                bottomNavContainer.setTranslationY(0f);
+            }
+            androidx.compose.ui.platform.ComposeView bottomNavCompose = findViewById(R.id.bottom_nav_compose);
+            if (bottomNavCompose != null) {
+                bottomNavCompose.setTranslationY(0f);
+            }
+            // Visibility depends on the surface: hidden on home, visible on websites.
+            applyBottomBarVisibilityForSurface();
+            if (bottomNavCompose != null) {
+                String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+                boolean isHome = isPetalHomeSurfaceShowing || isHomePage(currentUrl);
+                boolean isIncognito = currentAlbumController != null
+                        ? currentAlbumController.isIncognito()
+                        : (activeGeckoView != null && activeGeckoView.isIncognito());
+                int currentTabCount = isIncognito ? BrowserContainer.getIncognitoCount() : BrowserContainer.getNormalCount();
+                com.petal.browser.ui.components.PetalNavTab activeTab = isHome ? com.petal.browser.ui.components.PetalNavTab.HOME : com.petal.browser.ui.components.PetalNavTab.TABS;
+
+                com.petal.browser.compose.home.PetalBottomNavBridge.bindBottomNav(
+                    bottomNavCompose,
+                    this,
+                    activeTab,
+                    currentTabCount,
+                    isIncognito,
+                    new com.petal.browser.compose.home.PetalBottomNavHandler() {
+                        @Override
+                        public void onHomeClick() {
+                            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                            String effectiveHome = BrowserUnit.getEffectiveHomepageUrl(BrowserActivity.this);
+                            if (effectiveHome != null && !effectiveHome.equalsIgnoreCase("about:blank") && !BrowserUnit.isHomePage(effectiveHome)) {
+                                if (currentAlbumController != null) {
+                                    if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                                        ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).loadUrl(effectiveHome);
+                                    } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(effectiveHome);
+                                    } else if (activeGeckoView != null) {
+                                        activeGeckoView.loadUrl(effectiveHome);
+                                    }
+                                    showAlbum(currentAlbumController, effectiveHome);
+                                } else {
+                                    addAlbum(getString(R.string.app_name), effectiveHome, true, isIncognito);
+                                }
+                            } else {
+                                if (currentAlbumController != null) {
+                                    showAlbum(currentAlbumController, "about:blank");
+                                } else {
+                                    addAlbum(getString(R.string.app_name), "about:blank", true, isIncognito);
+                                }
+                            }
+                        }
+
+                        @Override
+                        public void onNewTabClick() {
+                            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                            boolean keepIncognito = currentAlbumController != null
+                                    ? currentAlbumController.isIncognito()
+                                    : (activeGeckoView != null && activeGeckoView.isIncognito());
+                            addAlbum(getString(R.string.app_name), "about:blank", true, keepIncognito);
+                        }
+
+                        @Override
+                        public void onTabsClick() {
+                            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                            showOverview();
+                        }
+
+                        @Override
+                        public void onMenuClick() {
+                            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                            View navView = findViewById(R.id.bottom_nav_compose);
+                            String title = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+                            String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+                            showOverflow(null, navView, 0, title, url, null, null, 0);
+                        }
+
+                        @Override
+                        public void onSwipeTabLeft() {
+                            // Swiped rightward (drag > 0): navigate to previous tab
+                            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.6f);
+                            switchAdjacentTab(-1);
+                        }
+
+                        @Override
+                        public void onSwipeTabRight() {
+                            // Swiped leftward (drag < 0): navigate to next tab
+                            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.6f);
+                            switchAdjacentTab(1);
+                        }
+                    }
+                );
+                bottomNavCompose.bringToFront();
+            }
+        } catch (Exception ignored) {}
+        applyAddressBarPosition();
+    }
+
+    /**
+     * Single source of truth for the persistent bottom bar's visibility, based on
+     * which surface is currently on screen:
+     *  - Overlay pages (Settings, History, Bookmarks, ...), PiP, PWA: GONE. The bar is
+     *    removed completely and reserves no space.
+     *  - Home page & Websites: VISIBLE.
+     */
+    private void applyBottomBarVisibilityForSurface() {
+        View container = findViewById(R.id.bottom_nav_container);
+        View compose = findViewById(R.id.bottom_nav_compose);
+
+        boolean inPip = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && isInPictureInPictureMode();
+        boolean pwa = getIntent() != null && getIntent().getBooleanExtra("pwa_mode", false);
+
+        if (container == null) return;
+
+        if (inPip || pwa || isOverlayScreenShowing || isCustomFullscreenState || videoOverlayBridge != null || customView != null) {
+            container.setVisibility(GONE);
+            if (compose != null) compose.setVisibility(GONE);
+            return;
+        }
+
+        container.setVisibility(VISIBLE);
+        if (compose != null) compose.setVisibility(VISIBLE);
+    }
+
+    public void applyAddressBarPosition() {
+        try {
+            boolean inPip = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && isInPictureInPictureMode();
+            View addressBar = findViewById(R.id.compose_address_bar);
+            View mainContent = findViewById(R.id.main_content);
+            View bottomNavContainer = findViewById(R.id.bottom_nav_container);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            View fabBubble = findViewById(R.id.fab_bubble);
+            View progressBarCompose = findViewById(R.id.main_progress_bar_compose);
+            View downloadBanner = findViewById(R.id.download_banner_compose);
+
+            if (mainContent == null) return;
+
+            if (inPip || (getIntent() != null && getIntent().getBooleanExtra("pwa_mode", false))) {
+                if (addressBar != null) addressBar.setVisibility(GONE);
+                if (bottomNavContainer != null) bottomNavContainer.setVisibility(GONE);
+                if (bottomNav != null) bottomNav.setVisibility(GONE);
+                if (fabBubble != null) fabBubble.setVisibility(GONE);
+
+                // IMPORTANT: Keep the content container full-screen. Do not use
+                // RelativeLayout ABOVE/BELOW rules here; they can produce a zero-sized
+                // content area when Compose is measured asynchronously.
+                if (mainContent.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                    RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) mainContent.getLayoutParams();
+                    lp.removeRule(RelativeLayout.BELOW);
+                    lp.removeRule(RelativeLayout.ABOVE);
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    lp.topMargin = 0;
+                    lp.bottomMargin = 0;
+                    mainContent.setLayoutParams(lp);
+                }
+                mainContent.setPadding(0, 0, 0, 0);
+                return;
+            }
+
+            String pos = sp.getString("sp_address_bar_position", "TOP");
+            boolean isBottom = "BOTTOM".equalsIgnoreCase(pos);
+
+            if (addressBar == null) return;
+            String curUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : null);
+            boolean isWebPage = isActualWebPage(curUrl);
+            boolean isHome = isPetalHomeSurfaceShowing || (currentAlbumController != null && isHomePage(currentAlbumController.getUrl()));
+            boolean isNonWebSurface = !isWebPage || isHome || isOverlayScreenShowing || hasNonTabTopContent()
+                    || isCustomFullscreenState || videoOverlayBridge != null || customView != null;
+
+            if (isNonWebSurface) {
+                addressBar.setVisibility(GONE);
+            } else {
+                addressBar.setVisibility(VISIBLE);
+            }
+
+            final int addressHeight = addressBar.getVisibility() == GONE ? 0 : (addressBar.getHeight() > 0 ? addressBar.getHeight() : (int) HelperUnit.convertDpToPixel(60f, context));
+            // Use the actual Compose bottom-nav height, NOT the container height.
+            // The bottom_nav_container (a RelativeLayout with wrap_content height) can
+            // incorrectly measure at the full screen height when RelativeLayout resolves
+            // ALIGN_PARENT_TOP + ALIGN_PARENT_BOTTOM simultaneously (e.g. after rule
+            // accumulation across multiple applyAddressBarPosition calls). When the
+            // container reports full screen height (e.g. 2392px) instead of the real
+            // nav-bar height (e.g. 276px), mainContent.setPadding(0, topInset, 0, 2392)
+            // leaves zero (or negative) available height for GeckoView/ComposeView
+            // children, producing the blank/black-screen bug.
+            View bottomNavComposeView = findViewById(R.id.bottom_nav_compose);
+            final int bottomNavHeight;
+            if (bottomNavContainer != null && bottomNavContainer.getVisibility() != GONE) {
+                // Prefer the measured height of the actual Compose nav view — it always
+                // represents the true rendered height of the navigation bar.
+                int composeH = (bottomNavComposeView != null) ? bottomNavComposeView.getHeight() : 0;
+                int containerH = bottomNavContainer.getHeight();
+                // Guard: if the container is suspiciously tall (> half screen height),
+                // fall back to the compose view height which is the ground-truth.
+                int screenH = getResources().getDisplayMetrics().heightPixels;
+                bottomNavHeight = (containerH > screenH / 2) ? composeH : (containerH > 0 ? containerH : (int) HelperUnit.convertDpToPixel(64f, context));
+            } else {
+                bottomNavHeight = 0;
+            }
+            final int gap = (int) HelperUnit.convertDpToPixel(2f, context);
+
+            // Keep main_content as a stable full-screen container and reserve space
+            // with padding. This avoids the old circular/async RelativeLayout layout
+            // dependency that caused the WebView/GeckoView to measure at zero height.
+            if (mainContent.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) mainContent.getLayoutParams();
+                lp.removeRule(RelativeLayout.BELOW);
+                lp.removeRule(RelativeLayout.ABOVE);
+                lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                lp.topMargin = 0;
+                lp.bottomMargin = 0;
+                mainContent.setLayoutParams(lp);
+            }
+
+            addressBar.setTranslationY(0f);
+            if (addressBar.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams addrParams = (RelativeLayout.LayoutParams) addressBar.getLayoutParams();
+                addrParams.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                addrParams.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                addrParams.removeRule(RelativeLayout.ABOVE);
+                addrParams.removeRule(RelativeLayout.BELOW);
+                addrParams.topMargin = 0;
+                if (isBottom) {
+                    addrParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    addrParams.bottomMargin = bottomNavHeight;
+                } else {
+                    addrParams.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    addrParams.bottomMargin = 0;
+                }
+                addressBar.setLayoutParams(addrParams);
+            }
+
+            int resolvedStatusBarGap = statusBarTopInset > 0 ? statusBarTopInset : HelperUnit.getStatusBarHeight(this);
+            // For bottom address bar (Firefox style):
+            // When address bar is at the bottom, it docks flush right above the bottom nav (if visible) or parent bottom.
+            // Reserved bottom padding for mainContent ensures webpage content sits flush above the bottom toolbar.
+            boolean isFloatingNavStyle = sp.getBoolean("sp_floating_tab_bar", true);
+            boolean liquidGlassOn = sp.getBoolean("sp_liquid_glass_enabled", false) &&
+                    (sp.getBoolean("sp_liquid_glass_bottom_nav", true) || (isBottom && sp.getBoolean("sp_liquid_glass_address_bar", true)));
+            boolean liquidGlassTopOn = sp.getBoolean("sp_liquid_glass_enabled", false) &&
+                    (!isBottom && sp.getBoolean("sp_liquid_glass_address_bar", true));
+            int reservedNavHeight = (isFloatingNavStyle && !isBottom) ? 0 : bottomNavHeight;
+            boolean reserveBarSpace = !isNonWebSurface;
+            int topInset = reserveBarSpace
+                    ? (!isBottom ? (liquidGlassTopOn ? resolvedStatusBarGap : addressHeight + gap) : resolvedStatusBarGap)
+                    : 0;
+            // When liquid glass is enabled, allow web content to extend all the way to the edges
+            // of the viewport so liquid glass can refract and blur the live webpage behind both bars.
+            // Flat (non-floating) liquid glass bars show the set wallpaper, not the page, so the page
+            // must stop above them (same gap the plain Material bar has). Floating glass bars keep
+            // the page running underneath.
+            boolean glassMaster = sp.getBoolean("sp_liquid_glass_enabled", false);
+            boolean flatNavBar = isBottom || !isFloatingNavStyle;
+            boolean navGlassFlat = glassMaster && flatNavBar && sp.getBoolean("sp_liquid_glass_bottom_nav", true);
+            boolean addrGlassFlat = glassMaster && isBottom && sp.getBoolean("sp_liquid_glass_address_bar", true);
+            boolean wallpaperBackdrop = navGlassFlat || addrGlassFlat;
+            View glassBackdropView = findViewById(R.id.glass_wallpaper_backdrop);
+            if (glassBackdropView instanceof androidx.compose.ui.platform.ComposeView) {
+                if (wallpaperBackdrop) {
+                    com.petal.browser.compose.home.PetalGlassBackdropBridge.bind(
+                            (androidx.compose.ui.platform.ComposeView) glassBackdropView, this);
+                    glassBackdropView.setVisibility(VISIBLE);
+                } else {
+                    glassBackdropView.setVisibility(GONE);
+                }
+            }
+            boolean pageRunsUnderBars = liquidGlassOn && !wallpaperBackdrop;
+            int bottomInset = (reserveBarSpace && !pageRunsUnderBars) ? (isBottom ? addressHeight + bottomNavHeight : reservedNavHeight)
+                    : 0;
+            mainContent.setPadding(0, topInset, 0, bottomInset);
+
+            // Remember where the page area sits with the bars shown and with them minimized.
+            int hiddenTopInset = topInset;
+            int hiddenBottomInset = bottomInset;
+            if (reserveBarSpace) {
+                if (!isBottom) hiddenTopInset = Math.min(topInset, resolvedStatusBarGap);
+                hiddenBottomInset = Math.max(0, bottomInset - (isBottom ? addressHeight : 0) - (flatNavBar ? bottomNavHeight : 0));
+            }
+            barsShownTop = topInset;
+            barsShownBottom = bottomInset;
+            barsHiddenTop = hiddenTopInset;
+            barsHiddenBottom = hiddenBottomInset;
+            barInsetsKnown = true;
+
+            // The strip above the page (status bar + top address bar) has no page content, so
+            // the window's black showed behind the glass bar. Give it the theme surface colour.
+            boolean topBarGlass = !isBottom
+                    && sp.getBoolean("sp_liquid_glass_enabled", false)
+                    && sp.getBoolean("sp_liquid_glass_address_bar", true);
+            View rootForStrip = findViewById(R.id.main);
+            if (rootForStrip != null) {
+                if (topBarGlass) {
+                    rootForStrip.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(
+                            rootForStrip, com.google.android.material.R.attr.colorSurface));
+                } else {
+                    rootForStrip.setBackground(null);
+                }
+            }
+
+
+            if (progressBarCompose != null && progressBarCompose.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) progressBarCompose.getLayoutParams();
+                lp.removeRule(RelativeLayout.ABOVE);
+                lp.removeRule(RelativeLayout.BELOW);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                if (isBottom) {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    // Dock progress bar flush right along the top border of the bottom address bar
+                    lp.bottomMargin = addressHeight + bottomNavHeight;
+                    lp.topMargin = 0;
+                } else {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    lp.topMargin = addressHeight;
+                    lp.bottomMargin = 0;
+                }
+                progressBarCompose.setLayoutParams(lp);
+                progressBarCompose.setElevation(HelperUnit.convertDpToPixel(30f, context));
+                progressBarCompose.setTranslationY(0f);
+                progressBarCompose.bringToFront();
+            }
+
+            if (downloadBanner != null && downloadBanner.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) downloadBanner.getLayoutParams();
+                lp.removeRule(RelativeLayout.BELOW);
+                lp.removeRule(RelativeLayout.ABOVE);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                if (isBottom) {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    lp.bottomMargin = addressHeight + bottomNavHeight + (int) HelperUnit.convertDpToPixel(8f, context);
+                    lp.topMargin = 0;
+                } else {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    lp.topMargin = addressHeight + gap;
+                    lp.bottomMargin = 0;
+                }
+                downloadBanner.setLayoutParams(lp);
+                downloadBanner.bringToFront();
+            }
+
+            View networkStatusBanner = findViewById(R.id.network_status_compose);
+            if (networkStatusBanner != null && networkStatusBanner.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) networkStatusBanner.getLayoutParams();
+                lp.removeRule(RelativeLayout.BELOW);
+                lp.removeRule(RelativeLayout.ABOVE);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                if (isBottom) {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    lp.bottomMargin = addressHeight + bottomNavHeight + (int) HelperUnit.convertDpToPixel(8f, context);
+                    lp.topMargin = 0;
+                } else {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    lp.topMargin = addressHeight + (int) HelperUnit.convertDpToPixel(6f, context);
+                    lp.bottomMargin = 0;
+                }
+                networkStatusBanner.setLayoutParams(lp);
+                networkStatusBanner.bringToFront();
+            }
+
+            View mediaSnifferBanner = findViewById(R.id.media_sniffer_compose);
+            if (mediaSnifferBanner != null && mediaSnifferBanner.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) mediaSnifferBanner.getLayoutParams();
+                lp.removeRule(RelativeLayout.BELOW);
+                lp.removeRule(RelativeLayout.ABOVE);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                if (isBottom) {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    lp.bottomMargin = addressHeight + bottomNavHeight + (int) HelperUnit.convertDpToPixel(8f, context);
+                    lp.topMargin = 0;
+                } else {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    lp.topMargin = addressHeight + (int) HelperUnit.convertDpToPixel(6f, context);
+                    lp.bottomMargin = 0;
+                }
+                mediaSnifferBanner.setLayoutParams(lp);
+                mediaSnifferBanner.bringToFront();
+            }
+
+            if (fabBubble != null && fabBubble.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) fabBubble.getLayoutParams();
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                if (isBottom) {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                    lp.bottomMargin = bottomNavHeight + addressHeight + (int) HelperUnit.convertDpToPixel(12f, context);
+                    lp.topMargin = 0;
+                } else {
+                    lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+                    lp.topMargin = addressHeight + (int) HelperUnit.convertDpToPixel(16f, context);
+                    lp.bottomMargin = 0;
+                }
+                fabBubble.setLayoutParams(lp);
+            }
+
+            if (bottomNavContainer != null && bottomNavContainer.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) bottomNavContainer.getLayoutParams();
+                lp.removeRule(RelativeLayout.ABOVE);
+                // Explicitly remove ALIGN_PARENT_TOP: if it was inadvertently set (by
+                // rule accumulation or an OEM RelativeLayout quirk), having BOTH
+                // ALIGN_PARENT_TOP and ALIGN_PARENT_BOTTOM forces wrap_content views to
+                // fill the full parent height. This causes bottomNavContainer.getHeight()
+                // to equal the screen height, which in turn makes mainContent.setPadding()
+                // produce zero available space for GeckoView/ComposeView (blank screen).
+                lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+                lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                lp.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+                bottomNavContainer.setLayoutParams(lp);
+                bottomNavContainer.bringToFront();
+            }
+
+            boolean isFloating = sp.getBoolean("sp_floating_tab_bar", true);
+            if (bottomNav != null && bottomNav.getLayoutParams() instanceof RelativeLayout.LayoutParams) {
+                RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) bottomNav.getLayoutParams();
+                lp.removeRule(RelativeLayout.ABOVE);
+                lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                lp.addRule(RelativeLayout.CENTER_HORIZONTAL, RelativeLayout.TRUE);
+                lp.bottomMargin = isFloating ? (int) HelperUnit.convertDpToPixel(6f, context) : 0;
+                bottomNav.setLayoutParams(lp);
+                bottomNav.bringToFront();
+            }
+
+            // Ensure mainContent stays behind UI bars and overlays
+            if (bottomNavContainer != null) bottomNavContainer.bringToFront();
+            if (bottomNav != null) bottomNav.bringToFront();
+            addressBar.bringToFront();
+            if (progressBarCompose != null) progressBarCompose.bringToFront();
+            if (downloadBanner != null) downloadBanner.bringToFront();
+            if (networkStatusBanner != null) networkStatusBanner.bringToFront();
+            if (mediaSnifferBanner != null) mediaSnifferBanner.bringToFront();
+            if (fabBubble != null) fabBubble.bringToFront();
+            View refreshBar = findViewById(R.id.refresh_bar_compose);
+            if (refreshBar != null) refreshBar.bringToFront();
+            // This pass reset the bars' offsets and margins; if they are minimized, put them back.
+            if (isAddressBarCollapsed) {
+                if (reserveBarSpace) {
+                    applyBarsHiddenState(true, false, true);
+                } else {
+                    isAddressBarCollapsed = false;
+                    barsHiddenUrl = null;
+                }
+            }
+            addressBar.requestLayout();
+            mainContent.requestLayout();
+
+            // Compose may initially report 0 before its first measure. Re-run after
+            // measurement so padding and overlays use the real address-bar height.
+            if (addressHeight == 0 && addressBar.getVisibility() != GONE) {
+                addressBar.post(this::applyAddressBarPosition);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error applying address bar position", e);
+        }
+    }
+
+    @Override
+    public synchronized void removeAlbum(final AlbumController controller) {
+        if (BrowserContainer.size() <= 1) {
+            boolean isIncog = controller != null && controller.isIncognito();
+            if (isIncog) {
+                removeAlbumSilently(controller);
+                addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+                com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
+            } else {
+                String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+                String homeUrl = sp.getString("favoriteURL", "about:blank");
+                if (currentUrl != null && !isHomePage(currentUrl) && !currentUrl.equals(homeUrl)) {
+                    if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                        ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).loadUrl(homeUrl);
+                    } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(homeUrl);
+                    } else if (activeGeckoView != null) {
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(homeUrl);
+                    }
+                    showAlbum(currentAlbumController, homeUrl);
+                } else {
+                    doubleTapsQuit();
+                }
+            }
+            updateOmniBox();
+            updatePersistentBottomNav();
+            // Ensure user stays on the tab switcher menu view when 0/1 tabs remain
+            showOverview();
+        } else {
+            // closeTabConfirmation() runs okAction asynchronously (it waits for the
+            // user to tap "OK" on a Snackbar) when the "confirm before closing tab"
+            // preference is on. The tab bar refresh must happen inside the callback,
+            // after the tab is actually removed - otherwise it fired immediately and
+            // showed a stale tab count/list until the user confirmed.
+            closeTabConfirmation(() -> {
+                AlbumController predecessor;
+                if (controller == currentAlbumController) {
+                    if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                        predecessor = ((com.petal.browser.browser.PetalTabViewController) controller).getPredecessor();
+                    } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                        predecessor = ((com.petal.browser.view.PetalGeckoView) controller).getPredecessor();
+                    } else {
+                        predecessor = null;
+                    }
+                } else {
+                    predecessor = currentAlbumController;
+                }
+                //if not the current TAB is being closed return to current TAB
+                tab_container.removeView(controller.getAlbumView());
+                // Retained surface: unmount it from contentFrame before the tab is destroyed.
+                detachTabSurface(controller);
+                int index = BrowserContainer.indexOf(controller);
+
+                try {
+                    String tabTitle = controller.getTitle();
+                    String tabUrl = controller.getUrl();
+                    boolean isIncog = false;
+                    String tabGrpId = null;
+                    String tabGrpTitle = null;
+                    if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                        com.petal.browser.browser.PetalTabViewController surface = (com.petal.browser.browser.PetalTabViewController) controller;
+                        isIncog = surface.isIncognito();
+                        tabGrpId = surface.getTabGroupId();
+                        tabGrpTitle = surface.getTabGroupTitle();
+                    } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                        isIncog = ((com.petal.browser.view.PetalGeckoView) controller).isIncognito();
+                        tabGrpId = ((com.petal.browser.view.PetalGeckoView) controller).getTabGroupId();
+                        tabGrpTitle = ((com.petal.browser.view.PetalGeckoView) controller).getTabGroupTitle();
+                    } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+                        isIncog = ((com.petal.browser.browser.PlaceholderAlbumController) controller).isIncognito();
+                        tabGrpId = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabGroupId();
+                        tabGrpTitle = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabGroupTitle();
+                    }
+                    com.petal.browser.unit.PetalRecentlyClosedManager.pushClosedTab(
+                        String.valueOf(controller.hashCode()),
+                        tabTitle,
+                        tabUrl,
+                        index,
+                        isIncog,
+                        tabGrpId,
+                        tabGrpTitle,
+                        null
+                    );
+                } catch (Exception ignored) {}
+
+                BrowserContainer.remove(controller);
+                String tabIdToRemove = null;
+                if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                    com.petal.browser.browser.PetalTabViewController surface =
+                            (com.petal.browser.browser.PetalTabViewController) controller;
+                    tabIdToRemove = surface.getTabId();
+                    surface.destroy();
+                } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                    tabIdToRemove = ((com.petal.browser.view.PetalGeckoView) controller).getTabId();
+                    ((com.petal.browser.view.PetalGeckoView) controller).destroy();
+                } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+                    tabIdToRemove = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabId();
+                }
+                com.petal.browser.unit.TabThumbnailCache.removeAllIdentifiers(tabIdToRemove, String.valueOf(controller.hashCode()));
+                if ((predecessor != null) && (BrowserContainer.indexOf(predecessor) != -1)) {
+                    //if predecessor is stored and has not been closed in the meantime
+                    showAlbum(predecessor);
+                } else {
+                    if (index >= BrowserContainer.size()) index = BrowserContainer.size() - 1;
+                    showAlbum(BrowserContainer.get(index));
+                }
+                updateOmniBox();
+                updatePersistentBottomNav();
+                saveOpenedTabs();
+                com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(BrowserActivity.this);
+            });
+        }
+    }
+
+    public synchronized void removeAlbumSilently(final AlbumController controller) {
+        if (controller == null) return;
+        try {
+            if (tab_container != null && controller.getAlbumView() != null) {
+                tab_container.removeView(controller.getAlbumView());
+            }
+            // Retained surface: unmount it from contentFrame before the tab is destroyed.
+            detachTabSurface(controller);
+            boolean isClosingCurrent = (controller == currentAlbumController);
+            try {
+                String tabTitle = controller.getTitle();
+                String tabUrl = controller.getUrl();
+                boolean isIncog = false;
+                String tabGrpId = null;
+                String tabGrpTitle = null;
+                int closeIndex = BrowserContainer.indexOf(controller);
+                if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                    com.petal.browser.browser.PetalTabViewController surface = (com.petal.browser.browser.PetalTabViewController) controller;
+                    isIncog = surface.isIncognito();
+                    tabGrpId = surface.getTabGroupId();
+                    tabGrpTitle = surface.getTabGroupTitle();
+                } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                    isIncog = ((com.petal.browser.view.PetalGeckoView) controller).isIncognito();
+                    tabGrpId = ((com.petal.browser.view.PetalGeckoView) controller).getTabGroupId();
+                    tabGrpTitle = ((com.petal.browser.view.PetalGeckoView) controller).getTabGroupTitle();
+                } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+                    isIncog = ((com.petal.browser.browser.PlaceholderAlbumController) controller).isIncognito();
+                    tabGrpId = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabGroupId();
+                    tabGrpTitle = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabGroupTitle();
+                }
+                com.petal.browser.unit.PetalRecentlyClosedManager.pushClosedTab(
+                    String.valueOf(controller.hashCode()),
+                    tabTitle,
+                    tabUrl,
+                    closeIndex,
+                    isIncog,
+                    tabGrpId,
+                    tabGrpTitle,
+                    null
+                );
+            } catch (Exception ignored) {}
+
+            BrowserContainer.remove(controller);
+            String tabIdToRemove = null;
+            if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                com.petal.browser.browser.PetalTabViewController surface =
+                        (com.petal.browser.browser.PetalTabViewController) controller;
+                tabIdToRemove = surface.getTabId();
+                surface.destroy();
+            } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                tabIdToRemove = ((com.petal.browser.view.PetalGeckoView) controller).getTabId();
+                com.petal.browser.engine.gecko.PetalEngineStore.removeTab(this, tabIdToRemove);
+            } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
+                tabIdToRemove = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabId();
+            }
+            
+            // Forgetful Browsing: If no remaining open tabs have this domain, purge its data
+            try {
+                String closedHost = HelperUnit.domain(controller.getUrl());
+                if (closedHost != null && !closedHost.isEmpty()) {
+                    boolean stillOpen = false;
+                    for (AlbumController ac : BrowserContainer.list()) {
+                        if (closedHost.equalsIgnoreCase(HelperUnit.domain(ac.getUrl()))) {
+                            stillOpen = true;
+                            break;
+                        }
+                    }
+                    if (!stillOpen) {
+                        com.petal.browser.privacy.ForgetfulBrowsingManager.onDomainTabsClosed(this, closedHost);
+                    }
+                }
+            } catch (Exception ignored) {}
+            
+            com.petal.browser.unit.TabThumbnailCache.removeAllIdentifiers(tabIdToRemove, String.valueOf(controller.hashCode()));
+            if (isClosingCurrent && BrowserContainer.size() > 0) {
+                AlbumController nextController = BrowserContainer.get(Math.max(0, BrowserContainer.size() - 1));
+                if (isOverlayScreenShowing) {
+                    if (currentAlbumController != null) {
+                        currentAlbumController.deactivate();
+                    }
+                    currentAlbumController = nextController;
+                    currentAlbumController.activate();
+                } else {
+                    showAlbum(nextController);
+                }
+            } else if (BrowserContainer.size() == 0) {
+                currentAlbumController = null;
+            }
+
+            updatePersistentBottomNav();
+            saveOpenedTabs();
+            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
+        } catch (Exception e) {
+            Log.e(TAG, "Error removing album silently", e);
+        }
+    }
+
+    /**
+     * Switches to the adjacent tab in the same mode (normal or incognito).
+     * @param direction -1 for previous tab, +1 for next tab
+     */
+    public synchronized void switchAdjacentTab(int direction) {
+        if (BrowserContainer.size() <= 1) return;
+        boolean isCurrentIncog = (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController)
+                ? ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).isIncognito()
+                : (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView)
+                ? ((com.petal.browser.view.PetalGeckoView) currentAlbumController).isIncognito()
+                : (activeGeckoView != null && activeGeckoView.isIncognito());
+
+        List<AlbumController> matchingTabs = new ArrayList<>();
+        for (AlbumController ac : BrowserContainer.list()) {
+            boolean tabIncog = (ac instanceof com.petal.browser.browser.PetalTabViewController)
+                    ? ((com.petal.browser.browser.PetalTabViewController) ac).isIncognito()
+                    : (ac instanceof com.petal.browser.view.PetalGeckoView)
+                    ? ((com.petal.browser.view.PetalGeckoView) ac).isIncognito()
+                    : false; // all tabs are GeckoView
+            if (tabIncog == isCurrentIncog) {
+                matchingTabs.add(ac);
+            }
+        }
+        if (matchingTabs.size() <= 1) return;
+
+        int currentIdx = matchingTabs.indexOf(currentAlbumController);
+        if (currentIdx == -1) currentIdx = 0;
+        int nextIdx = (currentIdx + direction) % matchingTabs.size();
+        if (nextIdx < 0) nextIdx += matchingTabs.size();
+
+        AlbumController targetTab = matchingTabs.get(nextIdx);
+        if (targetTab != null && targetTab != currentAlbumController) {
+            showAlbum(targetTab);
+        }
+    }
+
+    @Override
+    public synchronized void updateProgress(int progress) {
+        androidx.compose.ui.platform.ComposeView progressBarCompose = findViewById(R.id.main_progress_bar_compose);
+        String currentUrl = currentAlbumController != null && currentAlbumController.getUrl() != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+        boolean isInternalPage = currentUrl != null && (
+            currentUrl.startsWith("petal://settings") ||
+            currentUrl.startsWith("petal://history") ||
+            currentUrl.startsWith("petal://account") ||
+            currentUrl.startsWith("petal://downloads") ||
+            currentUrl.startsWith("petal://credits") ||
+            currentUrl.startsWith("about:blank") ||
+            isHomePage(currentUrl)
+        );
+
+        if (progressBarCompose != null) {
+            // Keep the ComposeView itself permanently VISIBLE and let its internal
+            // AnimatedVisibility state (below) control what's actually drawn. This
+            // used to call setVisibility(GONE) here, which - once set - a ComposeView
+            // never composes again, so the very next real page load had nothing left
+            // to make visible and the progress bar stayed missing for the rest of the
+            // session (root cause of the "progress bar is missing" bug).
+            if (progressBarCompose.getVisibility() != VISIBLE) {
+                progressBarCompose.setVisibility(VISIBLE);
+            }
+            if (!refreshState.isRefreshing() && !isInternalPage) {
+                com.petal.browser.ui.components.PetalProgressBarBridge.updateProgress(progressBarCompose, progress);
+                com.petal.browser.compose.home.PetalAddressBarBridge.updateProgressValue(progress);
+            } else {
+                com.petal.browser.ui.components.PetalProgressBarBridge.hide(progressBarCompose);
+                com.petal.browser.compose.home.PetalAddressBarBridge.updateProgressValue(100);
+            }
+        }
+
+        if (progressBar != null) {
+            // The Compose LinearWavy indicator is the website loading indicator.
+            // Keep the legacy Material bar hidden so the two lines never overlap.
+            if (progressBarCompose != null) {
+                progressBar.setVisibility(GONE);
+            } else if (!isInternalPage) {
+                progressBar.setProgressCompat(progress, true);
+                progressBar.setVisibility(progress < 100 ? VISIBLE : GONE);
+            } else {
+                progressBar.setVisibility(GONE);
+            }
+            if (progress >= 100) {
+                updateOmniBox();
+                saveOpenedTabs();
+                FaviconHelper.setFavicon(context, contentView, activeGeckoView.getUrl(), R.id.menu_icon, R.drawable.icon_image_broken);
+                final Handler handler = new Handler();
+                handler.postDelayed(() -> FaviconHelper.setFavicon(context, contentView, activeGeckoView.getUrl(), R.id.menu_icon, R.drawable.icon_image_broken), 500);
+            }
+        }
+    }
+
+    @Override
+    public void showFileChooser(ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
+        if (mFilePathCallback != null) {
+            mFilePathCallback.onReceiveValue(null);
+            mFilePathCallback = null;
+        }
+
+        // Petal-only upload flow: route media and document requests to their dedicated pickers.
+        com.petal.browser.compose.file.PetalUploadChooser.show(
+                this,
+                filePathCallback,
+                fileChooserParams,
+                () -> {
+                    Log.e(TAG, "Both Petal pickers failed to open");
+                    return kotlin.Unit.INSTANCE;
+                }
+        );
+    }
+
+    public void launchSystemFileChooserFallback(ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
+        mFilePathCallback = filePathCallback;
+        mCameraPhotoPath = null;
+
+        boolean isImageRequest = false;
+        if (fileChooserParams != null && fileChooserParams.getAcceptTypes() != null) {
+            for (String type : fileChooserParams.getAcceptTypes()) {
+                if (type != null && (type.contains("image/") || type.contains("image/*") || type.contains(".jpg") || type.contains(".png"))) {
+                    isImageRequest = true;
+                    break;
+                }
+            }
+        }
+
+        Intent takePictureIntent = null;
+        try {
+            Intent captureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            if (captureIntent.resolveActivity(getPackageManager()) != null) {
+                java.io.File photoFile = null;
+                try {
+                    String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date());
+                    String imageFileName = "JPEG_" + timeStamp + "_";
+                    java.io.File storageDir = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
+                    photoFile = java.io.File.createTempFile(imageFileName, ".jpg", storageDir);
+                    mCameraPhotoPath = photoFile.getAbsolutePath();
+                } catch (Exception ex) {
+                    Log.e(TAG, "Unable to create Image File", ex);
+                }
+
+                if (photoFile != null) {
+                    Uri photoURI = androidx.core.content.FileProvider.getUriForFile(
+                            this,
+                            getPackageName() + ".fileprovider",
+                            photoFile
+                    );
+                    captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                    captureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    takePictureIntent = captureIntent;
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up camera capture intent", e);
+        }
+
+        Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+        contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+        contentSelectionIntent.setType(isImageRequest ? "image/*" : "*/*");
+        if (fileChooserParams != null && fileChooserParams.getAcceptTypes() != null && fileChooserParams.getAcceptTypes().length > 0) {
+            String[] acceptTypes = fileChooserParams.getAcceptTypes();
+            if (acceptTypes.length == 1 && !acceptTypes[0].trim().isEmpty()) {
+                contentSelectionIntent.setType(acceptTypes[0]);
+            } else if (acceptTypes.length > 1) {
+                contentSelectionIntent.setType("*/*");
+                contentSelectionIntent.putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes);
+            }
+        }
+        if (fileChooserParams != null && fileChooserParams.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
+            contentSelectionIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        }
+
+        Intent[] intentArray;
+        if (takePictureIntent != null) {
+            intentArray = new Intent[]{takePictureIntent};
+        } else {
+            intentArray = new Intent[0];
+        }
+
+        Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+        chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+        chooserIntent.putExtra(Intent.EXTRA_TITLE, "Upload or Capture Image");
+        if (intentArray.length > 0) {
+            chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+        }
+
+        try {
+            startActivityForResult(chooserIntent, INPUT_FILE_REQUEST_CODE);
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting file chooser activity", e);
+            if (mFilePathCallback != null) {
+                mFilePathCallback.onReceiveValue(null);
+                mFilePathCallback = null;
+            }
+        }
+    }
+
+    @Override
+    public void onShowCustomView(View view, WebChromeClient.CustomViewCallback callback) {
+        if (view == null) return;
+        if (customView != null && callback != null) {
+            callback.onCustomViewHidden();
+            return;
+        }
+
+        customView = view;
+        customViewCallback = callback;
+        fullscreenHolder = new FrameLayout(context);
+        fullscreenHolder.addView(
+                customView,
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                ));
+
+        // Attach Petal native video player overlay on top of customView (auto-skipped on YouTube & YT embeds)
+        try {
+            com.petal.browser.browser.AlbumController activeController = currentAlbumController != null ? currentAlbumController : activeGeckoView;
+            videoOverlayBridge = new com.petal.browser.media.PetalVideoPlayerOverlayBridge(
+                    this,
+                    activeController,
+                    () -> {
+                        runOnUiThread(this::onHideCustomView);
+                        return kotlin.Unit.INSTANCE;
+                    }
+            );
+            videoOverlayBridge.attachOverlay(fullscreenHolder, customView);
+        } catch (Exception e) {
+            Log.w(TAG, "Video player overlay bridge failed to attach: " + e.getMessage());
+        }
+
+        FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
+        decorView.addView(
+                fullscreenHolder,
+                new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                ));
+
+        customView.setKeepScreenOn(true);
+        ((View) currentAlbumController).setVisibility(GONE);
+        setCustomFullscreen(true);
+
+        if (view instanceof FrameLayout) {
+            if (((FrameLayout) view).getFocusedChild() instanceof VideoView) {
+                videoView = (VideoView) ((FrameLayout) view).getFocusedChild();
+                videoView.setOnErrorListener(new VideoCompletionListener());
+                videoView.setOnCompletionListener(new VideoCompletionListener());
+            }
+        }
+    }
+
+    @Override
+    public void onHideCustomView() {
+        if (videoOverlayBridge != null) {
+            try {
+                videoOverlayBridge.detachOverlay();
+            } catch (Exception ignored) {}
+            videoOverlayBridge = null;
+        }
+        if (customViewCallback != null) {
+            try {
+                customViewCallback.onCustomViewHidden();
+            } catch (Exception ignored) {}
+            customViewCallback = null;
+        }
+        FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
+        if (fullscreenHolder != null) {
+            decorView.removeView(fullscreenHolder);
+        }
+        if (customView != null) {
+            customView.setKeepScreenOn(false);
+        }
+        ((View) currentAlbumController).setVisibility(VISIBLE);
+        setCustomFullscreen(false);
+        fullscreenHolder = null;
+        customView = null;
+        if (videoView != null) {
+            videoView.setOnErrorListener(null);
+            videoView.setOnCompletionListener(null);
+            videoView = null;
+        }
+        contentFrame.requestFocus();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    public void initOverview() {
+        if (dialogOverview == null) return;
+        listView = dialogOverview.findViewById(R.id.list_overView);
+        AtomicInteger intPage = new AtomicInteger();
+
+        try {
+            TypedValue typedValue = new TypedValue();
+            context.getTheme().resolveAttribute(R.attr.colorPrimaryInverse, typedValue, true);
+            int color = typedValue.data;
+            TypedValue typedValue2 = new TypedValue();
+            context.getTheme().resolveAttribute(R.attr.colorOnSurface, typedValue2, true);
+            int color2 = typedValue2.data;
+
+            if (bottom_navigation != null) {
+                BadgeDrawable badge = bottom_navigation.getOrCreateBadge(R.id.page_0);
+                if (badge != null) {
+                    badge.setBackgroundColor(color);
+                    badge.setBadgeTextColor(color2);
+                    badge.setHorizontalOffset(0);
+                    badge.setVerticalOffset(0);
+                    if (BrowserContainer.size() > 1) {
+                        badge.setNumber(BrowserContainer.size());
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        NavigationBarView.OnItemSelectedListener navListener = menuItem -> {
+
+            if (menuItem.getItemId() == R.id.page_0) {
+                if (fab_overview != null) fab_overview.setImageResource(R.drawable.icon_tab);
+                overViewTab = getString(R.string.album_title_tab);
+                intPage.set(R.id.page_0);
+                if (listView != null) listView.setVisibility(GONE);
+                if (tab_container != null) tab_container.setVisibility(VISIBLE);}
+
+            else if (menuItem.getItemId() == R.id.page_2) {
+                try {
+                    RecordAction action = new RecordAction(context);
+                    action.open(true);
+                    String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+                    if (fab_overview != null) {
+                        if (currentUrl != null && !currentUrl.isEmpty() && action.checkUrl(currentUrl, RecordUnit.TABLE_BOOKMARK)) {
+                            fab_overview.setImageResource(R.drawable.icon_bookmark_added);
+                        } else {
+                            fab_overview.setImageResource(R.drawable.icon_bookmark);
+                        }
+                    }
+                    action.close();
+
+                } catch (Exception e) {Log.i(TAG, "dialogCustomSearches:" + e);}
+                overViewTab = getString(R.string.album_title_bookmarks);
+                intPage.set(R.id.page_2);
+                if (listView != null) listView.setVisibility(VISIBLE);
+                if (tab_container != null) tab_container.setVisibility(GONE);
+
+                RecordAction action = new RecordAction(context);
+                action.open(false);
+                final List<Record> list;
+                list = action.listBookmark(activity, filter, filterBy);
+                action.close();
+                adapter = new AdapterRecord(context, list);
+                if (listView != null) {
+                    listView.setAdapter(adapter);
+                    adapter.notifyDataSetChanged();
+                    filter = false;
+                    listView.setOnItemClickListener((parent, view, position, id) -> {
+                        String itemUrl = list.get(position).getURL();
+                        navigateInCurrentTab(itemUrl);
+                        hideOverview();
+                    });
+                    listView.setOnItemLongClickListener((parent, view, position, id) -> {
+                        showOverflow(dialogOverview, listView, 3, list.get(position).getTitle(), list.get(position).getURL(), adapter, list, position);
+                        return true;
+                    });
+                } }
+            else if (menuItem.getItemId() == R.id.page_3) {
+                if (fab_overview != null) fab_overview.setImageResource(R.drawable.icon_history);
+                overViewTab = getString(R.string.album_title_history);
+                intPage.set(R.id.page_3);
+                listView.setVisibility(VISIBLE);
+                tab_container.setVisibility(GONE);
+
+                RecordAction action = new RecordAction(context);
+                action.open(false);
+                final List<Record> list;
+                list = action.listHistory(context);
+                action.close();
+                //noinspection NullableProblems
+                adapter = new AdapterRecord(context, list) {
+                    @Override
+                    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                        View v = super.getView(position, convertView, parent);
+                        TextView record_item_time = v.findViewById(R.id.dateView);
+                        record_item_time.setVisibility(VISIBLE);
+                        return v;
+                    }
+                };
+                listView.setAdapter(adapter);
+                adapter.notifyDataSetChanged();
+                listView.setOnItemClickListener((parent, view, position, id) -> {
+                    String itemUrl = list.get(position).getURL();
+                    navigateInCurrentTab(itemUrl);
+                    hideOverview();
+                });
+                listView.setOnItemLongClickListener((parent, view, position, id) -> {
+                    showOverflow(dialogOverview, listView, 4, list.get(position).getTitle(), list.get(position).getURL(), adapter, list, position);
+                    return true;
+                }); }
+            else if (menuItem.getItemId() == R.id.page_incognito) {
+                addAlbum("Incognito Tab", sp.getString("favoriteURL", "about:blank"), true, true);
+                hideOverview();
+            }
+            else if (menuItem.getItemId() == R.id.page_4) {
+                PopupMenu popup = new PopupMenu(this, bottom_navigation.findViewById(R.id.page_2));
+                popup.setForceShowIcon(true);
+                popup.setOnDismissListener(menu -> setSelectedTab());
+                if (bottom_navigation.getSelectedItemId() == R.id.page_0)
+                    popup.inflate(R.menu.menu_help);
+                else if (bottom_navigation.getSelectedItemId() == R.id.page_2)
+                    popup.inflate(R.menu.menu_list_bookmark);
+                else if (bottom_navigation.getSelectedItemId() == R.id.page_3)
+                    popup.inflate(R.menu.menu_list_history);
+
+                popup.setOnMenuItemClickListener(item -> {
+                    if (item.getItemId() == R.id.menu_delete) {
+                        String dialogTitle = overViewTab.equals(getString(R.string.album_title_bookmarks))
+                                ? "Clear All Bookmarks?" : "Clear All History?";
+                        String dialogMsg = overViewTab.equals(getString(R.string.album_title_bookmarks))
+                                ? "This will permanently remove all bookmarks from your library."
+                                : "This will permanently remove all web history records.";
+                        com.petal.browser.ui.components.PetalConfirmSheetBridge.showClearDatabaseConfirmation(
+                            BrowserActivity.this,
+                            dialogTitle,
+                            dialogMsg,
+                            () -> {
+                                if (overViewTab.equals(getString(R.string.album_title_bookmarks))) {
+                                    BrowserUnit.clearBookmark(context);
+                                    bottom_navigation.setSelectedItemId(R.id.page_2);
+                                } else if (overViewTab.equals(getString(R.string.album_title_history))) {
+                                    BrowserUnit.clearHistory(context);
+                                    bottom_navigation.setSelectedItemId(R.id.page_3);
+                                }
+                            }
+                        );
+                    } else if (item.getItemId() == R.id.menu_sortName) {
+                        sp.edit().putString("sort_bookmark", "title").apply();
+                        sp.edit().putBoolean("sort_bookmarkDomain", false).apply();
+                        bottom_navigation.setSelectedItemId(R.id.page_2);
+                    } else if (item.getItemId() == R.id.menu_sortIcon) {
+                        sp.edit().putString("sort_bookmark", "time").apply();
+                        sp.edit().putBoolean("sort_bookmarkDomain", false).apply();
+                        bottom_navigation.setSelectedItemId(R.id.page_2);
+                    } else if (item.getItemId() == R.id.menu_sortDate) {
+                        sp.edit().putBoolean("sort_historyDomain", false).apply();
+                        bottom_navigation.setSelectedItemId(R.id.page_3);
+                    } else if (item.getItemId() == R.id.menu_sortDomain) {
+                        if (overViewTab.equals(getString(R.string.album_title_bookmarks))) {
+                            sp.edit().putBoolean("sort_bookmarkDomain", true).apply();
+                            bottom_navigation.setSelectedItemId(R.id.page_2); }
+                        else if (overViewTab.equals(getString(R.string.album_title_history))) {
+                            sp.edit().putBoolean("sort_historyDomain", true).apply();
+                            bottom_navigation.setSelectedItemId(R.id.page_3);
+                        }
+                    } else if (item.getItemId() == R.id.menu_filter) {
+                        showDialogFilter();
+                    } else if (item.getItemId() == R.id.menu_help) {
+                        if (activeGeckoView != null) {
+                            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl("about:blank");
+                            showAlbum(currentAlbumController, "about:blank");
+                        }
+                    }
+                    return true;
+                });
+                popup.show();
+            }
+
+            return true;
+        };
+        bottom_navigation.setOnItemSelectedListener(navListener);
+        bottom_navigation.findViewById(R.id.page_2).setOnLongClickListener(v -> {
+            showDialogFilter();
+            return true;
+        });
+        setSelectedTab();
+        initOmniBox();
+
+        fab_menu = findViewById(R.id.fab_menu);
+        if (fab_menu != null) {
+            HelperUnit.applyBouncyTouchFeedback(fab_menu);
+            fab_menu.setOnClickListener(view -> {
+                String title = activeGeckoView != null ? activeGeckoView.getTitle() : "";
+                String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                showOverflow(null, null, 0, title, url, null, null, 0);
+            });
+            fab_menu.setOnLongClickListener(view -> {
+                String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                performGesture("setting_gesture_tabButton", url);
+                return true;
+            });
+        }
+
+        FloatingActionButton fab_share = findViewById(R.id.fab_share);
+        if (fab_share != null) {
+            HelperUnit.applyBouncyTouchFeedback(fab_share);
+            fab_share.setOnClickListener(v -> {
+                if (activeGeckoView != null && activeGeckoView.getUrl() != null) {
+                    shareLink(activeGeckoView.getTitle(), activeGeckoView.getUrl());
+                }
+            });
+        }
+
+        FloatingActionButton fab_undo = findViewById(R.id.fab_undo);
+        if (fab_undo != null) {
+            HelperUnit.applyBouncyTouchFeedback(fab_undo);
+            fab_undo.setOnClickListener(v -> {
+                if (activeGeckoView != null && activeGeckoView.canGoBack()) {
+                    activeGeckoView.goBack();
+                } else {
+                    PetalToast.show(BrowserActivity.this, "Nothing to undo");
+                }
+            });
+        }
+
+        fab_overview = findViewById(R.id.fab_overview);
+        progressBar = findViewById(R.id.main_progress_bar);
+        androidx.compose.ui.platform.ComposeView progressBarComposeView = findViewById(R.id.main_progress_bar_compose);
+        if (progressBarComposeView != null) {
+            androidx.compose.ui.platform.ComposeView fancyProgress = com.petal.browser.ui.components.PetalProgressBarBridge.createProgressView(this);
+            ViewGroup parent = (ViewGroup) progressBarComposeView.getParent();
+            if (parent != null) {
+                int index = parent.indexOfChild(progressBarComposeView);
+                parent.removeView(progressBarComposeView);
+                fancyProgress.setId(R.id.main_progress_bar_compose);
+                fancyProgress.setLayoutParams(progressBarComposeView.getLayoutParams());
+                parent.addView(fancyProgress, index);
+            }
+        }
+        badgeDrawable = BadgeDrawable.create(context);
+
+        TypedValue typedValue = new TypedValue();
+        context.getTheme().resolveAttribute(R.attr.colorPrimaryInverse, typedValue, true);
+        int color = typedValue.data;
+        TypedValue typedValue2 = new TypedValue();
+        context.getTheme().resolveAttribute(R.attr.colorOnSurface, typedValue2, true);
+        int color2 = typedValue2.data;
+        badgeDrawable.setBackgroundColor(color);
+        badgeDrawable.setBadgeTextColor(color2);
+
+        if (fab_overview != null) {
+            fab_overview.setOnTouchListener(new SwipeTouchListener(context) {
+                public void onSwipeTop() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_tb_up", url);
+                    hideOverview();
+                }
+                public void onSwipeBottom() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_tb_down", url);
+                    hideOverview();
+                }
+                public void onSwipeRight() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_tb_right", url);
+                    hideOverview();
+                }
+                public void onSwipeLeft() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_tb_left", url);
+                    hideOverview();
+                }
+            });
+        }
+
+        if (fab_menu != null) {
+            fab_menu.setOnTouchListener(new SwipeTouchListener(context) {
+                public void onSwipeTop() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_nav_up", url);
+                    hideOverflow();
+                }
+                public void onSwipeBottom() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_nav_down", url);
+                    hideOverflow();
+                }
+                public void onSwipeRight() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_nav_right", url);
+                    hideOverflow();
+                }
+                public void onSwipeLeft() {
+                    String url = activeGeckoView != null ? activeGeckoView.getUrl() : "";
+                    performGesture("setting_gesture_nav_left", url);
+                    hideOverflow();
+                }
+            });
+        }
+
+        if (fab_overview != null) {
+            HelperUnit.applyBouncyTouchFeedback(fab_overview);
+            fab_overview.setOnClickListener(v -> showOverview());
+            fab_overview.setOnLongClickListener(v -> {
+                performGesture("setting_gesture_overViewButton", activeGeckoView != null ? activeGeckoView.getUrl() : "");
+                return true;
+            });
+        }
+    }
+
+    @SuppressLint({"ClickableViewAccessibility", "UnsafeOptInUsageError"})
+    public void initOmniBox() {
+        contentView = findViewById(android.R.id.content);
+        composeAddressBar = findViewById(R.id.compose_address_bar);
+
+        View fab_bubble = findViewById(R.id.fab_bubble);
+        if (fab_bubble != null) {
+            HelperUnit.applyBouncyTouchFeedback(fab_bubble);
+            fab_bubble.setOnClickListener(v -> animateAddressBarCollapse(false));
+            styleFabBubbleForLiquidGlass(fab_bubble);
+        }
+
+        updateAddressBar();
+    }
+
+    public void performSearchWithFixerPrompt(String query, boolean isIncognitoTab, java.util.function.Consumer<String> onReadyToNavigate) {
+        if (query == null || query.trim().isEmpty()) return;
+        final String trimmed = query.trim();
+        // Google Search Fixer is enabled by default silently without disturbing popups or prompts
+        String targetUrl = com.petal.browser.unit.BrowserUnit.queryWrapper(this, trimmed);
+        onReadyToNavigate.accept(targetUrl);
+    }
+
+    public void handleFinalSearch(String query) {
+        if (query != null && !query.trim().isEmpty()) {
+            hideSearch();
+            boolean isIncognito = currentAlbumController != null && currentAlbumController.isIncognito();
+            performSearchWithFixerPrompt(query.trim(), isIncognito, targetUrl -> {
+                if (currentAlbumController != null) {
+                    showAlbum(currentAlbumController, targetUrl);
+                } else if (activeGeckoView != null) {
+                    showAlbum(currentAlbumController, targetUrl);
+                } else {
+                    addAlbum(null, targetUrl, true, isIncognito);
+                }
+            });
+        } else {
+            PetalToast.show(this, R.string.toast_input_empty);
+        }
+    }
+
+    private boolean isHomePage(String url) {
+        if (url == null || url.trim().isEmpty()) return true;
+        String clean = url.trim().toLowerCase(java.util.Locale.ROOT);
+        if (clean.equals("about:blank") || clean.equals("about:home") || clean.equals("petal://home") || clean.equals("petal://start") || clean.contains("petal_home.html")) {
+            return true;
+        }
+        return clean.startsWith("file:///android_asset/");
+    }
+
+    public boolean isActualWebPage(String url) {
+        if (url == null) return false;
+        String clean = url.trim();
+        if (clean.isEmpty() || isHomePage(clean)) return false;
+        String lower = clean.toLowerCase(java.util.Locale.ROOT);
+        return lower.startsWith("http://") || lower.startsWith("https://");
+    }
+
+    public boolean isCurrentTabHomeOrBlank() {
+        String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+        if (url == null || url.trim().isEmpty()) return true;
+        String clean = url.trim().toLowerCase(java.util.Locale.ROOT);
+        if (clean.equals("about:blank") || clean.equals("about:home") || clean.equals("petal://home") || clean.equals("petal://start") || clean.contains("petal_home.html")) {
+            return true;
+        }
+        return clean.startsWith("file:///android_asset/");
+    }
+
+    private androidx.compose.ui.platform.ComposeView composeAddressBar;
+
+    public void updateAddressBar() {
+        if (composeAddressBar == null) {
+            composeAddressBar = findViewById(R.id.compose_address_bar);
+        }
+        if (composeAddressBar == null) return;
+
+        String currentUrl = "";
+        String currentTitle = "";
+        boolean isIncognito = false;
+        boolean canGoBack = false;
+        boolean isLoading = false;
+        Bitmap currentFavicon = null;
+        float currentProgressFraction = 0f;
+
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            com.petal.browser.browser.PetalTabViewController surface = getActivePetalTabSurface();
+            com.petal.browser.browser.PetalTabViewController.State state = surface != null ? surface.currentState() : null;
+            if (state != null) {
+                currentUrl = state.getUrl();
+                currentTitle = state.getTitle();
+                isIncognito = state.isPrivate();
+                canGoBack = state.getCanGoBack();
+                isLoading = state.getLoading();
+                currentProgressFraction = state.getProgress() / 100f;
+            }
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+            currentUrl = gv.getUrl();
+            currentTitle = gv.getTitle();
+            isIncognito = gv.isIncognito();
+            canGoBack = gv.canGoBack();
+            isLoading = gv.getProgress() < 100;
+            currentFavicon = gv.getFavicon();
+            currentProgressFraction = gv.getProgress() / 100f;
+        } else if (activeGeckoView != null) {
+            currentUrl = activeGeckoView.getUrl();
+            currentTitle = activeGeckoView.getTitle();
+            isIncognito = activeGeckoView.isIncognito();
+            canGoBack = activeGeckoView.canGoBack();
+            isLoading = activeGeckoView.getProgress() < 100;
+            currentFavicon = activeGeckoView.getFavicon();
+            currentProgressFraction = activeGeckoView.getProgress() / 100f;
+        }
+
+        boolean isNonWebSurface = !isActualWebPage(currentUrl) || isPetalHomeSurfaceShowing || isHomePage(currentUrl)
+                || isOverlayScreenShowing || hasNonTabTopContent()
+                || isCustomFullscreenState || videoOverlayBridge != null || customView != null;
+        if (isNonWebSurface) {
+            composeAddressBar.setVisibility(GONE);
+            return;
+        } else {
+            composeAddressBar.setVisibility(VISIBLE);
+            applyAddressBarPosition();
+            composeAddressBar.bringToFront();
+            composeAddressBar.setTranslationY(0f);
+        }
+
+        com.petal.browser.compose.home.PetalAddressBarBridge.bindAddressBar(
+                composeAddressBar,
+                this,
+                currentUrl != null ? currentUrl : "",
+                currentTitle != null ? currentTitle : "",
+                isIncognito,
+                isLoading,
+                canGoBack,
+                () -> {
+                    com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                    performBackNavigation();
+                },
+                () -> {
+                    com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                    String shareUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+                    if (shareUrl != null && !shareUrl.isEmpty() && !isHomePage(shareUrl)) {
+                        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                        shareIntent.setType("text/plain");
+                        shareIntent.putExtra(Intent.EXTRA_TEXT, shareUrl);
+                        startActivity(Intent.createChooser(shareIntent, "Share Link"));
+                    }
+                },
+                () -> {
+                    com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                    String cUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+                    if (cUrl == null || cUrl.equalsIgnoreCase("about:blank") || cUrl.startsWith("about:") || isHomePage(cUrl)) {
+                        cUrl = "";
+                    }
+                    showOmniboxPage(cUrl);
+                },
+                () -> {
+                    com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this).playClick(BrowserActivity.this);
+                    showAiResearchSheet();
+                },
+                currentFavicon,
+                currentProgressFraction,
+                () -> {
+                    // Swipe to next tab
+                    AlbumController next = nextAlbumController(true);
+                    if (next != null && next != currentAlbumController) {
+                        showAlbum(next);
+                    }
+                },
+                () -> {
+                    // Swipe to previous tab
+                    AlbumController prev = nextAlbumController(false);
+                    if (prev != null && prev != currentAlbumController) {
+                        showAlbum(prev);
+                    }
+                },
+                pastedText -> {
+                    // Paste & Go
+                    if (pastedText != null && !pastedText.trim().isEmpty()) {
+                        handleFinalSearch(pastedText.trim());
+                    }
+                    return kotlin.Unit.INSTANCE;
+                },
+                () -> {
+                    // Hard Refresh (bypass cache)
+                    if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                        ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).reloadBypassCache();
+                    } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reloadBypassCache();
+                    } else if (activeGeckoView != null) {
+                        activeGeckoView.reload();
+                    }
+                }
+        );
+        if (refreshState != null && refreshState.isRefreshing()) {
+            refreshState.setRefreshing(false);
+            refreshState.setPullProgress(0f);
+            View refreshBarCompose = findViewById(R.id.refresh_bar_compose);
+            if (refreshBarCompose != null) {
+                refreshBarCompose.setVisibility(GONE);
+            }
+        }
+    }
+
+    private boolean isAiResearchExtracting = false;
+    private final android.os.Handler aiResearchTimeoutHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable aiResearchTimeoutRunnable;
+
+    public void showAiResearchSheet() {
+        if (currentAlbumController == null && activeGeckoView == null) return;
+
+        // Guard against rapid repeated taps queuing up multiple evaluateJavascript
+        // calls on the WebView - this is what made the browser appear to hang.
+        if (isAiResearchExtracting) return;
+
+        final String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : activeGeckoView.getUrl();
+        final String currentTitle = (currentAlbumController != null && currentAlbumController.getTitle() != null)
+                ? currentAlbumController.getTitle()
+                : (activeGeckoView != null && activeGeckoView.getTitle() != null ? activeGeckoView.getTitle() : "");
+
+        if (!com.petal.browser.compose.ai.PetalAiResearchEngine.INSTANCE.isProperWebSite(currentUrl)) {
+            return;
+        }
+
+        isAiResearchExtracting = true;
+        PetalToast.show(BrowserActivity.this, "Analyzing page\u2026");
+
+        if (currentAlbumController != null) {
+            isAiResearchExtracting = false;
+            com.petal.browser.ui.components.PetalAiResearchBridge.showAiFeature(
+                BrowserActivity.this,
+                currentTitle,
+                currentUrl,
+                currentTitle
+            );
+            return;
+        }
+
+        if (activeGeckoView == null) {
+            isAiResearchExtracting = false;
+            return;
+        }
+
+        // Safety timeout: if the page's JS engine is busy or the callback never
+        // fires (huge/complex DOM, stalled page, cross-origin edge cases), don't
+        // leave the UI stuck with no feedback - bail out after a few seconds.
+        aiResearchTimeoutRunnable = () -> {
+            if (isAiResearchExtracting) {
+                isAiResearchExtracting = false;
+                PetalToast.show(BrowserActivity.this, "Petal AI timed out reading this page. Please try again.");
+            }
+        };
+        aiResearchTimeoutHandler.postDelayed(aiResearchTimeoutRunnable, 6000);
+
+        // Truncate inside the page's own JS (before crossing the JS bridge) so
+        // very large pages don't serialize megabytes of text back to Java -
+        // that marshalling cost was the main cause of the perceived freeze.
+        activeGeckoView.evaluateJavascript(
+            "(function() { " +
+            "  try { " +
+            "    var title = document.title || ''; " +
+            "    var metaDesc = (document.querySelector('meta[name=\"description\"]') || {}).content || ''; " +
+            "    var bodyText = document.body ? document.body.innerText : ''; " +
+            "    if (bodyText && bodyText.length > 16000) { bodyText = bodyText.substring(0, 16000); } " +
+            "    return title + '\\n' + metaDesc + '\\n' + bodyText; " +
+            "  } catch (e) { return title || ''; } " +
+            "})();",
+            value -> {
+                aiResearchTimeoutHandler.removeCallbacks(aiResearchTimeoutRunnable);
+                if (!isAiResearchExtracting) return kotlin.Unit.INSTANCE; // already timed out, ignore late callback
+                isAiResearchExtracting = false;
+
+                String cleanText = value != null ? value : "";
+                if (cleanText.startsWith("\"") && cleanText.endsWith("\"") && cleanText.length() >= 2) {
+                    cleanText = cleanText.substring(1, cleanText.length() - 1);
+                }
+                cleanText = cleanText.replace("\\n", "\n").replace("\\\"", "\"").replace("\\\\", "\\");
+                if (cleanText.length() > 15000) {
+                    cleanText = cleanText.substring(0, 15000);
+                }
+
+                com.petal.browser.ui.components.PetalAiResearchBridge.showAiFeature(
+                    BrowserActivity.this,
+                    currentTitle,
+                    currentUrl,
+                    cleanText
+                );
+                return kotlin.Unit.INSTANCE;
+            }
+        );
+    }
+
+    public int currentVideoWidth = 0;
+    public int currentVideoHeight = 0;
+
+    public void updateVideoDimensions(int width, int height) {
+        if (width > 0 && height > 0) {
+            this.currentVideoWidth = width;
+            this.currentVideoHeight = height;
+            updatePipParams(isMediaPlaying);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Scroll-minimized bars (address bar + bottom nav). This is the single owner of the
+    // hide / show state; every scroll listener only calls animateAddressBarCollapse().
+    // ─────────────────────────────────────────────────────────────────────────────
+    private boolean isAddressBarCollapsed = false;
+    private String barsHiddenUrl = null;
+    private boolean imeVisibleForBars = false;
+    public int navigationBarBottomInset = 0;
+    private boolean barInsetsKnown = false;
+    private int barsShownTop = 0, barsShownBottom = 0, barsHiddenTop = 0, barsHiddenBottom = 0;
+    private final java.util.WeakHashMap<View, androidx.dynamicanimation.animation.SpringAnimation> barSprings = new java.util.WeakHashMap<>();
+
+    /** Whether the bars may be minimized right now. Showing them again is never blocked. */
+    private boolean canCollapseBars() {
+        if (!sp.getBoolean("sp_hide_bars_on_scroll", true)) return false;
+        if (imeVisibleForBars) return false;
+        View find = findViewById(R.id.find_in_page_compose);
+        if (find != null && find.getVisibility() == VISIBLE) return false;
+        // TalkBack / switch users: bars that move away are hard to find. Keep them put.
+        android.view.accessibility.AccessibilityManager am = (android.view.accessibility.AccessibilityManager)
+                getSystemService(android.content.Context.ACCESSIBILITY_SERVICE);
+        if (am != null && am.isEnabled() && am.isTouchExplorationEnabled()) return false;
+        return true;
+    }
+
+    public void animateAddressBarCollapse(boolean collapse) {
+        String currentUrl = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+        View fab_bubble = findViewById(R.id.fab_bubble);
+        if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+
+        if (getIntent() != null && getIntent().getBooleanExtra("pwa_mode", false)) {
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+            if (contentFrame != null) contentFrame.setTranslationY(0f);
+            return;
+        }
+
+        boolean isNonWeb = !isActualWebPage(currentUrl) || isHomePage(currentUrl)
+                || isOverlayScreenShowing || hasNonTabTopContent()
+                || isCustomFullscreenState || videoOverlayBridge != null || customView != null;
+        if (isNonWeb) {
+            if (isAddressBarCollapsed) {
+                // Views only: the layout pass for this surface already set the content insets.
+                applyBarsHiddenState(false, false, false);
+            }
+            isAddressBarCollapsed = false;
+            barsHiddenUrl = null;
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+            if (contentFrame != null) contentFrame.setTranslationY(0f);
+            return;
+        }
+
+        if (composeAddressBar == null) return;
+
+        if (collapse && !isAddressBarCollapsed) {
+            if (!barInsetsKnown || !canCollapseBars()) return;
+            isAddressBarCollapsed = true;
+            barsHiddenUrl = currentUrl;
+            applyBarsHiddenState(true, true, true);
+        } else if (!collapse && isAddressBarCollapsed) {
+            isAddressBarCollapsed = false;
+            barsHiddenUrl = null;
+            applyBarsHiddenState(false, true, true);
+        }
+    }
+
+    /** Brings the bars back right away, e.g. when a new page starts. */
+    private void resetBarsToShown(boolean animate) {
+        if (!isAddressBarCollapsed) return;
+        isAddressBarCollapsed = false;
+        barsHiddenUrl = null;
+        applyBarsHiddenState(false, animate, true);
+    }
+
+    /**
+     * Moves every bar (address bar, bottom nav, progress line, banners, bubble) to the hidden or
+     * shown position, and grows / shrinks the page area to match. The one place that does this.
+     */
+    private void applyBarsHiddenState(boolean hidden, boolean animate, boolean adjustContent) {
+        View addressBar = findViewById(R.id.compose_address_bar);
+        View navContainer = findViewById(R.id.bottom_nav_container);
+        View navCompose = findViewById(R.id.bottom_nav_compose);
+        View bubble = findViewById(R.id.fab_bubble);
+        View mainContent = findViewById(R.id.main_content);
+        if (addressBar == null) return;
+
+        boolean isBottom = "BOTTOM".equalsIgnoreCase(sp.getString("sp_address_bar_position", "TOP"));
+        float dp16 = HelperUnit.convertDpToPixel(16f, context);
+        int screenH = getResources().getDisplayMetrics().heightPixels;
+
+        float addrH = addressBar.getHeight() > 0 ? addressBar.getHeight() : HelperUnit.convertDpToPixel(56f, context);
+        View navTarget = (navContainer != null && navContainer.getVisibility() != GONE) ? navContainer : null;
+        float navH = 0f;
+        if (navTarget != null) {
+            int h = navTarget.getHeight();
+            // Guard against the container measuring at full-screen height (see applyAddressBarPosition).
+            if (h > screenH / 2 && navCompose != null) h = navCompose.getHeight();
+            navH = h > 0 ? h : HelperUnit.convertDpToPixel(64f, context);
+        }
+
+        float addrOff = 0f, navOff = 0f, dockedOff = 0f;
+        if (hidden) {
+            navOff = navTarget != null ? navH + dp16 : 0f;
+            if (isBottom) {
+                addrOff = addrH + navH + dp16;
+                dockedOff = addrOff;
+            } else {
+                int statusGap = statusBarTopInset > 0 ? statusBarTopInset : HelperUnit.getStatusBarHeight(this);
+                addrOff = -(addrH + HelperUnit.convertDpToPixel(40f, context));
+                dockedOff = -Math.max(0f, addrH - statusGap);
+            }
+        } else {
+            // Coming back: make sure nothing stays INVISIBLE (see the hide-complete step below).
+            if (addressBar.getVisibility() == INVISIBLE) addressBar.setVisibility(VISIBLE);
+            if (navContainer != null && navContainer.getVisibility() == INVISIBLE) navContainer.setVisibility(VISIBLE);
+        }
+
+        View[] docked = new View[] {
+                findViewById(R.id.main_progress_bar_compose),
+                findViewById(R.id.main_progress_bar),
+                findViewById(R.id.download_banner_compose),
+                findViewById(R.id.network_status_compose),
+                findViewById(R.id.media_sniffer_compose)
+        };
+
+        if (animate) {
+            springTranslateY(addressBar, addrOff, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_NO_BOUNCY);
+            if (navTarget != null) springTranslateY(navTarget, navOff, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_NO_BOUNCY);
+            for (View v : docked) if (v != null) springTranslateY(v, dockedOff, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_NO_BOUNCY);
+        } else {
+            setBarTranslationNow(addressBar, addrOff);
+            if (navTarget != null) setBarTranslationNow(navTarget, navOff);
+            for (View v : docked) if (v != null) setBarTranslationNow(v, dockedOff);
+        }
+
+        if (adjustContent && mainContent != null && barInsetsKnown) {
+            int targetTop = hidden ? barsHiddenTop : barsShownTop;
+            int targetBottom = hidden ? barsHiddenBottom : barsShownBottom;
+            if (animate) {
+                animateContentPadding(targetTop, targetBottom);
+            } else {
+                if (contentPaddingAnimator != null) contentPaddingAnimator.cancel();
+                mainContent.setPadding(mainContent.getPaddingLeft(), targetTop, mainContent.getPaddingRight(), targetBottom);
+            }
+        }
+
+        if (bubble != null) {
+            if (hidden) {
+                styleFabBubbleForLiquidGlass(bubble);
+                placeBubble(bubble, true, addrH, navH);
+                bubble.setVisibility(VISIBLE);
+                if (animate) {
+                    bubble.setScaleX(0f);
+                    bubble.setScaleY(0f);
+                    bubble.setAlpha(0f);
+                    springScale(bubble, 1f, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
+                    springAlpha(bubble, 1f, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
+                } else {
+                    bubble.setScaleX(1f);
+                    bubble.setScaleY(1f);
+                    bubble.setAlpha(1f);
+                }
+            } else if (animate) {
+                final float fAddrH = addrH, fNavH = navH;
+                springScale(bubble, 0f, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
+                springAlpha(bubble, 0f, SpringForce.STIFFNESS_MEDIUM, SpringForce.DAMPING_RATIO_MEDIUM_BOUNCY);
+                bubble.postDelayed(() -> {
+                    if (!isAddressBarCollapsed) {
+                        bubble.setVisibility(GONE);
+                        placeBubble(bubble, false, fAddrH, fNavH);
+                    }
+                }, 350);
+            } else {
+                bubble.setVisibility(GONE);
+                placeBubble(bubble, false, addrH, navH);
+            }
+        }
+
+        if (hidden) {
+            // Once the slide is over, take the bars out of drawing. Their glass then stops
+            // re-recording the page every frame (see GlassBackdrop.refresh).
+            addressBar.postDelayed(() -> {
+                if (!isAddressBarCollapsed) return;
+                View a = findViewById(R.id.compose_address_bar);
+                View n = findViewById(R.id.bottom_nav_container);
+                if (a != null && a.getVisibility() == VISIBLE) a.setVisibility(INVISIBLE);
+                if (n != null && n.getVisibility() == VISIBLE) n.setVisibility(INVISIBLE);
+            }, animate ? 520 : 0);
+        }
+    }
+
+    /** The minimized-state bubble sits bottom-right above the gesture bar; shown-state keeps its old spot. */
+    private void placeBubble(View bubble, boolean hiddenState, float addrH, float navH) {
+        if (!(bubble.getLayoutParams() instanceof RelativeLayout.LayoutParams)) return;
+        RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) bubble.getLayoutParams();
+        lp.removeRule(RelativeLayout.ALIGN_PARENT_TOP);
+        lp.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        boolean isBottom = "BOTTOM".equalsIgnoreCase(sp.getString("sp_address_bar_position", "TOP"));
+        if (hiddenState) {
+            lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+            lp.topMargin = 0;
+            lp.bottomMargin = navigationBarBottomInset + (int) HelperUnit.convertDpToPixel(20f, context);
+        } else if (isBottom) {
+            lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+            lp.topMargin = 0;
+            lp.bottomMargin = (int) (navH + addrH + HelperUnit.convertDpToPixel(12f, context));
+        } else {
+            lp.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
+            lp.bottomMargin = 0;
+            lp.topMargin = (int) (addrH + HelperUnit.convertDpToPixel(16f, context));
+        }
+        bubble.setLayoutParams(lp);
+    }
+
+    private void styleFabBubbleForLiquidGlass(View bubble) {
+        if (bubble instanceof com.google.android.material.card.MaterialCardView) {
+            com.google.android.material.card.MaterialCardView card = (com.google.android.material.card.MaterialCardView) bubble;
+            boolean isGlass = sp.getBoolean("sp_liquid_glass_enabled", false);
+            if (isGlass) {
+                int surfaceColor = com.google.android.material.color.MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurfaceContainerHigh);
+                int outlineColor = com.google.android.material.color.MaterialColors.getColor(card, com.google.android.material.R.attr.colorOutlineVariant);
+                int alphaSurface = (int) (255 * 0.70f);
+                int alphaOutline = (int) (255 * 0.40f);
+                int glassBg = androidx.core.graphics.ColorUtils.setAlphaComponent(surfaceColor, alphaSurface);
+                int glassStroke = androidx.core.graphics.ColorUtils.setAlphaComponent(outlineColor, alphaOutline);
+                card.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(glassBg));
+                card.setStrokeColor(android.content.res.ColorStateList.valueOf(glassStroke));
+                card.setStrokeWidth((int) HelperUnit.convertDpToPixel(1.2f, context));
+                card.setCardElevation(HelperUnit.convertDpToPixel(8f, context));
+            } else {
+                int surfaceColor = com.google.android.material.color.MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurfaceContainerHighest);
+                int outlineColor = com.google.android.material.color.MaterialColors.getColor(card, com.google.android.material.R.attr.colorOutlineVariant);
+                card.setCardBackgroundColor(android.content.res.ColorStateList.valueOf(surfaceColor));
+                card.setStrokeColor(android.content.res.ColorStateList.valueOf(outlineColor));
+                card.setStrokeWidth((int) HelperUnit.convertDpToPixel(1f, context));
+                card.setCardElevation(HelperUnit.convertDpToPixel(16f, context));
+            }
+        }
+    }
+
+    private void setBarTranslationNow(View v, float y) {
+        androidx.dynamicanimation.animation.SpringAnimation old = barSprings.get(v);
+        if (old != null && old.isRunning()) old.cancel();
+        v.setTranslationY(y);
+    }
+
+    private void animateContentPadding(int targetTop, int targetBottom) {
+        final View mainContent = findViewById(R.id.main_content);
+        if (mainContent == null) return;
+        if (contentPaddingAnimator != null) {
+            contentPaddingAnimator.cancel();
+        }
+        final int startTop = mainContent.getPaddingTop();
+        final int startBottom = mainContent.getPaddingBottom();
+        if (startTop == targetTop && startBottom == targetBottom) return;
+        contentPaddingAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f);
+        contentPaddingAnimator.setDuration(240L);
+        contentPaddingAnimator.setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator());
+        contentPaddingAnimator.addUpdateListener(anim -> {
+            float f = (float) anim.getAnimatedValue();
+            mainContent.setPadding(
+                    mainContent.getPaddingLeft(),
+                    startTop + (int) ((targetTop - startTop) * f),
+                    mainContent.getPaddingRight(),
+                    startBottom + (int) ((targetBottom - startBottom) * f));
+        });
+        contentPaddingAnimator.start();
+    }
+
+    /** Springs a view's vertical offset. A running spring on the same view is cancelled first, so repeated calls never stack. */
+    public void springTranslateY(View view, float endValue, float stiffness, float dampingRatio) {
+        if (view == null) return;
+        androidx.dynamicanimation.animation.SpringAnimation old = barSprings.get(view);
+        if (old != null && old.isRunning()) old.cancel();
+        androidx.dynamicanimation.animation.SpringAnimation anim =
+                new androidx.dynamicanimation.animation.SpringAnimation(view, androidx.dynamicanimation.animation.DynamicAnimation.TRANSLATION_Y);
+        anim.setSpring(new androidx.dynamicanimation.animation.SpringForce(endValue)
+                .setStiffness(stiffness)
+                .setDampingRatio(dampingRatio));
+        barSprings.put(view, anim);
+        anim.start();
+    }
+
+    public void springScale(View view, float endValue, float stiffness, float dampingRatio) {
+        new androidx.dynamicanimation.animation.SpringAnimation(view, androidx.dynamicanimation.animation.DynamicAnimation.SCALE_X)
+                .setSpring(new androidx.dynamicanimation.animation.SpringForce(endValue)
+                        .setStiffness(stiffness)
+                        .setDampingRatio(dampingRatio))
+                .start();
+        new androidx.dynamicanimation.animation.SpringAnimation(view, androidx.dynamicanimation.animation.DynamicAnimation.SCALE_Y)
+                .setSpring(new androidx.dynamicanimation.animation.SpringForce(endValue)
+                        .setStiffness(stiffness)
+                        .setDampingRatio(dampingRatio))
+                .start();
+    }
+
+    public void springAlpha(View view, float endValue, float stiffness, float dampingRatio) {
+        new androidx.dynamicanimation.animation.SpringAnimation(view, androidx.dynamicanimation.animation.DynamicAnimation.ALPHA)
+                .setSpring(new androidx.dynamicanimation.animation.SpringForce(endValue)
+                        .setStiffness(stiffness)
+                        .setDampingRatio(dampingRatio))
+                .start();
+    }
+
+    public void updateOmniBox() {
+        if (currentAlbumController == null && activeGeckoView == null) return;
+        updateAddressBar();
+
+        String url = currentAlbumController != null ? currentAlbumController.getUrl() : "";
+        View progressBarCompose = findViewById(R.id.main_progress_bar_compose);
+        View mediaSnifferBanner = findViewById(R.id.media_sniffer_compose);
+        boolean isWebPage = isActualWebPage(url);
+        boolean isNonWebSurface = !isWebPage || isHomePage(url) || isOverlayScreenShowing || hasNonTabTopContent()
+                || isCustomFullscreenState || videoOverlayBridge != null || customView != null;
+        boolean isSearchOrInternal = com.petal.browser.media.sniffer.PetalMediaSniffer.isSearchEngineOrInternalUrl(url);
+        if (mediaSnifferBanner != null) {
+            mediaSnifferBanner.setVisibility((isNonWebSurface || isSearchOrInternal) ? GONE : VISIBLE);
+        }
+
+        if (isNonWebSurface) {
+            // Leaving a website: bring the bars back (views only, the layout pass sets the insets).
+            if (isAddressBarCollapsed) applyBarsHiddenState(false, false, false);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble = findViewById(R.id.fab_bubble);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+            if (contentFrame != null) contentFrame.setTranslationY(0f);
+            if (progressBarCompose != null) progressBarCompose.setTranslationY(0f);
+            isAddressBarCollapsed = false;
+            barsHiddenUrl = null;
+        } else {
+            boolean samePageStillMinimized = isAddressBarCollapsed && url != null && url.equals(barsHiddenUrl);
+            if (!samePageStillMinimized) {
+                // New page (or tab): bars come back, like Chrome.
+                if (isAddressBarCollapsed) resetBarsToShown(false);
+                if (composeAddressBar != null) {
+                    composeAddressBar.setVisibility(VISIBLE);
+                    composeAddressBar.setTranslationY(0f);
+                }
+                if (contentFrame != null) contentFrame.setTranslationY(0f);
+                if (progressBarCompose != null) progressBarCompose.setTranslationY(0f);
+                View fab_bubble = findViewById(R.id.fab_bubble);
+                if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+            }
+        }
+
+        if (url != null) {
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                gv.initPreferences(url);
+                if (progressBar != null) progressBar.setVisibility(GONE);
+                if (fab_menu != null) setProfileIcon(fab_menu, url);
+            } else if (activeGeckoView != null) {
+                activeGeckoView.initPreferences(url);
+                if (activeGeckoView.isForeground()) {
+                    if (progressBar != null) progressBar.setVisibility(GONE);
+                    if (fab_menu != null) setProfileIcon(fab_menu, url);
+                }
+            }
+        }
+    }
+
+    private void initSearchOnSite() {
+        findInPageCompose = findViewById(R.id.find_in_page_compose);
+        if (findInPageCompose instanceof androidx.compose.ui.platform.ComposeView) {
+            androidx.compose.ui.platform.ComposeView cv = (androidx.compose.ui.platform.ComposeView) findInPageCompose;
+            cv.setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed.INSTANCE);
+            updateFindInPageCompose();
+        }
+    }
+
+    public void updateFindInPageCompose() {
+        if (!(findInPageCompose instanceof androidx.compose.ui.platform.ComposeView)) return;
+        androidx.compose.ui.platform.ComposeView cv = (androidx.compose.ui.platform.ComposeView) findInPageCompose;
+        com.petal.browser.compose.find.PetalFindInPageBridge.setupFindInPage(
+            cv,
+            isFindInPageShowing,
+            findInPageQuery,
+            query -> {
+                findInPageQuery = query;
+                updateFindInPageCompose();
+                if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                    com.petal.browser.browser.PetalTabViewController surface = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
+                    if (query.isEmpty()) surface.clearFindMatches(); else surface.findAll(query);
+                } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                    if (query.isEmpty()) {
+                        gv.clearMatches();
+                    } else {
+                        gv.findAllAsync(query);
+                    }
+                } else if (activeGeckoView != null) {
+                    if (query.isEmpty()) {
+                        activeGeckoView.clearMatches();
+                    } else {
+                        activeGeckoView.findAllAsync(query);
+                    }
+                }
+            },
+            () -> {
+                // Find Next
+                if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                    ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).findNext(true);
+                } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).findNext(true);
+                } else if (activeGeckoView != null) {
+                    activeGeckoView.findNext(true);
+                }
+            },
+            () -> {
+                // Find Previous
+                if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                    ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).findNext(false);
+                } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) currentAlbumController).findNext(false);
+                } else if (activeGeckoView != null) {
+                    activeGeckoView.findNext(false);
+                }
+            },
+            this::closeFindInPage
+        );
+    }
+
+    public void closeFindInPage() {
+        if (!isFindInPageShowing) return;
+        isFindInPageShowing = false;
+        findInPageQuery = "";
+        updateFindInPageCompose();
+        if (findInPageCompose != null) {
+            findInPageCompose.postDelayed(() -> {
+                if (!isFindInPageShowing && findInPageCompose != null) {
+                    findInPageCompose.setVisibility(GONE);
+                }
+            }, 300);
+        }
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).clearFindMatches();
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).clearMatches();
+        } else if (activeGeckoView != null) {
+            activeGeckoView.clearMatches();
+        }
+        if (appBar != null) appBar.setVisibility(VISIBLE);
+        updateBackCallbackState();
+    }
+
+    public void initPullToRefresh() {
+        androidx.compose.ui.platform.ComposeView refreshBarCompose = findViewById(R.id.refresh_bar_compose);
+        View addressBarForMargin = findViewById(R.id.compose_address_bar);
+        if (refreshBarCompose != null) {
+            // Remove from RelativeLayout if present and re-add directly to window overlay so WebView hardware layer can never obscure it
+            android.view.ViewParent parent = refreshBarCompose.getParent();
+            if (parent instanceof android.view.ViewGroup) {
+                ((android.view.ViewGroup) parent).removeView(refreshBarCompose);
+            }
+            android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            // 56dp was a guess and didn't match the address bar's real height on this
+            // device, so the spinner landed on top of the wavy progress line instead of
+            // below it. Measure the actual address bar height once it's laid out, and
+            // keep it in sync if that height ever changes (font scale, theme, etc.).
+            params.topMargin = (int) HelperUnit.convertDpToPixel(56f, this);
+            addContentView(refreshBarCompose, params);
+            com.petal.browser.compose.composable.PetalRefreshBarBridge.bindRefreshBar(refreshBarCompose, this, refreshState);
+            refreshBarCompose.setClipChildren(false);
+            refreshBarCompose.setClipToPadding(false);
+            android.view.ViewParent parentView = refreshBarCompose.getParent();
+            if (parentView instanceof android.view.ViewGroup) {
+                ((android.view.ViewGroup) parentView).setClipChildren(false);
+                ((android.view.ViewGroup) parentView).setClipToPadding(false);
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                float elevationPx = HelperUnit.convertDpToPixel(999f, this);
+                refreshBarCompose.setElevation(elevationPx);
+                refreshBarCompose.setTranslationZ(elevationPx);
+            }
+            // Keep the host view GONE while idle. Compose's AnimatedVisibility only
+            // hides its content; the ComposeView itself would otherwise remain as a
+            // transparent touch surface above the WebView and steal the next
+            // pull gesture. It is made visible only after PullToRefreshFrameLayout
+            // has already captured a real pull gesture.
+            refreshBarCompose.setVisibility(GONE);
+            refreshBarCompose.bringToFront();
+
+            if (addressBarForMargin != null) {
+                final android.widget.FrameLayout.LayoutParams finalParams = params;
+                final androidx.compose.ui.platform.ComposeView finalRefreshBar = refreshBarCompose;
+                Runnable updateMargin = () -> {
+                    boolean isBottom = "BOTTOM".equalsIgnoreCase(sp.getString("sp_address_bar_position", "TOP"));
+                    int targetTopMargin;
+                    if (isBottom) {
+                        int resolvedStatusBarGap = statusBarTopInset > 0 ? statusBarTopInset : HelperUnit.getStatusBarHeight(BrowserActivity.this);
+                        targetTopMargin = resolvedStatusBarGap;
+                    } else {
+                        int[] loc = new int[2];
+                        addressBarForMargin.getLocationInWindow(loc);
+                        int[] parentLoc = new int[2];
+                        android.view.ViewParent currentParent = finalRefreshBar.getParent();
+                        if (currentParent instanceof android.view.View) {
+                            ((android.view.View) currentParent).getLocationInWindow(parentLoc);
+                        }
+                        int measuredH = addressBarForMargin.getHeight();
+                        targetTopMargin = (loc[1] - parentLoc[1]) + measuredH;
+                        if (targetTopMargin <= 0) {
+                            targetTopMargin = addressBarForMargin.getBottom() > 0 ? addressBarForMargin.getBottom() : measuredH;
+                        }
+                    }
+                    if (targetTopMargin >= 0 && finalParams.topMargin != targetTopMargin) {
+                        finalParams.topMargin = targetTopMargin;
+                        finalRefreshBar.setLayoutParams(finalParams);
+                    }
+                };
+                android.view.View.OnLayoutChangeListener layoutListener = (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> updateMargin.run();
+                addressBarForMargin.addOnLayoutChangeListener(layoutListener);
+                addressBarForMargin.post(updateMargin);
+            }
+        }
+
+        androidx.compose.ui.platform.ComposeView downloadBannerCompose = findViewById(R.id.download_banner_compose);
+        if (downloadBannerCompose != null) {
+            com.petal.browser.compose.downloads.PetalDownloadBannerBridge.bindDownloadBanner(
+                downloadBannerCompose,
+                this,
+                this::showDownloads
+            );
+        }
+
+        // Bind the media sniffer overlay — shows a "Media found" banner above the address bar
+        // whenever playable video/audio is detected on the current page. The ComposeView exists
+        // in the layout but was never given content without this call.
+        androidx.compose.ui.platform.ComposeView mediaSnifferCompose = findViewById(R.id.media_sniffer_compose);
+        if (mediaSnifferCompose != null) {
+            com.petal.browser.media.sniffer.PetalMediaSnifferOverlayBridge.bind(mediaSnifferCompose, this);
+        }
+        // Sync detect/validate/button flags from SharedPreferences into the interceptor.
+        com.petal.browser.media.sniffer.PetalMediaSniffer.initPreferences(this);
+
+        androidx.compose.ui.platform.ComposeView networkStatusCompose = findViewById(R.id.network_status_compose);
+        if (networkStatusCompose != null) {
+            com.petal.browser.ui.components.PetalNetworkStatusBridge.INSTANCE.attachComposeView(this, networkStatusCompose);
+        }
+
+        androidx.compose.ui.platform.ComposeView snackbarCompose = findViewById(R.id.petal_snackbar_compose);
+        if (snackbarCompose != null) {
+            com.petal.browser.ui.components.PetalSnackbarDispatcher.INSTANCE.attachComposeView(this, snackbarCompose);
+        }
+
+        if (contentFrame == null) return;
+
+        // Pull distance 80dp with 120dp top touch area threshold matching omni-browser
+        contentFrame.setPullDistanceDp(80f);
+        contentFrame.setEdgeThresholdDp(120f);
+        contentFrame.setCanPull(() -> {
+            // Strictly exclusive to websites: never allow on home, settings, history, or internal surfaces
+            if (isPetalHomeSurfaceShowing || isOverlayScreenShowing || hasNonTabTopContent()) {
+                return false;
+            }
+            View top = getTopContentChild();
+            if (top != null && !isTabSurface(top)) {
+                return false;
+            }
+
+            AlbumController controller = currentAlbumController;
+            String currentUrl = controller != null ? controller.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : null);
+            if (currentUrl == null) {
+                return false;
+            }
+            String trimmedUrl = currentUrl.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
+                return false;
+            }
+
+            boolean isScrolledToTop = false;
+            if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                isScrolledToTop = ((com.petal.browser.browser.PetalTabViewController) controller).isPageAtTop();
+            } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                isScrolledToTop = ((com.petal.browser.view.PetalGeckoView) controller).isPageAtTop();
+            } else if (activeGeckoView != null) {
+                isScrolledToTop = activeGeckoView.getScrollY() <= 0;
+            }
+
+            return isScrolledToTop && !refreshState.isRefreshing();
+        });
+
+        final androidx.compose.ui.platform.ComposeView finalRefreshView = refreshBarCompose;
+        contentFrame.setOnPullListener(progress -> {
+            if (finalRefreshView != null) {
+                if (progress > 0f) {
+                    if (finalRefreshView.getVisibility() != VISIBLE) {
+                        finalRefreshView.setVisibility(VISIBLE);
+                    }
+                    finalRefreshView.bringToFront();
+                } else if (!refreshState.isRefreshing()) {
+                    finalRefreshView.setVisibility(GONE);
+                }
+            }
+            float prevProgress = refreshState.getPullProgress();
+            refreshState.setPullProgress(progress);
+            if (progress >= 0.75f && prevProgress < 0.75f) {
+                com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this)
+                    .playIfEnabled(BrowserActivity.this, com.petal.browser.haptics.PetalHapticEngine.Pattern.TICK, 0.6f);
+            }
+        });
+
+        contentFrame.setOnReleaseListener(triggered -> {
+            if (!triggered) {
+                refreshState.setPullProgress(0f);
+                if (finalRefreshView != null) {
+                    finalRefreshView.setVisibility(GONE);
+                }
+                return;
+            }
+            com.petal.browser.haptics.PetalHapticEngine.getInstance(BrowserActivity.this)
+                .playIfEnabled(BrowserActivity.this, com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.75f);
+            refreshState.setRefreshing(true);
+            refreshState.setPullProgress(1.0f);
+
+            // Firefox safety watchdog: reset refreshing indicator after 8 seconds if page load hangs
+            if (contentFrame != null) {
+                contentFrame.removeCallbacks(refreshTimeoutWatchdog);
+                contentFrame.postDelayed(refreshTimeoutWatchdog, 8000L);
+            }
+
+            if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).reload();
+            } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                ((com.petal.browser.view.PetalGeckoView) currentAlbumController).reload();
+            } else if (activeGeckoView != null) {
+                activeGeckoView.reload();
+            } else {
+                resetRefreshState();
+            }
+        });
+    }
+
+    private final Runnable refreshTimeoutWatchdog = this::resetRefreshState;
+
+    /**
+     * Hides both the pull-to-refresh spinner and the top page-loading progress bar.
+     * Call this whenever an internal, non-webpage screen (Settings, Downloads,
+     * History, Account Sync, Omnibox, the home screen, etc.) is swapped into
+     * contentFrame, so neither overlay - both of which live outside the normal
+     * view hierarchy so the WebView can never obscure them - can be left showing
+     * (or showing stale progress) on top of a screen that isn't an actual webpage.
+     */
+    public void hideRefreshAndProgressOverlays() {
+        if (contentFrame != null) {
+            contentFrame.removeCallbacks(refreshTimeoutWatchdog);
+            contentFrame.reset();
+        }
+        if (refreshState != null) {
+            refreshState.setRefreshing(false);
+            refreshState.setPullProgress(0f);
+        }
+        View refreshBarCompose = findViewById(R.id.refresh_bar_compose);
+        if (refreshBarCompose != null) {
+            refreshBarCompose.setVisibility(GONE);
+        }
+        androidx.compose.ui.platform.ComposeView progressBarCompose = findViewById(R.id.main_progress_bar_compose);
+        if (progressBarCompose != null) {
+            com.petal.browser.ui.components.PetalProgressBarBridge.hide(progressBarCompose);
+        }
+        View downloadBanner = findViewById(R.id.download_banner_compose);
+        if (downloadBanner != null) {
+            downloadBanner.setVisibility(GONE);
+        }
+        View mediaSnifferBanner = findViewById(R.id.media_sniffer_compose);
+        if (mediaSnifferBanner != null) {
+            mediaSnifferBanner.setVisibility(GONE);
+        }
+    }
+
+    public void resetRefreshState() {
+        runOnUiThread(() -> {
+            if (contentFrame != null) {
+                contentFrame.removeCallbacks(refreshTimeoutWatchdog);
+                contentFrame.reset();
+            }
+            if (refreshState != null) {
+                refreshState.setRefreshing(false);
+                refreshState.setPullProgress(0f);
+            }
+            View refreshBarCompose = findViewById(R.id.refresh_bar_compose);
+            if (refreshBarCompose != null) {
+                refreshBarCompose.setVisibility(GONE);
+            }
+        });
+    }
+
+    public void initSearch() {
+        // Obsolete legacy search dialog stub; Petal uses compose PetalOmniboxPage.
+    }
+
+    @Override
+    public void showOverview() {
+        showOverviewNow();
+    }
+
+    private void showOverviewNow() {
+        // Chromium (CacheTab) and Firefox (BrowserThumbnails) both snapshot while the tab's
+        // compositor is still alive. Once the tab surface is hidden the frame is blank, so
+        // capture first and only then swap in the tab manager.
+        captureCurrentTabThen(this::showOverviewAfterCapture);
+    }
+
+    /** Captures the visible tab into TabThumbnailCache, then runs {@code next} exactly once. */
+    private void captureCurrentTabThen(final Runnable next) {
+        final java.util.concurrent.atomic.AtomicBoolean done = new java.util.concurrent.atomic.AtomicBoolean(false);
+        final Runnable finish = () -> {
+            if (done.compareAndSet(false, true)) next.run();
+        };
+        try {
+            final AlbumController current = currentAlbumController;
+            final View surface = current == null ? null : current.getAlbumView();
+            final boolean capturable = surface != null && surface.isShown() && surface.getWidth() > 0 && surface.getHeight() > 0;
+            if (!capturable) {
+                finish.run();
+                return;
+            }
+            // Never let a slow compositor block opening the tab manager.
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(finish, 450L);
+            java.util.function.Consumer<android.graphics.Bitmap> onCaptured = bitmap -> finish.run();
+            if (current instanceof com.petal.browser.view.PetalGeckoView) {
+                ((com.petal.browser.view.PetalGeckoView) current).captureForSwitcher(onCaptured);
+            } else if (current instanceof com.petal.browser.browser.PetalTabViewController) {
+                ((com.petal.browser.browser.PetalTabViewController) current).captureForSwitcher(onCaptured);
+            } else {
+                finish.run();
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Tab capture before overview failed", t);
+            finish.run();
+        }
+    }
+
+    private void showOverviewAfterCapture() {
+        try {
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble = findViewById(R.id.fab_bubble);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+
+            View tabSwitcherView = com.petal.browser.ui.components.PetalTabSwitcherBridge.createTabSwitcherView(
+                this,
+                currentAlbumController,
+                album -> {
+                    showAlbum(album);
+                    return kotlin.Unit.INSTANCE;
+                },
+                album -> {
+                    removeAlbumSilently(album);
+                    return kotlin.Unit.INSTANCE;
+                },
+                () -> {
+                    for (AlbumController album : BrowserContainer.list()) {
+                        if (album != null) {
+                            if (tab_container != null && album.getAlbumView() != null) {
+                                tab_container.removeView(album.getAlbumView());
+                            }
+                            detachTabSurface(album);
+                            
+                        }
+                    }
+                    BrowserContainer.clear();
+                    com.petal.browser.unit.TabThumbnailCache.clear();
+                    com.petal.browser.unit.PetalTabSessionManager.clearSession(BrowserActivity.this);
+                    addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+                            return kotlin.Unit.INSTANCE;
+                },
+                isIncognito -> {
+                    addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true, isIncognito);
+                    return kotlin.Unit.INSTANCE;
+                },
+                () -> {
+                    if (currentAlbumController != null) {
+                        showAlbum(currentAlbumController);
+                    } else if (BrowserContainer.size() > 0) {
+                        showAlbum(BrowserContainer.get(0));
+                    } else {
+                        addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+                    }
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(tabSwitcherView);
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing tabs overview", e);
+        }
+    }
+
+    public void hideSearch() {
+        if (dialogCustomSearches != null) {
+            try { dialogCustomSearches.cancel(); } catch (Exception e) { Log.i(TAG, "dialogCustomSearches:" + e); }
+        }
+    }
+
+    public void hideOverview() {
+        dialogOverview.cancel();
+    }
+
+    public void setSelectedTab() {
+        if (overViewTab.equals(getString(R.string.album_title_tab))) bottom_navigation.setSelectedItemId(R.id.page_0);
+        else if (overViewTab.equals(getString(R.string.album_title_bookmarks))) bottom_navigation.setSelectedItemId(R.id.page_2);
+        else if (overViewTab.equals(getString(R.string.album_title_history))) bottom_navigation.setSelectedItemId(R.id.page_3);
+    }
+
+    public void hideOverflow () {
+        try {dialog_overflow.cancel();} catch (Exception e) {Log.i(TAG, "Overflow already closed:" + e);}
+    }
+
+    // Hilfsmethode, um nur ausgewählte Items aus dem lokalen Speicher zu holen
+    private List<MenuItem> loadSelectedFromStorage() {
+        SharedPreferences prefs = getSharedPreferences(Settings_Menu.PREF_NAME, Context.MODE_PRIVATE);
+        String json = prefs.getString(Settings_Menu.KEY_LIST, null);
+        List<MenuItem> selected = new ArrayList<>();
+        if (json != null) {
+            Type type = new TypeToken<ArrayList<MenuItem>>() {}.getType();
+            List<MenuItem> masterList = new Gson().fromJson(json, type);
+            for (MenuItem item : masterList) {
+                if (item.isSelected()) {
+                    selected.add(item);
+                }
+            }
+        }
+        return selected;
+    }
+
+    public void removeItemByName(String name, List<MenuItem> selectedItemsList, AdapterMenu adapter) {
+        int indexToRemove = -1;
+        // 1. Position des Elements in der aktuellen Grid-Liste finden
+        for (int i = 0; i < selectedItemsList.size(); i++) {
+            if (selectedItemsList.get(i).getTitle().equalsIgnoreCase(name)) {
+                indexToRemove = i;
+                break;
+            }
+        }
+        // Wenn das Element im aktuellen Grid existiert
+        if (indexToRemove != -1) {
+            // 2. Aus der Liste für die Anzeige entfernen
+            selectedItemsList.remove(indexToRemove);
+            // 3. Den Adapter über das Entfernen informieren (zeigt eine schöne Animation)
+            adapter.notifyItemRemoved(indexToRemove);
+        }
+    }
+
+    public void showOverflowMenu(View anchorView) {
+        com.petal.browser.ui.components.BrowserNavigationDelegate.showOverflowMenu(this);
+    }
+
+    public void showQuickTools() {
+        com.petal.browser.ui.components.PetalQuickToolsBridge.showQuickTools(this);
+    }
+
+    /**
+     * Chrome-style full-screen Omnibox search page, replacing both the legacy
+     * AlertDialog-based dialogSearch and the old bottom-sheet PetalOmniboxOverlay.
+     * Mounts into contentFrame exactly like showDownloads()/showHistoryScreen(), so it
+     * gets the same predictive-back gesture handling as every other full-screen surface
+     * instead of living in a separate dialog window.
+     */
+    public void showOmniboxPage(String initialQuery) {
+        try {
+            if (BrowserContainer.size() == 0) {
+                addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+            }
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_omnibox = findViewById(R.id.fab_bubble);
+            if (fab_bubble_omnibox != null) fab_bubble_omnibox.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            String pageTitle = currentAlbumController != null ? currentAlbumController.getTitle() : (activeGeckoView != null ? activeGeckoView.getTitle() : "");
+            String pageUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+            Bitmap favicon = null;
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                favicon = ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getFavicon();
+            } else if (activeGeckoView != null) {
+                favicon = activeGeckoView.getFavicon();
+            }
+            boolean isIncognitoTab = currentAlbumController != null
+                    ? currentAlbumController.isIncognito()
+                    : (activeGeckoView != null && activeGeckoView.isIncognito());
+
+            View omniboxView = com.petal.browser.ui.components.PetalOmniboxBridge.createOmniboxView(
+                BrowserActivity.this,
+                initialQuery != null ? initialQuery : "",
+                pageTitle != null ? pageTitle : "",
+                pageUrl != null ? pageUrl : "",
+                favicon,
+                isIncognitoTab,
+                () -> {
+                    showAlbum(currentAlbumController);
+                    return kotlin.Unit.INSTANCE;
+                },
+                result -> {
+                    if (result != null && !result.trim().isEmpty()) {
+                        performSearchWithFixerPrompt(result.trim(), isIncognitoTab, targetUrl -> {
+                            if (currentAlbumController != null) {
+                                showAlbum(currentAlbumController, targetUrl);
+                            } else if (BrowserContainer.size() > 0) {
+                                AlbumController controller = BrowserContainer.get(0);
+                                showAlbum(controller, targetUrl);
+                            } else {
+                                addAlbum(null, targetUrl, true, isIncognitoTab);
+                            }
+                        });
+                    }
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(omniboxView);
+        } catch (Exception e) {
+            Log.e(TAG, "Error showing omnibox page", e);
+        }
+    }
+
+    public void showDownloads() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_downloads = findViewById(R.id.fab_bubble);
+            if (fab_bubble_downloads != null) fab_bubble_downloads.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View downloadView = PetalDownloadBridge.createDownloadView(BrowserActivity.this, () -> {
+                showAlbum(currentAlbumController);
+                return kotlin.Unit.INSTANCE;
+            });
+            presentComposeScreen(downloadView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showHistoryScreen() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_history = findViewById(R.id.fab_bubble);
+            if (fab_bubble_history != null) fab_bubble_history.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View historyView = com.petal.browser.compose.history.PetalHistoryBridge.createHistoryView(
+                BrowserActivity.this,
+                url -> {
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
+                    } else if (activeGeckoView != null) {
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
+                    }
+                    showAlbum(currentAlbumController, url);
+                },
+                () -> {
+                    View rootView = findViewById(android.R.id.content) != null ? findViewById(android.R.id.content) : getWindow().getDecorView();
+                    com.petal.browser.predictive.PetalContentSnapshot.capture(rootView);
+                    startActivity(new Intent(BrowserActivity.this, com.petal.browser.activity.Settings_Delete.class));
+                },
+                () -> {
+                    showAlbum(currentAlbumController);
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(historyView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showBookmarksPage() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_bm = findViewById(R.id.fab_bubble);
+            if (fab_bubble_bm != null) fab_bubble_bm.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View bookmarksView = com.petal.browser.compose.bookmarks.PetalBookmarksBridge.createBookmarksView(
+                BrowserActivity.this,
+                url -> {
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
+                    } else if (activeGeckoView != null) {
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(url);
+                    }
+                    showAlbum(currentAlbumController, url);
+                },
+                () -> {
+                    showAlbum(currentAlbumController);
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(bookmarksView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showBookmarksSheet() {
+        showBookmarksPage();
+    }
+
+    public void showBookmarks() {
+        showBookmarksPage();
+    }
+
+    public void showExtensionsScreen() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_ext = findViewById(R.id.fab_bubble);
+            if (fab_bubble_ext != null) fab_bubble_ext.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View extensionsView = com.petal.browser.compose.extensions.PetalExtensionsBridge.createExtensionsView(
+                BrowserActivity.this,
+                () -> {
+                    // Fully dismiss the Compose overlay before navigating to an extension
+                    // options page. Leaving contentFrame populated makes the newly-created
+                    // Gecko tab sit behind the Extensions screen, so "Extension settings"
+                    // appears to do nothing.
+                    isOverlayScreenShowing = false;
+                    removeOverlayViews();
+                    showAlbum(currentAlbumController);
+                    updatePersistentBottomNav();
+                    updateOmniBox();
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(extensionsView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showSafeLockerScreen() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_safe = findViewById(R.id.fab_bubble);
+            if (fab_bubble_safe != null) fab_bubble_safe.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View safeLockerView = com.petal.browser.privacy.SafeLockerBridge.createSafeLockerView(
+                BrowserActivity.this,
+                () -> {
+                    isOverlayScreenShowing = false;
+                    removeOverlayViews();
+                    showAlbum(currentAlbumController);
+                    updatePersistentBottomNav();
+                    updateOmniBox();
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(safeLockerView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void showSafeLocker() {
+        showSafeLockerScreen();
+    }
+
+    public void savePageOffline() {
+        if (currentAlbumController == null || currentAlbumController.getUrl() == null) return;
+        String url = currentAlbumController.getUrl();
+        if (url.startsWith("about:") || url.startsWith("petal://") || url.startsWith("file://")) {
+            PetalToast.show(this, "Cannot save internal page offline");
+            return;
+        }
+
+        java.io.File offlineDir = new java.io.File(getExternalFilesDir(null), "OfflinePages");
+        if (!offlineDir.exists()) {
+            offlineDir.mkdirs();
+        }
+
+        String rawTitle = (currentAlbumController.getTitle() != null && !currentAlbumController.getTitle().trim().isEmpty())
+                ? currentAlbumController.getTitle()
+                : HelperUnit.domain(url);
+        String sanitizedTitle = rawTitle.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String fileName = sanitizedTitle + "_" + System.currentTimeMillis() + ".html";
+        java.io.File archiveFile = new java.io.File(offlineDir, fileName);
+
+        try {
+            new Thread(() -> {
+                try {
+                    java.net.URL targetUrl = new java.net.URL(url);
+                    java.net.HttpURLConnection conn = (java.net.HttpURLConnection) targetUrl.openConnection();
+                    conn.setConnectTimeout(5000);
+                    conn.setReadTimeout(5000);
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:154.0) Gecko/154.0 Firefox/154.0");
+                    java.io.InputStream in = conn.getInputStream();
+                    java.io.FileOutputStream out = new java.io.FileOutputStream(archiveFile);
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = in.read(buffer)) > 0) {
+                        out.write(buffer, 0, len);
+                    }
+                    out.close();
+                    in.close();
+                    conn.disconnect();
+
+                    runOnUiThread(() -> {
+                        PetalToast.show(BrowserActivity.this, "Saved website to view offline!");
+                        com.petal.browser.engine.gecko.PetalEngineStore.addOfflineArchive(
+                                BrowserActivity.this, url, archiveFile.getAbsolutePath(), rawTitle);
+                        com.petal.browser.compose.downloads.PetalLiveAlertManager.trackOfflinePage(
+                                BrowserActivity.this, rawTitle, url, archiveFile.getAbsolutePath());
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Error saving offline page", e);
+                    runOnUiThread(() -> PetalToast.show(BrowserActivity.this, "Failed to save page offline"));
+                }
+            }).start();
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving web archive offline", e);
+            PetalToast.show(BrowserActivity.this, "Failed to save page offline");
+        }
+    }
+
+    public void showReaderMode() {
+        if (currentAlbumController == null || currentAlbumController.getUrl() == null) return;
+        String url = currentAlbumController.getUrl();
+        if (url.startsWith("about:") || url.startsWith("petal://") || url.startsWith("file://")) {
+            PetalToast.show(this, "Reader mode is not available for internal pages");
+            return;
+        }
+
+        try {
+            captureBrowserMainPreview();
+            com.petal.browser.compose.reader.PetalReaderBridge.extractArticle(currentAlbumController, article -> {
+                if (article != null && article.getContentText() != null && !article.getContentText().trim().isEmpty()) {
+                    isOverlayScreenShowing = true;
+                    clearContentFrameKeepingTabs();
+                    if (appBar != null) appBar.setVisibility(GONE);
+                    LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+                    if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+                    View bottomNav = findViewById(R.id.bottom_nav_compose);
+                    if (bottomNav != null) bottomNav.setVisibility(GONE);
+                    if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+                    if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+                    View fab_bubble = findViewById(R.id.fab_bubble);
+                    if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+                    hideRefreshAndProgressOverlays();
+
+                    View readerView = com.petal.browser.compose.reader.PetalReaderBridge.createReaderView(
+                        BrowserActivity.this,
+                        article,
+                        () -> {
+                            showAlbum(currentAlbumController);
+                            return kotlin.Unit.INSTANCE;
+                        }
+                    );
+                    presentComposeScreen(readerView);
+                } else {
+                    PetalToast.show(BrowserActivity.this, "Could not extract article content for Reading mode");
+                }
+                return kotlin.Unit.INSTANCE;
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error launching reader mode", e);
+            PetalToast.show(this, "Failed to load Reading mode");
+        }
+    }
+
+    public void showAccountSyncScreen() {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_account = findViewById(R.id.fab_bubble);
+            if (fab_bubble_account != null) fab_bubble_account.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View accountSyncView = com.petal.browser.account.PetalAccountSyncBridge.createAccountSyncView(
+                BrowserActivity.this,
+                () -> {
+                    showAlbum(currentAlbumController);
+                    return kotlin.Unit.INSTANCE;
+                },
+                shortcut -> {
+                    // Do not reuse the currently attached GeckoSession while the
+                    // Compose account overlay is being removed. Opening a fresh
+                    // tab avoids a session/view lifecycle race and preserves the
+                    // page the user came from.
+                    if (shortcut != null && shortcut.getUrl() != null && !shortcut.getUrl().trim().isEmpty()) {
+                        addAlbum(shortcut.getLabel(), shortcut.getUrl().trim(), true);
+                    }
+                    return kotlin.Unit.INSTANCE;
+                }
+            );
+            presentComposeScreen(accountSyncView);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void captureBrowserMainPreview() {
+        // No-op preview snapshot placeholder for screen transition previews
+    }
+
+    public void showOverflow(Dialog dialog, View view, int hideMenu, String title, String url, final AdapterRecord adapterRecord, List<Record> recordList, int location) {
+        showOverflowMenu(view != null ? view : findViewById(R.id.bottom_nav_compose));
+    }
+
+    public void showDialogFastToggle(String title, String url, FloatingActionButton floatingActionButton) {
+
+        listStandard = new List_standard(context);
+        
+
+        String profile;
+        if (listStandard.isWhite(url)) {
+            profile = HelperUnit.domain(url);
+        } else {
+            profile = sp.getString("profile", "profileStandard");
+        }
+
+        if (url != null) {
+            MaterialAlertDialogBuilder builderFastToggle = new MaterialAlertDialogBuilder(context);
+            View dialogViewFastToggle = View.inflate(context, R.layout.dialog_fast_toggle, null);
+            builderFastToggle.setView(dialogViewFastToggle);
+            AlertDialog dialogFastToggle = builderFastToggle.create();
+            HelperUnit.setupDialog(context, dialogFastToggle);
+
+            LinearLayout textGroup = dialogViewFastToggle.findViewById(R.id.textGroup);
+            TextView overflowURL = dialogViewFastToggle.findViewById(R.id.textGroup_menuURL);
+            overflowURL.setText(url);
+            HelperUnit.setHighLightedText(context, overflowURL, url, HelperUnit.domain(url));
+            TextView overflowTitle = dialogViewFastToggle.findViewById(R.id.textGroup_menuTitle);
+            overflowTitle.setText(title);
+            FaviconHelper.setFavicon(context, dialogViewFastToggle, url, R.id.menu_icon, R.drawable.icon_image_broken);
+            textGroup.setOnClickListener(v ->
+                    HelperUnit.showCustomSnackbarWithTwoActions(
+                    this, dialogViewFastToggle, null,
+                    title, "", url,
+                    R.drawable.icon_share, () -> {
+                        shareLink(title, url);
+                        return true;
+                    },
+                    R.drawable.icon_close, () -> true
+            ));
+
+            FloatingActionButton buttonProfile = dialogViewFastToggle.findViewById(R.id.buttonProfile);
+            setProfileIcon(buttonProfile, url);
+            buttonProfile.setOnClickListener(v -> {
+                String cat = "    ¯\\_(ツ)_/¯    ";
+                com.petal.browser.view.PetalToast.show(context, cat, com.petal.browser.view.PetalToast.LENGTH_LONG);
+            });
+            buttonProfile.setOnLongClickListener(v -> {
+                sp.edit().putString("profile", "profileStandard").apply();
+                setProfileIcon(buttonProfile, url);
+                dialogFastToggle.cancel();
+                if (!listStandard.isWhite(url)){
+                    reloadCurrentBrowserTab();
+                }
+                return true;
+            });
+
+            Button ib_save = dialogViewFastToggle.findViewById(R.id.ib_save);
+            Button ib_delete = dialogViewFastToggle.findViewById(R.id.ib_delete);
+
+            if (listStandard.isWhite(url)) {
+                ib_save.setVisibility(GONE);
+                ib_delete.setVisibility(VISIBLE);
+            } else {
+                ib_save.setVisibility(VISIBLE);
+                ib_delete.setVisibility(GONE);
+            }
+
+            RelativeLayout checkbox_reset = dialogViewFastToggle.findViewById(R.id.checkbox_reset);
+            ImageView icon_standard = dialogViewFastToggle.findViewById(R.id.icon_standard);
+
+            if (sp.getBoolean("sp_standard_always", true)) {
+                icon_standard.setImageResource(R.drawable.icon_check);
+            } else {
+                icon_standard.setImageResource(R.drawable.icon_close);
+            }
+
+            if (sp.getBoolean("sp_standard_restart", true)) {
+                icon_standard.setImageResource(R.drawable.icon_restart);
+            }
+
+            checkbox_reset.setOnClickListener(v -> {
+                PopupMenu popupMenu = new PopupMenu(context, checkbox_reset);
+                popupMenu.getMenuInflater().inflate(R.menu.menu_standard, popupMenu.getMenu());
+                popupMenu.setOnMenuItemClickListener(menuItem -> {
+                    if (menuItem.getItemId() == R.id.menu_standardAlways) {
+                        sp.edit().putBoolean("sp_standard_always", true).apply();
+                        sp.edit().putBoolean("sp_standard_restart", false).apply();
+                        icon_standard.setImageResource(R.drawable.icon_check);
+                    } else if (menuItem.getItemId() == R.id.menu_standardNever) {
+                        sp.edit().putBoolean("sp_standard_always", false).apply();
+                        sp.edit().putBoolean("sp_standard_restart", false).apply();
+                        icon_standard.setImageResource(R.drawable.icon_close);
+                    } else if (menuItem.getItemId() == R.id.menu_standardRestart) {
+                        sp.edit().putBoolean("sp_standard_always", false).apply();
+                        sp.edit().putBoolean("sp_standard_restart", true).apply();
+                        icon_standard.setImageResource(R.drawable.icon_restart);
+                    }
+                    return true;
+                });
+                // Showing the popup menu
+                popupMenu.show();
+            });
+
+            Button checkbox_redirect = dialogViewFastToggle.findViewById(R.id.item_checkBox);
+            checkbox_redirect.setOnClickListener(v -> new CustomRedirectsDialog().show(getSupportFragmentManager(),"redirect"));
+
+            CheckBox checkbox_screenOn = dialogViewFastToggle.findViewById(R.id.checkbox_screenOn);
+            checkbox_screenOn.setChecked(sp.getBoolean("sp_screenOn", false));
+            checkbox_screenOn.setOnClickListener(v -> {
+                sp.edit().putBoolean("sp_screenOn", checkbox_screenOn.isChecked()).apply();
+                checkbox_screenOn.setChecked(sp.getBoolean("sp_screenOn", true));
+                dialogFastToggle.cancel();
+                triggerRebirth(context);
+            });
+
+            CheckBox checkbox_links = dialogViewFastToggle.findViewById(R.id.checkbox_links);
+            checkbox_links.setChecked(sp.getBoolean("sp_tabBackground", false));
+            checkbox_links.setOnClickListener(v -> {
+                sp.edit().putBoolean("sp_tabBackground", checkbox_links.isChecked()).apply();
+                checkbox_links.setChecked(sp.getBoolean("sp_tabBackground", true));
+            });
+
+            TextView titleViewSettings = dialogViewFastToggle.findViewById(R.id.titleViewSettings);
+            String s = context.getString(R.string.app_name) + " " + context.getString(R.string.setting_label);
+            titleViewSettings.setText(s);
+
+            CheckBox checkbox_image = dialogViewFastToggle.findViewById(R.id.checkbox_image);
+            checkbox_image.setChecked(sp.getBoolean(profile + "_images", false));
+            checkbox_image.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_images", checkbox_image.isChecked()).apply();
+                }  else if (profile.equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_images", checkbox_image.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_images", checkbox_image.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_java = dialogViewFastToggle.findViewById(R.id.checkbox_java);
+            checkbox_java.setChecked(sp.getBoolean(profile + "_javascript", false));
+            checkbox_java.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_javascript", checkbox_java.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascript", checkbox_java.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascript", checkbox_java.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_javaPopUp = dialogViewFastToggle.findViewById(R.id.checkbox_javaPopUp);
+            checkbox_javaPopUp.setChecked(sp.getBoolean(profile + "_javascriptPopUp", false));
+            checkbox_javaPopUp.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_javascriptPopUp", checkbox_javaPopUp.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_cookies = dialogViewFastToggle.findViewById(R.id.checkbox_cookies);
+            checkbox_cookies.setChecked(sp.getBoolean(profile + "_cookies", false));
+            checkbox_cookies.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_cookies", checkbox_cookies.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookies", checkbox_cookies.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookies", checkbox_cookies.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_cookiesThirdParty = dialogViewFastToggle.findViewById(R.id.checkbox_cookiesThirdParty);
+            checkbox_cookiesThirdParty.setChecked(sp.getBoolean(profile + "_cookiesThirdParty", false));
+            checkbox_cookiesThirdParty.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_cookiesBanner = dialogViewFastToggle.findViewById(R.id.checkbox_cookiesBanner);
+            checkbox_cookiesBanner.setChecked(sp.getBoolean(profile + "_deny_cookie_banners", true));
+            checkbox_cookiesBanner.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_fingerPrint = dialogViewFastToggle.findViewById(R.id.checkbox_fingerPrint);
+            checkbox_fingerPrint.setChecked(sp.getBoolean(profile + "_fingerPrintProtection", true));
+            checkbox_fingerPrint.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_fingerPrintProtection", checkbox_fingerPrint.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_adBlock = dialogViewFastToggle.findViewById(R.id.checkbox_adBlock);
+            checkbox_adBlock.setChecked(sp.getBoolean(profile + "_adBlock", true));
+            checkbox_adBlock.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_adBlock", checkbox_adBlock.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_adBlock", checkbox_adBlock.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_adBlock", checkbox_adBlock.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_trackingURL = dialogViewFastToggle.findViewById(R.id.checkbox_trackingURL);
+            checkbox_trackingURL.setChecked(sp.getBoolean(profile + "_trackingULS", true));
+            checkbox_trackingURL.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_trackingULS", checkbox_trackingURL.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_saveData = dialogViewFastToggle.findViewById(R.id.checkbox_saveData);
+            checkbox_saveData.setChecked(sp.getBoolean(profile + "_saveData", true));
+            checkbox_saveData.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_saveData", checkbox_saveData.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveData", checkbox_saveData.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveData", checkbox_saveData.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_history = dialogViewFastToggle.findViewById(R.id.checkbox_history);
+            checkbox_history.setChecked(sp.getBoolean(profile + "_saveHistory", true));
+            checkbox_history.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_saveHistory", checkbox_history.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveHistory", checkbox_history.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_saveHistory", checkbox_history.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_location = dialogViewFastToggle.findViewById(R.id.checkbox_location);
+            checkbox_location.setChecked(sp.getBoolean(profile + "_location", false));
+            checkbox_location.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_location", checkbox_location.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_location", checkbox_location.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_location", checkbox_location.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_mic = dialogViewFastToggle.findViewById(R.id.checkbox_mic);
+            checkbox_mic.setChecked(sp.getBoolean(profile + "_microphone", false));
+            checkbox_mic.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_microphone", checkbox_mic.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_microphone", checkbox_mic.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_microphone", checkbox_mic.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_camera = dialogViewFastToggle.findViewById(R.id.checkbox_camera);
+            checkbox_camera.setChecked(sp.getBoolean(profile + "_camera", false));
+            checkbox_camera.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_camera", checkbox_camera.isChecked()).apply();
+                } else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_camera", checkbox_camera.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_camera", checkbox_camera.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_dom = dialogViewFastToggle.findViewById(R.id.checkbox_dom);
+            checkbox_dom.setChecked(sp.getBoolean(profile + "_dom", false));
+            checkbox_dom.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_dom", checkbox_dom.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_dom", checkbox_dom.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_dom", checkbox_dom.isChecked()).apply();
+                }
+            });
+
+            RelativeLayout layout_nightView = dialogViewFastToggle.findViewById(R.id.layout_nightView);
+            CheckBox checkbox_nightView = dialogViewFastToggle.findViewById(R.id.checkbox_nightView);
+            int nightModeFlags = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+            if ((nightModeFlags == Configuration.UI_MODE_NIGHT_YES) && !sp.getString("sp_theme", "1").equals("2")) {
+                layout_nightView.setVisibility(VISIBLE);
+            } else  {
+                layout_nightView.setVisibility(GONE);
+            }
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                checkbox_nightView.setChecked(sp.getBoolean(profile + "_night", true));
+                checkbox_nightView.setOnClickListener(v -> {
+                    if (listStandard.isWhite(url)){
+                        sp.edit().putBoolean(profile + "_night", checkbox_nightView.isChecked()).apply();
+                    }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                        activeGeckoView.setProfileChanged();
+                        setProfileIcon(buttonProfile, url);
+                        sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_night", checkbox_nightView.isChecked()).apply();
+                    } else {
+                        sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_night", checkbox_nightView.isChecked()).apply();
+                    }
+                });
+            }
+
+            CheckBox checkbox_desktop = dialogViewFastToggle.findViewById(R.id.checkbox_desktop);
+            checkbox_desktop.setChecked(sp.getBoolean(profile + "_desktop", false));
+            checkbox_desktop.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_desktop", checkbox_desktop.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_desktop", checkbox_desktop.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_desktop", checkbox_desktop.isChecked()).apply();
+                }
+            });
+
+            CheckBox checkbox_drm = dialogViewFastToggle.findViewById(R.id.checkbox_drm);
+            checkbox_drm.setChecked(sp.getBoolean(profile + "_drm", true));
+            checkbox_drm.setOnClickListener(v -> {
+                if (listStandard.isWhite(url)){
+                    sp.edit().putBoolean(profile + "_drm", checkbox_drm.isChecked()).apply();
+                }  else if (com.petal.browser.view.PetalGeckoView.getProfile(this).equals("profileStandard")) {
+                    activeGeckoView.setProfileChanged();
+                    setProfileIcon(buttonProfile, url);
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_drm", checkbox_drm.isChecked()).apply();
+                } else {
+                    sp.edit().putBoolean(com.petal.browser.view.PetalGeckoView.getProfile(this) + "_drm", checkbox_drm.isChecked()).apply();
+                }
+            });
+
+            HelperUnit.applyBouncyTouchFeedback(ib_save);
+            ib_save.setOnClickListener(v -> {
+                listStandard.removeDomain(HelperUnit.domain(url));
+                listStandard.addDomain(HelperUnit.domain(url));
+                String profileToSave = HelperUnit.domain(url);
+                sp.edit()
+                        .putBoolean(profileToSave + "_saveData", checkbox_saveData.isChecked())
+                        .putBoolean(profileToSave + "_images", checkbox_image.isChecked())
+                        .putBoolean(profileToSave + "_adBlock", checkbox_adBlock.isChecked())
+                        .putBoolean(profileToSave + "_trackingULS", checkbox_trackingURL.isChecked())
+                        .putBoolean(profileToSave + "_location", checkbox_location.isChecked())
+                        .putBoolean(profileToSave + "_fingerPrintProtection", checkbox_fingerPrint.isChecked())
+                        .putBoolean(profileToSave + "_cookies", checkbox_cookies.isChecked())
+                        .putBoolean(profileToSave + "_cookiesThirdParty", checkbox_cookiesThirdParty.isChecked())
+                        .putBoolean(profileToSave + "_deny_cookie_banners", checkbox_cookiesBanner.isChecked())
+                        .putBoolean(profileToSave + "_javascript", checkbox_java.isChecked())
+                        .putBoolean(profileToSave + "_javascriptPopUp", checkbox_javaPopUp.isChecked())
+                        .putBoolean(profileToSave + "_saveHistory", checkbox_history.isChecked())
+                        .putBoolean(profileToSave + "_camera", checkbox_camera.isChecked())
+                        .putBoolean(profileToSave + "_microphone", checkbox_mic.isChecked())
+                        .putBoolean(profileToSave + "_dom", checkbox_dom.isChecked())
+                        .putBoolean(profileToSave + "_night", checkbox_nightView.isChecked())
+                        .putBoolean(profileToSave + "_desktop", checkbox_desktop.isChecked()).apply();
+                if (sp.getBoolean("sp_standard_always", true)) {
+                    sp.edit().putString("profile", "profileStandard").apply();
+                    setProfileIcon(buttonProfile, url);
+                }
+                setProfileIcon(buttonProfile, url);
+                dialogFastToggle.cancel();
+                reloadCurrentBrowserTab();
+            });
+
+            HelperUnit.applyBouncyTouchFeedback(ib_delete, 0.88f);
+            ib_delete.setOnClickListener(view -> {
+                listStandard.removeDomain(HelperUnit.domain(url));
+                String profileToSave = HelperUnit.domain(url);
+                sp.edit()
+                        .remove(profileToSave + "_saveData")
+                        .remove(profileToSave + "_images")
+                        .remove(profileToSave + "_adBlock")
+                        .remove(profileToSave + "_trackingULS")
+                        .remove(profileToSave + "_location")
+                        .remove(profileToSave + "_fingerPrintProtection")
+                        .remove(profileToSave + "_cookies")
+                        .remove(profileToSave + "_cookiesThirdParty")
+                        .remove(profileToSave + "_deny_cookie_banners")
+                        .remove(profileToSave + "_javascript")
+                        .remove(profileToSave + "_javascriptPopUp")
+                        .remove(profileToSave + "_saveHistory")
+                        .remove(profileToSave + "_camera")
+                        .remove(profileToSave + "_microphone")
+                        .remove(profileToSave + "_dom")
+                        .remove(profileToSave + "_night")
+                        .remove(profileToSave + "_desktop").apply();
+                if (sp.getBoolean("sp_standard_always", true)) {
+                    sp.edit().putString("profile", "profileStandard").apply();
+                    setProfileIcon(buttonProfile, url);
+                }
+                setProfileIcon(buttonProfile, url);
+                dialogFastToggle.cancel();
+                reloadCurrentBrowserTab();
+            });
+
+            Button ib_reload = dialogViewFastToggle.findViewById(R.id.ib_reload);
+            HelperUnit.applyBouncyTouchFeedback(ib_reload);
+            ib_reload.setOnClickListener(view -> {
+                dialogFastToggle.cancel();
+                reloadCurrentBrowserTab();
+            });
+
+            Button ib_settings = dialogViewFastToggle.findViewById(R.id.ib_settings);
+            HelperUnit.applyBouncyTouchFeedback(ib_settings);
+            ib_settings.setOnClickListener(view -> {
+                if (activeGeckoView != null) {
+                    dialogFastToggle.cancel();
+                    Intent settings = new Intent(BrowserActivity.this, Settings_Activity.class);
+                    startActivity(settings);
+                }
+            });
+
+            Button button_help = dialogViewFastToggle.findViewById(R.id.button_help);
+            HelperUnit.applyBouncyTouchFeedback(button_help);
+            button_help.setOnClickListener(view -> {
+                dialogFastToggle.cancel();
+                if (activeGeckoView != null) {
+                    if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl("about:blank");
+                    showAlbum(currentAlbumController, "about:blank");
+                }
+            });
+            dialogFastToggle.setOnDismissListener(dialogInterface -> setProfileIcon(floatingActionButton,url));
+            dialogFastToggle.show();
+
+            if (SDK_INT >= Build.VERSION_CODES.TIRAMISU && sp.getBoolean("sp_tabBackground", false)) {
+                int notificationAllowed = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS);
+                if (notificationAllowed != PackageManager.PERMISSION_GRANTED) {
+                    HelperUnit.showCustomSnackbarWithTwoActions(
+                            context, dialogViewFastToggle, null,
+                            getString(R.string.dialog_backGround), getString(R.string.app_permission), "",
+                            R.drawable.icon_check, () -> {
+                                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1234567);
+                                return true;
+                            },
+                            R.drawable.icon_close, () -> true
+                    );
+                }
+            }
+        } else {
+            PetalToast.show(context, getString(R.string.app_error));
+        }
+    }
+    
+    public void setProfileIcon (FloatingActionButton floatingActionButton, String url) {
+        String profile = sp.getString("profile", "profileStandard");
+        TypedValue typedValue = new TypedValue();
+        Resources.Theme theme = context.getTheme();
+        theme.resolveAttribute(R.attr.colorError, typedValue, true);
+        int color = typedValue.data;
+        if (profile.equals("profileStandard")) {
+            floatingActionButton.setImageResource(R.drawable.icon_profile_standard);
+            fab_menu.setImageResource(R.drawable.icon_profile_standard);
+        } else {
+            floatingActionButton.setImageResource(R.drawable.icon_profile_changed);
+            fab_menu.setImageResource(R.drawable.icon_profile_changed);
+        }
+        listStandard = new List_standard(context);
+        if (listStandard.isWhite(url)) {
+            floatingActionButton.getDrawable().mutate().setTint(color);
+            fab_menu.getDrawable().mutate().setTint(color);
+        }
+    }
+
+    public void showDialogFilter() {
+        com.petal.browser.ui.components.BrowserDialogManager.showDialogFilter(this);
+    }
+
+    public void showDialogCustomSearches(String url) {
+        com.petal.browser.ui.components.BrowserDialogManager.showDialogCustomSearches(this, url);
+    }
+    public void doubleTapsQuit() {
+        if (!sp.getBoolean("sp_close_browser_confirm", true)) {
+            finishAndRemoveTask();
+        } else {
+            showExitConfirmationDialog();
+        }
+    }
+    public void setCustomFullscreen(boolean fullscreen) {
+        isCustomFullscreenState = fullscreen;
+        applyAddressBarPosition();
+        updatePersistentBottomNav();
+
+        if (fullscreen) {
+            if (SDK_INT >= Build.VERSION_CODES.R) {
+                final WindowInsetsController insetsController = getWindow().getInsetsController();
+                if (insetsController != null) {
+                    insetsController.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                    insetsController.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            }
+            else getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+            // Attach Petal native video player overlay on fullscreen video if enabled in settings
+            try {
+                boolean nativePlayerEnabled = sp.getBoolean("sp_native_video_player", false);
+                boolean isYouTube = com.petal.browser.media.PetalVideoPlayerOverlayBridge.Companion.isYouTubeVideo(currentAlbumController, null);
+                if (nativePlayerEnabled && !isYouTube && videoOverlayBridge == null) {
+                    FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
+                    com.petal.browser.browser.AlbumController activeController = currentAlbumController != null ? currentAlbumController : activeGeckoView;
+                    videoOverlayBridge = new com.petal.browser.media.PetalVideoPlayerOverlayBridge(
+                            this,
+                            activeController,
+                            () -> {
+                                runOnUiThread(() -> setCustomFullscreen(false));
+                                return kotlin.Unit.INSTANCE;
+                            }
+                    );
+                    videoOverlayBridge.attachOverlay(decorView, null);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to attach video overlay in setCustomFullscreen: " + e.getMessage());
+            }
+        } else {
+            if (SDK_INT >= Build.VERSION_CODES.R) {
+                final WindowInsetsController insetsController = getWindow().getInsetsController();
+                if (insetsController != null) {
+                    insetsController.show(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                    insetsController.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE); }
+            }
+            else getWindow().setFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN, WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
+
+            // Detach Petal native video player overlay when exiting fullscreen
+            if (videoOverlayBridge != null && customView == null && fullscreenHolder == null) {
+                try {
+                    videoOverlayBridge.detachOverlay();
+                } catch (Exception ignored) {}
+                videoOverlayBridge = null;
+            }
+        }
+    }
+    public void copyLink(String url) {
+        String cleanUrl = com.petal.browser.privacy.PetalUrlCleaner.cleanUrl(url);
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("text", cleanUrl);
+        Objects.requireNonNull(clipboard).setPrimaryClip(clip);
+        PetalToast.show(this, getString(R.string.app_done));
+    }
+
+    public void shareLink(String title, String url) {
+        String cleanUrl = com.petal.browser.privacy.PetalUrlCleaner.cleanUrl(url);
+        hideOverview();
+        List_standard listStandard = new List_standard(context);
+        String profile = sp.getString("profile", "profileStandard");
+        if (listStandard.isWhite(cleanUrl)) profile = HelperUnit.domain(cleanUrl);
+
+        boolean removeTracking = sp.getBoolean(profile + "_trackingULS", true);
+
+        if (removeTracking && cleanUrl.contains("?") && cleanUrl.contains("/")) {
+
+            String lastIndex = url.substring(url.lastIndexOf("/"));
+            String tracking = url.substring(url.lastIndexOf("?"));
+            String urlClean = url.replace(tracking, "");
+
+            if (lastIndex.contains(tracking)) {
+
+                String m = context.getString(R.string.dialog_tracking) + " \"" + tracking + "\"" + "?";
+
+                if (m.length() > 150) {
+                    m = m.substring(0, 150) + " [...]?\"";
+                }
+
+                GridItem item_01 = new GridItem(context.getString(R.string.app_ok), R.drawable.icon_check);
+                GridItem item_02 = new GridItem( context.getString(R.string.app_no), R.drawable.icon_close);
+                GridItem item_03 = new GridItem( context.getString(R.string.menu_edit), R.drawable.icon_edit);
+
+                View dialogView = View.inflate(context, R.layout.dialog_menu, null);
+                MaterialAlertDialogBuilder builderTrack = new MaterialAlertDialogBuilder(context);
+
+                LinearLayout textGroup = dialogView.findViewById(R.id.textGroup);
+                TextView overflowURL = dialogView.findViewById(R.id.overflowURL);
+                overflowURL.setText(url);
+                TextView overflowMessage = dialogView.findViewById(R.id.overflowMessage);
+                overflowMessage.setText(m);
+                HelperUnit.setHighLightedText(context, overflowURL, url, HelperUnit.domain(url));
+                TextView menuTitle = dialogView.findViewById(R.id.overflowTitle);
+                menuTitle.setText(HelperUnit.domain(url));
+                textGroup.setOnClickListener(v ->
+                        HelperUnit.showCustomSnackbarWithTwoActions(
+                                context, dialogView, null,
+                                title, "", url,
+                                R.drawable.icon_share, () -> {
+                                    shareLink(title, url);
+                                    return true;
+                                },
+                                R.drawable.icon_close, () -> true
+                        ));
+
+                FloatingActionButton buttonProfile = dialogView.findViewById(R.id.buttonProfile);
+                this.setProfileIcon(buttonProfile, url);
+                FaviconHelper.setFavicon(context, dialogView, url, R.id.menu_icon, R.drawable.icon_image_broken);
+                buttonProfile.setOnClickListener(v -> showDialogFastToggle(title,url, buttonProfile));
+                buttonProfile.setOnLongClickListener(v -> {
+                    sp.edit().putString("profile", "profileStandard").apply();
+                    this.setProfileIcon(buttonProfile, url);
+                    if (!listStandard.isWhite(url)){
+                        activeGeckoView.reload();
+                    }return false;
+                });
+                builderTrack.setView(dialogView);
+
+                AlertDialog dialogTrack = builderTrack.create();
+                dialogTrack.show();
+                HelperUnit.setupDialog(context, dialogTrack);
+
+                GridView menu_grid = dialogView.findViewById(R.id.menu_grid);
+                final List<GridItem> gridList = new LinkedList<>();
+                gridList.add(gridList.size(), item_01);
+                gridList.add(gridList.size(), item_02);
+                gridList.add(gridList.size(), item_03);
+                GridAdapter gridAdapter = new GridAdapter(context, gridList);
+                menu_grid.setAdapter(gridAdapter);
+                gridAdapter.notifyDataSetChanged();
+                menu_grid.setOnItemClickListener((parent, view, position, id) -> {
+                    switch (position) {
+
+                        case 0:
+                            dialogTrack.cancel();
+                            Intent sharingIntentClean;
+                            sharingIntentClean = new Intent(Intent.ACTION_SEND);
+                            sharingIntentClean.setType("text/plain");
+                            sharingIntentClean.putExtra(Intent.EXTRA_SUBJECT, title);
+                            sharingIntentClean.putExtra(Intent.EXTRA_TEXT, urlClean);
+                            context.startActivity(Intent.createChooser(sharingIntentClean, (context.getString(R.string.menu_share_link))));
+                            break;
+                        case 1:
+                            dialogTrack.cancel();
+                            Intent sharingIntent;
+                            sharingIntent = new Intent(Intent.ACTION_SEND);
+                            sharingIntent.setType("text/plain");
+                            sharingIntent.putExtra(Intent.EXTRA_SUBJECT, title);
+                            sharingIntent.putExtra(Intent.EXTRA_TEXT, url);
+                            context.startActivity(Intent.createChooser(sharingIntent, (context.getString(R.string.menu_share_link))));
+                            break;
+                        case 2:
+                            dialogTrack.cancel();
+                            View dialogEdit = View.inflate(context, R.layout.dialog_edit, null);
+                            TextInputLayout editBottomLayout = dialogEdit.findViewById(R.id.editBottomLayout);
+                            TextInputLayout editTopLayout = dialogEdit.findViewById(R.id.editTopLayout);
+                            editBottomLayout.setHint(activity.getString(R.string.dialog_URL_hint));
+                            editTopLayout.setVisibility(GONE);
+                            EditText input = dialogEdit.findViewById(R.id.editBottom);
+                            input.setText(url);
+                            HelperUnit.showSoftKeyboard(input);
+
+                            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+                            builder.setTitle(context.getString(R.string.menu_edit));
+                            builder.setIcon(R.drawable.icon_tracking);
+                            builder.setView(dialogEdit);
+                            Dialog dialog = builder.create();
+
+                            Button ib_cancel = dialogEdit.findViewById(R.id.editCancel);
+                            HelperUnit.applyBouncyTouchFeedback(ib_cancel);
+                            ib_cancel.setOnClickListener(v -> dialog.cancel());
+                            Button ib_ok = dialogEdit.findViewById(R.id.editOK);
+                            HelperUnit.applyBouncyTouchFeedback(ib_ok);
+                            ib_ok.setOnClickListener(v -> {
+                                dialog.dismiss();
+                                String newValue = Objects.requireNonNull(input.getText()).toString();
+                                Intent sharingIntentEdit;
+                                sharingIntentEdit = new Intent(Intent.ACTION_SEND);
+                                sharingIntentEdit.setType("text/plain");
+                                sharingIntentEdit.putExtra(Intent.EXTRA_SUBJECT, title);
+                                sharingIntentEdit.putExtra(Intent.EXTRA_TEXT, newValue);
+                                context.startActivity(Intent.createChooser(sharingIntentEdit, (context.getString(R.string.menu_share_link))));
+                            });
+                            dialog.show();
+                            HelperUnit.setupDialog(context, dialog);
+                            break;
+                    }
+                });
+            }
+        } else {
+            Intent sharingIntent = new Intent(Intent.ACTION_SEND);
+            sharingIntent.setType("text/plain");
+            sharingIntent.putExtra(Intent.EXTRA_SUBJECT, title);
+            sharingIntent.putExtra(Intent.EXTRA_TEXT, url);
+            context.startActivity(Intent.createChooser(sharingIntent, (context.getString(R.string.menu_share_link))));
+        }
+    }
+
+    public void postLink(String data, Dialog dialogParent) {
+        String urlForPosting = sp.getString("urlForPosting", "");
+
+        if (!urlForPosting.isEmpty()) {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("text", data);
+            Objects.requireNonNull(clipboard).setPrimaryClip(clip);
+            PetalToast.show(this, getString(R.string.app_done));
+            addAlbum("", urlForPosting, true);
+        } else {
+            MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
+            View dialogViewSubMenu = View.inflate(context, R.layout.dialog_edit, null);
+            TextInputLayout editBottomLayout = dialogViewSubMenu.findViewById(R.id.editBottomLayout);
+            TextInputLayout editTopLayout = dialogViewSubMenu.findViewById(R.id.editTopLayout);
+            editBottomLayout.setHint(activity.getString(R.string.dialog_URL_hint));
+            editTopLayout.setVisibility(GONE);
+
+            builder.setView(dialogViewSubMenu);
+            builder.setTitle(activity.getString(R.string.dialog_postOnWebsite));
+            builder.setMessage(getString(R.string.dialog_postOnWebsiteHint));
+            builder.setIcon(R.drawable.icon_post);
+
+            Dialog dialog = builder.create();
+            dialog.show();
+            HelperUnit.setupDialog(context, dialog);
+
+            Button ib_cancel = dialogViewSubMenu.findViewById(R.id.editCancel);
+            HelperUnit.applyBouncyTouchFeedback(ib_cancel);
+            ib_cancel.setOnClickListener(v -> dialog.cancel());
+            Button ib_ok = dialogViewSubMenu.findViewById(R.id.editOK);
+            HelperUnit.applyBouncyTouchFeedback(ib_ok);
+            ib_ok.setOnClickListener(v -> {
+                EditText editBottom = dialogViewSubMenu.findViewById(R.id.editBottom);
+                String shareTop = editBottom.getText().toString().trim();
+                sp.edit().putString("urlForPosting", shareTop).apply();
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("text", data);
+                Objects.requireNonNull(clipboard).setPrimaryClip(clip);
+                PetalToast.show(this, getString(R.string.app_done));
+                addAlbum("", shareTop, true);
+                dialog.cancel();
+                try {
+                    dialogParent.cancel();
+                } catch (Exception e) {
+                    Log.i(TAG, "shouldOverrideUrlLoading Exception:" + e);
+                }
+            });
+        }
+    }
+    public void searchOnSite() {
+        String curUrl = currentAlbumController != null ? currentAlbumController.getUrl() : (activeGeckoView != null ? activeGeckoView.getUrl() : "");
+        if (isPetalHomeSurfaceShowing || isHomePage(curUrl) || curUrl == null || curUrl.isEmpty() || curUrl.equalsIgnoreCase("about:blank")) {
+            // Find in page is exclusive to websites, not available on home page
+            return;
+        }
+        if (appBar != null) appBar.setVisibility(GONE);
+        isFindInPageShowing = true;
+        findInPageQuery = "";
+        if (findInPageCompose != null) {
+            findInPageCompose.setVisibility(VISIBLE);
+        }
+        updateFindInPageCompose();
+        updateBackCallbackState();
+    }
+    public void saveBookmark(String title, String url) {
+        if (url == null || url.trim().isEmpty() || isHomePage(url)) {
+            PetalToast.show(this, "Home page cannot be bookmarked");
+            return;
+        }
+        RecordAction action = new RecordAction(context);
+        action.open(true);
+        String message = context.getString(R.string.app_error) + ": " + context.getString(R.string.app_error_save);
+        if (action.checkUrl(url, RecordUnit.TABLE_BOOKMARK))
+            PetalToast.show(this, message);
+        else {
+            action.addBookmark(new Record(title, url, 0, 0));
+            PetalToast.show(this, R.string.app_done); }
+        action.close();
+    }
+
+    public void performGesture(String gesture, String url) {
+        com.petal.browser.util.BrowserGestureHandler.performGesture(this, gesture, url);
+    }
+
+    public void closeTabConfirmation(final Runnable okAction) {
+        if (!sp.getBoolean("sp_close_tab_confirm", false)) {
+            okAction.run();
+        } else {
+            String tabTitle = currentAlbumController != null ? currentAlbumController.getTitle() : "";
+            com.petal.browser.ui.components.PetalConfirmSheetBridge.showTabCloseConfirmation(this, tabTitle, okAction);
+        }
+    }
+
+
+    public void closeAllIncognitoTabs() {
+        try {
+            List<AlbumController> toRemove = new ArrayList<>();
+            for (AlbumController album : BrowserContainer.list()) {
+                if (album != null && album.isIncognito()) {
+                    toRemove.add(album);
+                }
+            }
+            for (AlbumController album : toRemove) {
+                removeAlbumSilently(album);
+            }
+            if (BrowserContainer.size() == 0) {
+                addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
+            } else if (currentAlbumController == null) {
+                showAlbum(BrowserContainer.get(0));
+            }
+            updateOmniBox();
+            updatePersistentBottomNav();
+            saveOpenedTabs();
+            com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
+            PetalToast.show(this, "Closed all Incognito tabs");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    public void dispatchIntent(Intent intent) {
+        if (intent == null) return;
+
+        // Tapping a download notification (see PetalLiveAlertManager) launches
+        // BrowserActivity with this extra so it lands on the Download Manager
+        // screen instead of just reopening to whatever was last on screen.
+        if (intent.getBooleanExtra("open_downloads", false)) {
+            intent.removeExtra("open_downloads");
+            showDownloads();
+            return;
+        }
+
+        boolean isPwaMode = intent.getBooleanExtra("pwa_mode", false);
+        if (isPwaMode) {
+            View composeAddr = findViewById(R.id.compose_address_bar);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            View fab_bubble = findViewById(R.id.fab_bubble);
+            if (composeAddr != null) composeAddr.setVisibility(GONE);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (fab_bubble != null) fab_bubble.setVisibility(GONE);
+        }
+
+        String action = intent.getAction();
+        if ("com.petal.browser.action.SHOW_UPDATE".equals(action)) {
+            String updateVer = intent.getStringExtra("update_version");
+            String updateUrl = intent.getStringExtra("update_url");
+            intent.setAction("");
+            if (updateVer != null && updateUrl != null) {
+                com.petal.browser.ui.components.PetalUpdateSheetBridge.showUpdateSheet(
+                    this,
+                    new com.petal.browser.ui.components.PetalUpdateInfo(
+                        updateVer,
+                        "Squashed bugs, added magic. Ready to download & install!",
+                        updateUrl,
+                        "https://github.com/shreyagarwal72/petal/releases",
+                        true
+                    )
+                );
+            }
+            return;
+        }
+        if (com.petal.browser.compose.incognito.PetalIncognitoSessionManager.ACTION_CLOSE_INCOGNITO.equals(action)) {
+            closeAllIncognitoTabs();
+            intent.setAction("");
+            return;
+        }
+        String url = intent.getStringExtra(Intent.EXTRA_TEXT);
+        Uri rawDataUri = intent.getData();
+        if (rawDataUri == null && url != null && (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("petal://"))) {
+            try {
+                rawDataUri = Uri.parse(url);
+            } catch (Exception ignored) {}
+        }
+        final Uri dataUri = rawDataUri;
+        String mimeType = intent.getType();
+        if ("".equals(action)) {
+            Log.i(TAG, "resumed Petal Browser");
+        } else if (filePathCallback != null) {
+            filePathCallback = null;
+            getIntent().setAction("");
+        } else if (Intent.ACTION_VIEW.equals(action) && dataUri != null) {
+            String scheme = dataUri.getScheme();
+            if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme) || "about".equalsIgnoreCase(scheme) || "petal".equalsIgnoreCase(scheme)) {
+                // If Custom Tabs is enabled and this intent was dispatched as a CustomTabsIntent
+                // from an external caller, route directly to PetalCustomTabActivity (Firefox Fenix contract).
+                boolean customTabsPref = sp.getBoolean("sp_custom_tabs_enabled", true);
+                boolean hasCustomTabExtra = intent.hasExtra(androidx.browser.customtabs.CustomTabsIntent.EXTRA_SESSION)
+                        || intent.hasExtra(androidx.browser.customtabs.CustomTabsIntent.EXTRA_TOOLBAR_COLOR)
+                        || intent.hasExtra("android.support.customtabs.extra.SESSION");
+                if (customTabsPref && hasCustomTabExtra && !isPwaMode) {
+                    Intent cctIntent = new Intent(intent);
+                    cctIntent.setClass(this, com.petal.browser.customtabs.PetalCustomTabActivity.class);
+                    cctIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(cctIntent);
+                    getIntent().setAction("");
+                    finish();
+                    return;
+                }
+
+                sp.edit().putBoolean("show_overview", false).apply();
+                getIntent().setAction("");
+
+                String targetLoadUrl = dataUri.toString();
+                String offlineArchivePath = intent.getStringExtra("offline_archive_path");
+                if (offlineArchivePath != null && !HelperUnit.isNetworkAvailable(this)) {
+                    java.io.File archiveFile = new java.io.File(offlineArchivePath);
+                    if (archiveFile.exists()) {
+                        targetLoadUrl = "file://" + archiveFile.getAbsolutePath();
+                    }
+                }
+
+                addAlbum(null, targetLoadUrl, true);
+                if (isPwaMode) {
+                    View composeAddr = findViewById(R.id.compose_address_bar);
+                    View bottomNav = findViewById(R.id.bottom_nav_compose);
+                    if (composeAddr != null) composeAddr.setVisibility(GONE);
+                    if (bottomNav != null) bottomNav.setVisibility(GONE);
+                }
+                return;
+            }
+            String fileName = null;
+            // 1. Echten Dateinamen aus der URI ermitteln
+            if ("content".equals(dataUri.getScheme())) {
+                try (Cursor cursor = getContentResolver().query(dataUri, null, null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                        if (nameIndex != -1) {
+                            fileName = cursor.getString(nameIndex); // z.B. "notizen.org"
+                        }
+                    }
+                } catch (Exception e) {
+                    PetalToast.show(context, getString(R.string.app_error));
+                }
+            } else if ("file".equals(dataUri.getScheme())) {
+                fileName = dataUri.getLastPathSegment();
+            }
+
+            // 1a. Firefox WebExtension packages (.xpi) - install natively instead of falling
+            // through to the plain-text viewer below (or being rejected by it). File managers
+            // and the Downloads app usually tag these "application/x-xpinstall"; fall back to
+            // the file extension for providers that report a generic type instead.
+            boolean isXpiMime = mimeType != null && mimeType.equalsIgnoreCase("application/x-xpinstall");
+            boolean isXpiName = fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(".xpi");
+            if (isXpiMime || isXpiName) {
+                sp.edit().putBoolean("show_overview", false).apply();
+                getIntent().setAction("");
+                com.petal.browser.extensions.PetalExtensionManager.installFromContentUri(this, dataUri, (success, message) -> {
+                    runOnUiThread(() -> {
+                        PetalToast.show(this, message != null ? message : (success ? "Extension installed" : "Extension installation failed"));
+                        if (success) {
+                            showExtensionsScreen();
+                        }
+                    });
+                    return kotlin.Unit.INSTANCE;
+                });
+                return;
+            }
+
+            // Petal password backups are imported into the local vault, never rendered as text.
+            boolean isPetalBackup = (fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(".petal"))
+                    || "application/vnd.petal.password-vault".equalsIgnoreCase(mimeType);
+            if (isPetalBackup) {
+                sp.edit().putBoolean("show_overview", false).apply();
+                getIntent().setAction("");
+                getIntent().setData(null);
+                new Thread(() -> {
+                    try {
+                        com.petal.browser.passwords.PetalCredentialVault.INSTANCE.init(this);
+                        String backup = com.petal.browser.util.BrowserIntentHandler.readTextFromUri(this, dataUri);
+
+                        if (com.petal.browser.passwords.PetalCredentialVault.INSTANCE.isPasswordBackup(backup)) {
+                            // New password-protected backup: ask for the password first.
+                            runOnUiThread(() -> com.petal.browser.passwords.PetalBackupPasswordPrompt.askAsync(this, password -> {
+                                if (password == null) return kotlin.Unit.INSTANCE;
+                                new Thread(() -> {
+                                    try {
+                                        int imported = com.petal.browser.passwords.PetalCredentialVault.INSTANCE.importWithPasswordOrThrow(backup, password);
+                                        runOnUiThread(() -> PetalToast.show(this, imported > 0
+                                                ? "Imported " + imported + " passwords from Petal backup"
+                                                : "No new passwords imported; these entries may already be in your vault."));
+                                    } catch (Exception e) {
+                                        String message = e.getMessage() != null ? e.getMessage() : "Could not import the Petal backup.";
+                                        runOnUiThread(() -> PetalToast.show(this, message));
+                                    }
+                                }, "PetalBackupImportV2").start();
+                                return kotlin.Unit.INSTANCE;
+                            }));
+                            return;
+                        }
+
+                        // Old phone-tied backup (only works on the same install that made it).
+                        int imported = com.petal.browser.passwords.PetalCredentialVault.INSTANCE.importEncryptedOrThrow(backup);
+                        runOnUiThread(() -> PetalToast.show(this, imported > 0
+                                ? "Imported " + imported + " passwords from Petal backup"
+                                : "No new passwords imported; these entries may already be in your vault."));
+                    } catch (Exception e) {
+                        String message = e.getMessage() != null ? e.getMessage() : "Could not import the Petal backup.";
+                        runOnUiThread(() -> PetalToast.show(this, message));
+                    }
+                }, "PetalBackupImport").start();
+                return;
+            }
+
+            // 2. Dateiendung prüfen und filtern
+            if (fileName != null) {
+                String extension = "";
+                int lastDot = fileName.lastIndexOf('.');
+                if (lastDot >= 0) {
+                    extension = fileName.substring(lastDot + 1).toLowerCase();
+                }
+                // Liste aller erlaubten Text- und Code-Endungen
+                List<String> allowedExtensions = Arrays.asList(
+                        "html", "txt", "xml", "json", "java", "md", "js", "css", "sh", "py", "org", "gpx"
+                );
+                if (!allowedExtensions.contains(extension)) {
+                    PetalToast.show(this, getString(R.string.dialog_supported), Toast.LENGTH_SHORT);
+                    getIntent().setAction("");
+                    getIntent().setData(null);
+                    return;
+                }
+            }
+            String filePath = dataUri.getPath();
+            // Liefert den Pfad (z. B. /storage/emulated/0/Download/file.txt)
+            // Falls der Pfad über einen ContentProvider verschlüsselt ist, nutzen wir die URI als Identifikator
+            String displayPath = filePath != null ? filePath : dataUri.toString();
+            // Die virtuelle oder echte Datei-URL für die WebView (wichtig für webView.getUrl())
+            String virtualFileUrl = filePath != null ? "file://" + filePath : dataUri.toString();
+            String fileContent = com.petal.browser.util.BrowserIntentHandler.readTextFromUri(this, dataUri);
+            if (!fileContent.trim().isEmpty()) {
+                if (mimeType != null && mimeType.contains("html")) {
+                    // HTML über die sichere Cache-Methode laden (damit CSS/Bilder funktionieren)
+                    File localHtmlFile = com.petal.browser.util.BrowserIntentHandler.copyHtmlToCache(this, dataUri);
+                    if (localHtmlFile != null && localHtmlFile.exists()) {
+                        String localUrl = "file://" + localHtmlFile.getAbsolutePath();
+                        addAlbum(fileName, localUrl, true);
+                        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadUrl(localUrl);
+                        }
+                    } else {
+                        addAlbum(fileName, "about:blank" , true);
+                        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                            ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).loadData(fileContent, "text/html", "UTF-8");
+                        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                            ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadDataWithBaseURL(null, fileContent, "text/html", "UTF-8", null);
+                        }
+                    }
+                } else {
+                    // UNIVERSAL-METHODE für XML, JSON, TXT, JAVA, MD, etc.
+                    String langClass = "language-txt";
+                    String formattedContent = fileContent;
+                    // Mime-Type oder Inhalts-Erkennung für das Syntax-Highlighting
+                    if (mimeType != null && (mimeType.contains("xml") || fileContent.trim().startsWith("<"))) {
+                        langClass = "language-xml";
+                    } else if (mimeType != null && (mimeType.contains("json") || mimeType.contains("javascript"))
+                            || fileContent.trim().startsWith("{") || fileContent.trim().startsWith("[")) {
+                        langClass = "language-json";
+                        try {
+                            if (fileContent.trim().startsWith("{")) {
+                                org.json.JSONObject jsonObject = new org.json.JSONObject(fileContent);
+                                formattedContent = jsonObject.toString(2);
+                            } else if (fileContent.trim().startsWith("[")) {
+                                org.json.JSONArray jsonArray = new org.json.JSONArray(fileContent);
+                                formattedContent = jsonArray.toString(2);
+                            }
+                        } catch (Exception ignored) {
+                            PetalToast.show(context, getString(R.string.app_error));
+                        }
+                    } else {
+                        assert fileName != null;
+                        if (fileName.endsWith(".java")) {
+                            langClass = "language-java";
+                        } else if (fileName.endsWith(".md")) {
+                            langClass = "language-markdown";
+                        }
+                    }
+                    // HTML-Sonderzeichen maskieren
+                    String escapedContent = formattedContent.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+                    // Das universelle HTML-Gerüst mit Dateiname, Pfad und responsivem Code-Block
+                    // NEU: Das <title>-Tag sorgt dafür, dass activeGeckoView.getTitle() den Dateinamen liefert
+                    String htmlWrapper = "<html><head>"
+                            + "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                            + "<title>" + fileName + "</title>"
+                            + "<link rel='stylesheet' href='https://cloudflare.com' />"
+                            + "<style>"
+                            + "  body { margin: 0; padding: 15px; background: #fafafa; font-family: sans-serif; color: #333; }"
+                            + "  .file-info { background: #eaeaea; padding: 10px; border-radius: 5px; font-size: 12px; margin-bottom: 15px; border-left: 4px solid #007bb6; word-break: break-all; }"
+                            + "  .file-info b { color: #111; }"
+                            + "  pre, code { font-family: monospace !important; font-size: 13px !important; white-space: pre-wrap !important; word-wrap: break-word !important; }"
+                            + "</style></head><body>"
+                            + "<div class='file-info'>"
+                            + "  <b>Datei:</b> " + fileName + "<br/>"
+                            + "  <b>Pfad:</b> " + displayPath
+                            + "</div>"
+                            + "<pre class='" + langClass + "'><code class='" + langClass + "'>"
+                            + escapedContent
+                            + "</code></pre>"
+                            + "<script src='https://cloudflare.com'></script>"
+                            + "<script src='https://cloudflare.com'></script>"
+                            + "</body></html>";
+                    addAlbum(fileName, virtualFileUrl, true);
+                    if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                        ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).loadData(htmlWrapper, "text/html", "UTF-8");
+                    } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                        ((com.petal.browser.view.PetalGeckoView) currentAlbumController).loadDataWithBaseURL(virtualFileUrl, htmlWrapper, "text/html", "UTF-8", null);
+                    }
+                }
+            } else {
+                sp.edit().putBoolean("show_overview", false).apply();
+                getIntent().setAction("");
+                addAlbum(null, Objects.requireNonNull(getIntent().getData()).toString(), true);
+            }
+        } else if ("postLink".equals(action)) {
+            sp.edit().putBoolean("show_overview", false).apply();
+            getIntent().setAction("");
+            postLink(url, null);
+        } else if ("customSearches".equals(action)) {
+            sp.edit().putBoolean("show_overview", false).apply();
+            getIntent().setAction("");
+            if (BrowserContainer.size() == 0) {
+                addAlbum(null, "", true);
+            }
+            assert url != null;
+            showDialogCustomSearches(url);
+        } else if (intent.getAction() != null && intent.getAction().equals(Intent.ACTION_PROCESS_TEXT)) {
+            sp.edit().putBoolean("show_overview", false).apply();
+            getIntent().setAction("");
+            CharSequence text = getIntent().getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT);
+            assert text != null;
+            url = text.toString();
+            addAlbum(null, url, true);
+        } else if (intent.getAction() != null && intent.getAction().equals(Intent.ACTION_WEB_SEARCH)) {
+            sp.edit().putBoolean("show_overview", false).apply();
+            getIntent().setAction("");
+            url = Objects.requireNonNull(intent.getStringExtra(SearchManager.QUERY));
+            addAlbum(null, url, true);
+        } else if (url != null && Intent.ACTION_SEND.equals(action)) {
+            sp.edit().putBoolean("show_overview", false).apply();
+            getIntent().setAction("");
+            addAlbum(null, url, true);
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_SEARCH.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                if (!isCurrentTabHomeOrBlank()) {
+                    addAlbum(null, "petal://home", true);
+                }
+                showOmniboxPage("");
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_AI_SEARCH.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                if (!isCurrentTabHomeOrBlank()) {
+                    addAlbum(null, "petal://home", true);
+                }
+                com.petal.browser.ui.components.PetalAiSearchBridge.showAiSearchResult(BrowserActivity.this, "");
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_VOICE.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                if (!isCurrentTabHomeOrBlank()) {
+                    addAlbum(null, "petal://home", true);
+                }
+                try {
+                    com.petal.browser.ui.components.PetalVoiceSearchBridge.showVoiceSearchSheet(this, result -> {
+                        if (result != null && !result.trim().isEmpty()) {
+                            boolean isIncog = currentAlbumController != null && currentAlbumController.isIncognito();
+                            performSearchWithFixerPrompt(result.trim(), isIncog, targetUrl -> {
+                                if (currentAlbumController != null) {
+                                    showAlbum(currentAlbumController, targetUrl);
+                                } else {
+                                    addAlbum(null, targetUrl, true, isIncog);
+                                }
+                            });
+                        }
+                        return kotlin.Unit.INSTANCE;
+                    });
+                } catch (Exception e) {
+                    showOmniboxPage("");
+                }
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_LENS.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                com.petal.browser.lens.PetalLensBridge.showLensBottomSheet(this);
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_SNAP_CAMERA.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                com.petal.browser.lens.PetalLensBridge.showLensBottomSheet(this, true);
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_INCOGNITO.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                addAlbum(null, "petal://home", true, true);
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_BOOKMARKS.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                showBookmarksSheet();
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_DOWNLOADS.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                showDownloads();
+            };
+            runOrDeferPendingWidgetAction();
+        } else if (com.petal.browser.widget.PetalSearchWidgetProvider.ACTION_OPEN_NEW_TAB.equals(action)) {
+            try { overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out); } catch (Exception ignored) {}
+            getIntent().setAction("");
+            sp.edit().putBoolean("show_overview", false).apply();
+            pendingWidgetAction = () -> {
+                addAlbum(null, "petal://home", true);
+            };
+            runOrDeferPendingWidgetAction();
+        }
+    }
+
+    /**
+     * Runs (or defers) a widget action queued up in {@link #pendingWidgetAction}.
+     * <p>
+     * A plain {@code contentFrame.post(...)} isn't reliable enough on a true cold start:
+     * {@code dispatchIntent()} runs at the end of {@code onCreate()}, but {@code onStart()}
+     * — called right after — can synchronously show the one-time Welcome dialog and/or the
+     * "choose a search engine" dialog (see onStart() above). Those are shown *after* this
+     * method queues the post, so the omnibox can end up added to contentFrame while it's
+     * still visually buried underneath one of those modal dialogs; once the user dismisses
+     * it, nothing re-triggers the omnibox, so they land on the plain home/tab page instead —
+     * exactly the "widget opens the home page on first launch" bug.
+     * <p>
+     * Deferring to {@link #onWindowFocusChanged(boolean)} instead fixes this: the window
+     * only regains real input focus once every startup dialog has actually been dismissed,
+     * cold start or not, so the omnibox reliably shows on top of whatever's current rather
+     * than getting shown-then-hidden underneath a dialog.
+     */
+    public void runOrDeferPendingWidgetAction() {
+        if (contentFrame == null) return;
+        if (isAppLockLocked) {
+            // Defer until app lock authentication finishes
+            return;
+        }
+        if (hasWindowFocus()) {
+            // Already focused and interactive (e.g. the widget was tapped while Petal was
+            // already in the foreground) — nothing is going to steal focus afterward, so
+            // just run on the next frame instead of waiting for a focus change that may
+            // never come.
+            contentFrame.post(this::consumePendingWidgetAction);
+        }
+        // Otherwise leave it queued; onWindowFocusChanged(true) will run it.
+    }
+
+    public void consumePendingWidgetAction() {
+        if (isAppLockLocked) {
+            return;
+        }
+        Runnable action = pendingWidgetAction;
+        pendingWidgetAction = null;
+        if (action != null) {
+            action.run();
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && !isAppLockLocked && pendingWidgetAction != null && contentFrame != null) {
+            contentFrame.post(this::consumePendingWidgetAction);
+        }
+    }
+
+
+    public void setWebView(String title, final String url, final boolean foreground) {
+        setWebView(title, url, foreground, false);
+    }
+
+    public void setWebView(String title, final String url, final boolean foreground, final boolean isIncognito) {
+        setWebView(title, url, foreground, isIncognito, false);
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    public void setWebView(String title, final String url, final boolean foreground, final boolean isIncognito, final boolean isPopup) {
+        String effectiveTitle = title != null ? title : getString(R.string.app_name);
+        String initialUrl = url != null ? url : "about:blank";
+        String generatedTabId = "tab_" + System.currentTimeMillis() + "_" + Math.abs(java.util.UUID.randomUUID().hashCode());
+
+        if (isIncognito && com.petal.browser.privacy.PetalTorManager.INSTANCE.isTorWindowEnabled(this)) {
+            com.petal.browser.privacy.PetalTorManager.INSTANCE.startTorSession(this);
+        }
+
+        // Create the session and TabSessionState inside Mozilla Android Components BrowserStore
+        kotlin.Pair<mozilla.components.browser.state.state.TabSessionState, mozilla.components.concept.engine.EngineSession> sessionPair =
+            com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
+                this,
+                generatedTabId,
+                initialUrl,
+                effectiveTitle,
+                isIncognito,
+                foreground
+            );
+
+        com.petal.browser.browser.PetalTabViewController tabSurface =
+            new com.petal.browser.browser.PetalTabViewController(this);
+        tabSurface.bindTab(sessionPair.getFirst());
+        tabSurface.attachLifecycle(this);
+        observePetalTabSurface(tabSurface);
+        if (currentAlbumController != null) {
+            tabSurface.setPredecessor(currentAlbumController);
+            int index = BrowserContainer.indexOf(currentAlbumController) + 1;
+            BrowserContainer.add(tabSurface, index);
+        } else {
+            BrowserContainer.add(tabSurface);
+        }
+
+        if (!isPopup) {
+            if (url == null || url.trim().isEmpty() || isHomePage(url)) {
+                String effectiveHome = BrowserUnit.getEffectiveHomepageUrl(this);
+                if (effectiveHome != null && !effectiveHome.equalsIgnoreCase("about:blank") && !isHomePage(effectiveHome)) {
+                    tabSurface.loadUrl(effectiveHome);
+                } else {
+                    tabSurface.loadUrl("about:blank");
+                }
+            } else {
+                tabSurface.loadUrl(url);
+            }
+        }
+        if (!foreground) {
+            tabSurface.deactivate();
+        } else {
+            hideOverview();
+            tabSurface.activate();
+            if (dialogOverview != null) dialogOverview.cancel();
+            showAlbum(tabSurface);
+        }
+
+        updateOmniBox();
+        updatePersistentBottomNav();
+        updateBackCallbackState();
+        saveOpenedTabs();
+        com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(this);
+    }
+
+    public void saveOpenedTabs() {
+        com.petal.browser.unit.PetalTabSessionManager.saveSession(this, currentAlbumController);
+    }
+
+    public synchronized AlbumController restoreTab(String title, String url, int index, boolean isIncognito, String groupId, String groupTitle, String groupColorHex, boolean keepOverviewOpen) {
+        AlbumController controller = com.petal.browser.unit.PetalTabSessionManager.restoreTabSilently(
+            this, title, url, index, isIncognito, groupId, groupTitle, groupColorHex, keepOverviewOpen
+        );
+        updateOmniBox();
+        updatePersistentBottomNav();
+        return controller;
+    }
+
+    public synchronized void addAlbum(String title, final String url, final boolean foreground) {
+        setWebView(title, url, foreground, false);
+    }
+
+    public synchronized void addAlbum(String title, final String url, final boolean foreground, final boolean isIncognito) {
+        setWebView(title, url, foreground, isIncognito);
+    }
+
+    public synchronized AlbumController addAlbumForPopup(String title, final boolean isIncognito) {
+        setWebView(title, null, true, isIncognito, true);
+        return currentAlbumController;
+    }
+
+    /** Adds a prepared Android Components window request as a normal BrowserStore tab. */
+    public synchronized void adoptPreparedWindow(
+            com.petal.browser.browser.PetalTabViewController source,
+        mozilla.components.concept.engine.window.WindowRequest request) {
+        mozilla.components.concept.engine.EngineSession engineSession = null;
+        com.petal.browser.browser.PetalTabViewController tabSurface = null;
+        String tabId = null;
+        boolean tabRegistered = false;
+        try {
+            android.content.SharedPreferences sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
+            boolean blockPopups = sp.getBoolean("sp_block_popups", sp.getBoolean("profileStandard_javascriptPopUp", true));
+            String url = request.getUrl();
+            if (url == null || url.trim().isEmpty()) url = "about:blank";
+
+            // If popup blocking is active, block unsolicited popups and ads
+            if (blockPopups && !url.equals("about:blank")) {
+                String sourceUrl = source != null ? source.getUrl() : null;
+                boolean shouldBlock = com.petal.browser.browser.PetalAdBlockEngine.shouldBlockUrl(this, url, sourceUrl);
+                if (shouldBlock) {
+                    android.util.Log.i("BrowserActivity", "Blocked popup window request to: " + url);
+                    try {
+                        engineSession = request.prepare();
+                        if (engineSession != null) engineSession.close();
+                    } catch (Throwable ignored) {}
+                    final String blockedUrl = url;
+                    runOnUiThread(() -> {
+                        String domain = blockedUrl;
+                        try {
+                            android.net.Uri u = android.net.Uri.parse(blockedUrl);
+                            if (u != null && u.getHost() != null) domain = u.getHost();
+                        } catch (Throwable ignored) {}
+                        com.petal.browser.view.PetalToast.show(
+                                BrowserActivity.this,
+                                getString(R.string.ui_block_popup_windows) + ": " + domain,
+                                com.petal.browser.view.PetalToast.LENGTH_LONG,
+                                getString(R.string.app_ok),
+                                () -> addAlbum(null, blockedUrl, false, source != null && source.isIncognito())
+                        );
+                    });
+                    return;
+                }
+            }
+
+            engineSession = request.prepare();
+            boolean isIncognito = source.isIncognito();
+            tabId = "tab_" + System.currentTimeMillis() + "_" +
+                    Math.abs(java.util.UUID.randomUUID().hashCode());
+            mozilla.components.browser.state.state.TabSessionState popupTab =
+                    com.petal.browser.engine.gecko.PetalEngineStore.adoptPreparedSession(
+                            this, tabId, url, getString(R.string.app_name),
+                            isIncognito, engineSession, true
+                    );
+            tabRegistered = true;
+
+            tabSurface = new com.petal.browser.browser.PetalTabViewController(this);
+            tabSurface.bindTab(popupTab);
+            tabSurface.attachLifecycle(this);
+            observePetalTabSurface(tabSurface);
+            tabSurface.setPredecessor(source);
+            tabSurface.markAdoptedNavigation(url);
+            int sourceIndex = BrowserContainer.indexOf(source);
+            BrowserContainer.add(tabSurface, sourceIndex >= 0 ? sourceIndex + 1 : BrowserContainer.size());
+            hideOverview();
+            tabSurface.activate();
+            if (dialogOverview != null) dialogOverview.cancel();
+            request.start();
+            showAlbum(tabSurface);
+            updateOmniBox();
+            updatePersistentBottomNav();
+            updateBackCallbackState();
+            saveOpenedTabs();
+        } catch (Throwable error) {
+            android.util.Log.e("BrowserActivity", "Failed to adopt Android Components window request", error);
+            if (tabSurface != null) {
+                if (tab_container != null) tab_container.removeView(tabSurface.getAlbumView());
+                detachTabSurface(tabSurface);
+                BrowserContainer.remove(tabSurface);
+                tabSurface.destroy();
+                if (currentAlbumController == tabSurface) showAlbum(source);
+            } else if (tabRegistered && tabId != null) {
+                com.petal.browser.engine.gecko.PetalEngineStore.removeTab(this, tabId);
+            } else if (engineSession != null) {
+                try { engineSession.close(); } catch (Throwable ignored) {}
+            }
+            updateOmniBox();
+            updatePersistentBottomNav();
+            updateBackCallbackState();
+        }
+    }
+
+    /** Handles content calling window.close() from an Android Components tab. */
+    public synchronized void closeContentWindow(
+            com.petal.browser.browser.PetalTabViewController source) {
+        if (BrowserContainer.size() > 1) {
+            removeAlbumSilently(source);
+        } else {
+            String homeUrl = sp.getString("favoriteURL", "about:blank");
+            source.loadUrl(homeUrl);
+            showAlbum(source, homeUrl);
+        }
+        updateOmniBox();
+        updatePersistentBottomNav();
+        updateBackCallbackState();
+    }
+
+    /**
+     * Adopts an already-opened GeckoSession (returned from GeckoView's onNewSession callback)
+     * into a new foreground popup tab. Unlike addAlbumForPopup, this does NOT call session.open()
+     * again — GeckoView already opened the session per its onNewSession contract.
+     * Calling open() a second time would cause an assertion crash.
+     */
+    public synchronized void adoptPopupGeckoSession(org.mozilla.geckoview.GeckoSession popupSession,
+                                                    String targetUrl,
+                                                    boolean isIncognito) {
+        try {
+            String popupUrl = targetUrl == null || targetUrl.trim().isEmpty()
+                    ? "about:blank" : targetUrl;
+            com.petal.browser.view.PetalGeckoView geckoView =
+                com.petal.browser.controller.BrowserWebViewController.createAndConfigureGeckoView(
+                    this, getString(R.string.app_name), popupUrl, true, isIncognito
+                );
+            // Replace the auto-created session with the one GeckoView opened for us.
+            // adoptSession() swaps the underlying session without calling open() again.
+            geckoView.adoptPopupSession(popupSession);
+
+            geckoView.setBrowserController(this);
+            // Gecko has already started loading the requested popup URL. Keep that URL in
+            // the tab metadata without calling loadUrl again, which would race the adopted
+            // session and could replace the destination with the home page.
+            geckoView.setAlbumTitle(getString(R.string.app_name), popupUrl);
+            // Tell the tab its real URL (no reload). Without this its URL stays
+            // "about:blank", showAlbum() treats it as the home page and resets it,
+            // cancelling the link that Gecko was loading.
+            geckoView.markAdoptedNavigation(popupUrl);
+
+            if (currentAlbumController != null) {
+                geckoView.setPredecessor(currentAlbumController);
+                int index = com.petal.browser.browser.BrowserContainer.indexOf(currentAlbumController) + 1;
+                com.petal.browser.browser.BrowserContainer.add(geckoView, index);
+            } else {
+                com.petal.browser.browser.BrowserContainer.add(geckoView);
+            }
+
+            geckoView.setBrowserController(this);
+            hideOverview();
+            geckoView.activate();
+            if (dialogOverview != null) dialogOverview.cancel();
+            showAlbum(geckoView);
+
+            updateOmniBox();
+            updatePersistentBottomNav();
+        } catch (Exception e) {
+            android.util.Log.e("BrowserActivity", "Failed to adopt popup GeckoSession", e);
+        }
+    }
+
+    public synchronized void addAlbumInGroup(String title, final String url, final boolean foreground, final String groupId, final String groupTitle) {
+        setWebView(title, url, foreground, false);
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            com.petal.browser.browser.PetalTabViewController surface = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
+            surface.setTabGroupId(groupId);
+            surface.setTabGroupTitle(groupTitle);
+        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+            gv.setTabGroupId(groupId);
+            gv.setTabGroupTitle(groupTitle);
+        } else if (activeGeckoView != null) {
+            activeGeckoView.setTabGroupId(groupId);
+            activeGeckoView.setTabGroupTitle(groupTitle);
+        }
+        saveOpenedTabs();
+    }
+
+    public void triggerRebirth(Context context) {
+        sp.edit().putInt("restart_changed", 0).putBoolean("restoreOnRestart", true).apply();
+        saveOpenedTabs();
+        com.petal.browser.ui.components.PetalConfirmSheetBridge.showRestartConfirmation(this, () -> {
+            PackageManager packageManager = context.getPackageManager();
+            Intent intent = packageManager.getLaunchIntentForPackage(context.getPackageName());
+            if (intent != null) {
+                ComponentName componentName = intent.getComponent();
+                Intent mainIntent = Intent.makeRestartActivityTask(componentName);
+                context.startActivity(mainIntent);
+                System.exit(0);
+            }
+        });
+    }
+
+    public String resolveCurrentTabUrl() {
+        String url = null;
+        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+            com.petal.browser.browser.PetalTabViewController surface = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
+            com.petal.browser.browser.PetalTabViewController.State state = surface.currentState();
+            if (state != null && state.getUrl() != null && !state.getUrl().trim().isEmpty()) {
+                url = state.getUrl().trim();
+            }
+        }
+        if ((url == null || url.isEmpty() || "about:blank".equalsIgnoreCase(url)) && currentAlbumController != null) {
+            url = currentAlbumController.getUrl();
+        }
+        if ((url == null || url.isEmpty() || "about:blank".equalsIgnoreCase(url)) && currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            url = ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getAlbumUrl();
+        }
+        if ((url == null || url.isEmpty() || "about:blank".equalsIgnoreCase(url)) && activeGeckoView != null) {
+            url = activeGeckoView.getUrl();
+        }
+        if ((url == null || url.isEmpty() || "about:blank".equalsIgnoreCase(url))) {
+            try {
+                mozilla.components.browser.state.store.BrowserStore store = com.petal.browser.engine.gecko.PetalEngineStore.getStore(this);
+                if (store != null && store.getState() != null) {
+                    String selectedId = store.getState().getSelectedTabId();
+                    if (selectedId != null) {
+                        for (mozilla.components.browser.state.state.TabSessionState t : store.getState().getTabs()) {
+                            if (selectedId.equals(t.getId()) && t.getContent() != null && t.getContent().getUrl() != null) {
+                                url = t.getContent().getUrl();
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+        return url;
+    }
+
+    public void installPwaShortcut() {
+        try {
+            String activeUrl = resolveCurrentTabUrl();
+            if (activeUrl == null || activeUrl.trim().isEmpty() || "about:blank".equalsIgnoreCase(activeUrl) || activeUrl.startsWith("petal://")) {
+                PetalToast.show(this, "No active web page to install");
+                return;
+            }
+            com.petal.browser.pwa.PetalPwaManager manager = null;
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                manager = gv.getPwaManager();
+                if (manager == null) { manager = new com.petal.browser.pwa.PetalPwaManager(this, gv, null); gv.setPwaManager(manager); }
+            } else if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                com.petal.browser.browser.PetalTabViewController tv = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
+                manager = tv.getPwaManager();
+                if (manager == null) { manager = new com.petal.browser.pwa.PetalPwaManager(this, tv, null); tv.setPwaManager(manager); }
+            } else if (currentAlbumController != null) {
+                manager = new com.petal.browser.pwa.PetalPwaManager(this, currentAlbumController, null);
+            }
+            
+            if (manager != null) manager.installCurrentPwa(this);
+            else PetalToast.show(this, "No active web page to install");
+        } catch (Exception e) {
+            e.printStackTrace();
+            PetalToast.show(this, "Failed to install app");
+        }
+    }
+
+    public void openApiIntegrationsHub() {
+        openSettingsScreen(com.petal.browser.compose.settings.SettingsCategory.API_INTEGRATIONS);
+    }
+
+    public void openSettingsScreen() {
+        openSettingsScreen(com.petal.browser.compose.settings.SettingsCategory.OVERVIEW);
+    }
+
+    public void openSettingsScreen(com.petal.browser.compose.settings.SettingsCategory initialCategory) {
+        try {
+            captureBrowserMainPreview();
+            isOverlayScreenShowing = true;
+            clearContentFrameKeepingTabs();
+            if (appBar != null) appBar.setVisibility(GONE);
+            LinearLayout appBar_buttons = findViewById(R.id.appBar_buttons);
+            if (appBar_buttons != null) appBar_buttons.setVisibility(GONE);
+            View bottomNav = findViewById(R.id.bottom_nav_compose);
+            if (bottomNav != null) bottomNav.setVisibility(GONE);
+            if (composeAddressBar == null) composeAddressBar = findViewById(R.id.compose_address_bar);
+            if (composeAddressBar != null) composeAddressBar.setVisibility(GONE);
+            View fab_bubble_settings = findViewById(R.id.fab_bubble);
+            if (fab_bubble_settings != null) fab_bubble_settings.setVisibility(GONE);
+            hideRefreshAndProgressOverlays();
+            View settingsView = com.petal.browser.compose.settings.PetalSettingsBridge.createSettingsView(BrowserActivity.this, initialCategory, () -> {
+                showAlbum(currentAlbumController);
+                return kotlin.Unit.INSTANCE;
+            });
+            presentComposeScreen(settingsView);
+        } catch (Exception e) {
+            startActivity(new Intent(BrowserActivity.this, Settings_Activity.class));
+        }
+    }
+
+    public static View getView() {
+        if (BrowserContainer.size() > 0) {
+            AlbumController controller = BrowserContainer.get(0);
+            if (controller != null) {
+                return controller.getAlbumView();
+            }
+        }
+        return null;
+    }
+
+    public void createWebPrintJob(WebView webView) {
+        if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+            com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+            try {
+                java.io.File cacheDir = getCacheDir();
+                java.io.File pdfFile = new java.io.File(cacheDir, "print_temp.pdf");
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(pdfFile);
+                gv.printToPdf(fos, success -> {
+                    if (success) {
+                        runOnUiThread(() -> {
+                            try {
+                                PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+                                if (printManager != null) {
+                                    String jobName = getString(R.string.app_name) + " - " + (currentAlbumController.getTitle() != null ? currentAlbumController.getTitle() : "Document");
+                                    printManager.print(jobName, new PrintDocumentAdapter() {
+                                        @Override
+                                        public void onLayout(PrintAttributes oldAttributes, PrintAttributes newAttributes, android.os.CancellationSignal cancellationSignal, LayoutResultCallback callback, android.os.Bundle extras) {
+                                            if (cancellationSignal != null && cancellationSignal.isCanceled()) {
+                                                callback.onLayoutCancelled();
+                                                return;
+                                            }
+                                            android.print.PrintDocumentInfo info = new android.print.PrintDocumentInfo.Builder(jobName)
+                                                    .setContentType(android.print.PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                                                    .build();
+                                            callback.onLayoutFinished(info, true);
+                                        }
+
+                                        @Override
+                                        public void onWrite(android.print.PageRange[] pages, android.os.ParcelFileDescriptor destination, android.os.CancellationSignal cancellationSignal, WriteResultCallback callback) {
+                                            if (destination == null) {
+                                                callback.onWriteFailed("No output destination");
+                                                return;
+                                            }
+                                            try (java.io.FileInputStream in = new java.io.FileInputStream(pdfFile);
+                                                 java.io.FileOutputStream out = new java.io.FileOutputStream(destination.getFileDescriptor())) {
+                                                byte[] buf = new byte[16384];
+                                                int len;
+                                                while ((len = in.read(buf)) > 0) {
+                                                    out.write(buf, 0, len);
+                                                }
+                                                callback.onWriteFinished(new android.print.PageRange[]{android.print.PageRange.ALL_PAGES});
+                                            } catch (Exception e) {
+                                                callback.onWriteFailed(e.getMessage());
+                                            }
+                                        }
+                                    }, new PrintAttributes.Builder().build());
+                                    return;
+                                }
+                            } catch (Exception e) {
+                                Log.w(TAG, "PrintManager failed, falling back to intent", e);
+                            }
+
+                            Intent intent = new Intent(Intent.ACTION_VIEW);
+                            Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                                    BrowserActivity.this,
+                                    getPackageName() + ".fileprovider",
+                                    pdfFile
+                            );
+                            intent.setDataAndType(uri, "application/pdf");
+                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            try {
+                                startActivity(Intent.createChooser(intent, getString(R.string.app_name) + " Document"));
+                            } catch (Exception e) {
+                                PetalToast.show(BrowserActivity.this, "No PDF viewer found");
+                            }
+                        });
+                    }
+                    return kotlin.Unit.INSTANCE;
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error generating print job via GeckoView", e);
+            }
+            return;
+        }
+        if (webView == null) return;
+        try {
+            PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+            if (printManager != null) {
+                String jobName = getString(R.string.app_name) + " Document";
+                PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter(jobName);
+                printManager.print(jobName, printAdapter, new PrintAttributes.Builder().build());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        try {
+            if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
+                com.petal.browser.view.PetalGeckoView activeGecko = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
+                activeGecko.updatePreviewCache(true);
+                activeGecko.onPause();
+            } else if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
+                com.petal.browser.browser.PetalTabViewController activeController = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
+                activeController.updatePreviewCache(true);
+            }
+            saveOpenedTabs();
+            com.petal.browser.engine.gecko.PetalEngineStore.onAppPause(this);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving tab session in onPause", e);
+        }
+    }
+
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        try {
+            com.petal.browser.engine.gecko.PetalGeckoRuntime.onLowMemory(this);
+            com.petal.browser.unit.TabThumbnailCache.clearMemory();
+        } catch (Throwable t) {
+            Log.d(TAG, "Error in onLowMemory: " + t.getMessage());
+        }
+    }
+}
