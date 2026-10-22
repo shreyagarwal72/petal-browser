@@ -177,7 +177,9 @@ jobs:
 
       # ── 13. Run gclient hooks ─────────────────────────────────────────────────
       - name: 🪝 gclient runhooks
-        working-directory: ${{ env.CHROMIUM_SRC }}
+        working-directory: ${{ env.BRAVE_WORKSPACE }}
+        env:
+          PYTHONPATH: ${{ env.BRAVE_CORE_DIR }}/script
         run: gclient runhooks
 
       # ── 14. Generate build files (GN) ─────────────────────────────────────────
