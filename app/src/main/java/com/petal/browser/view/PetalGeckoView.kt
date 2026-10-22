@@ -496,8 +496,11 @@ class PetalGeckoView @JvmOverloads constructor(
                     // (we don't surface Gecko's own save UI – the system autofill Save dialog does that).
                     try {
                         val option = request.options.firstOrNull() ?: return GeckoResult.fromValue(request.dismiss())
-                        val delegate = com.petal.browser.passwords.PetalAutofillGeckoDelegate(context)
-                        delegate.onLoginSave(option.value)
+                        val loginVal = option.value
+                        val usr = loginVal?.username.orEmpty()
+                        val pwd = loginVal?.password.orEmpty()
+                        val orig = loginVal?.origin.orEmpty().ifBlank { loginVal?.formActionOrigin.orEmpty() }
+                        com.petal.browser.passwords.PetalAutofillBridge.saveLogin(context, orig, usr, pwd)
                     } catch (t: Throwable) {
                         android.util.Log.w("PetalGeckoView", "onLoginSave error: ${t.message}")
                     }
@@ -1033,22 +1036,6 @@ class PetalGeckoView @JvmOverloads constructor(
                 val act = getHostActivity()
                 if (act is com.petal.browser.activity.BrowserActivity) {
                     act.runOnUiThread {
-                        // Handle Firefox / Mozilla OAuth redirect callback completion
-                        val fxManager = com.petal.browser.account.mozilla.FxAccountManager.getInstance()
-                        if (fxManager.isRedirectUrl(url)) {
-                            val authCode = fxManager.extractQueryParam(url, "code")
-                            if (!authCode.isNullOrBlank()) {
-                                val emailParam = fxManager.extractQueryParam(url, "email") ?: "user@mozilla.org"
-                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                                    fxManager.exchangeCodeForTokens(authCode, emailParam)
-                                    com.petal.browser.account.mozilla.PetalMozillaSyncManager.getInstance().syncNow(act)
-                                    com.petal.browser.view.PetalToast.show(act, "Signed in with Firefox Account. Syncing data...")
-                                    act.removeAlbum(this@PetalGeckoView)
-                                }
-                                return@runOnUiThread
-                            }
-                        }
-
                         // Location changes include login/OAuth redirects. Keep this callback
                         // UI-only; Gecko owns its compositor child lifecycle.
                         act.updateOmniBox()

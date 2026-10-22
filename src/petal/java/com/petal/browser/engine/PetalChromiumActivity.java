@@ -39,9 +39,9 @@ import androidx.compose.ui.platform.ComposeView;
  *   It references Brave/Chromium classes by their fully-qualified names as they
  *   exist in the compiled brave-core output.
  */
-public class PetalBraveActivity extends Activity /* extends org.chromium.chrome.browser.app.BraveActivity */ {
+public class PetalChromiumActivity extends Activity /* extends org.chromium.chrome.browser.app.BraveActivity */ {
 
-    private static final String TAG = "PetalBraveActivity";
+    private static final String TAG = "PetalChromiumActivity";
 
     private PetalTabManager petalTabManager;
     private PetalShieldsObserver petalShieldsObserver;
@@ -114,7 +114,7 @@ public class PetalBraveActivity extends Activity /* extends org.chromium.chrome.
                 .findViewById(android.R.id.content);
 
             // PetalComposeShell is a Kotlin object that returns a ComposeView
-            // pre-wired to PetalBraveActivityBridge (the ViewModel/state layer).
+            // pre-wired to PetalChromiumActivityBridge (the ViewModel/state layer).
             petalComposeShell = PetalComposeShell.INSTANCE.create(this);
 
             contentRoot.addView(petalComposeShell,

@@ -148,17 +148,11 @@ object PetalGeckoRuntime {
 
         val newRuntime = GeckoRuntime.create(appContext, settingsBuilder.build())
 
-        // Connect Petal's local password vault to GeckoView's autocomplete system.
-        // This allows the browser engine to:
-        //   • fetch saved logins when a login form is detected (onLoginFetch)
-        //   • save new credentials after form submission (onLoginSave)
-        //   • track last-used timestamps (onLoginUsed)
         try {
-            newRuntime.autocompleteStorageDelegate =
-                com.petal.browser.passwords.PetalAutofillGeckoDelegate(appContext)
-            Log.i(TAG, "Registered PetalAutofillGeckoDelegate as autocomplete storage delegate")
+            com.petal.browser.passwords.PetalAutofillBridge.init(appContext)
+            Log.i(TAG, "Initialized PetalAutofillBridge")
         } catch (t: Throwable) {
-            Log.w(TAG, "Could not register autocomplete delegate: ${t.message}")
+            Log.w(TAG, "Could not initialize PetalAutofillBridge: ${t.message}")
         }
 
         runtime = newRuntime

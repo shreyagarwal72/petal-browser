@@ -6,10 +6,10 @@ import com.petal.browser.browser.AlbumController
 import com.petal.browser.shields.PetalShieldsObserver
 
 /**
- * PetalBraveActivityBridge
+ * PetalChromiumActivityBridge
  *
- * Singleton ViewModel-style bridge between Brave's Chromium native layer and
- * Petal's Compose UI (PetalBraveUIRoot → PetalComposeShell).
+ * Singleton ViewModel-style bridge between Petal's Chromium native layer and
+ * Petal's Compose UI (PetalUIRoot → PetalComposeShell).
  *
  * All state is exposed as StateFlow so Compose collects it reactively.
  * Updates are pushed from PetalTabManager (tab events) and PetalShieldsObserver
@@ -18,12 +18,12 @@ import com.petal.browser.shields.PetalShieldsObserver
  * Navigation commands (goBack, navigate, etc.) delegate down to Chromium's
  * Tab / LoadUrlParams JNI via PetalTabManager.
  */
-class PetalBraveActivityBridge private constructor() {
+class PetalChromiumActivityBridge private constructor() {
 
     companion object {
-        @Volatile private var instance: PetalBraveActivityBridge? = null
+        @Volatile private var instance: PetalChromiumActivityBridge? = null
         fun getInstance() = instance ?: synchronized(this) {
-            instance ?: PetalBraveActivityBridge().also { instance = it }
+            instance ?: PetalChromiumActivityBridge().also { instance = it }
         }
     }
 

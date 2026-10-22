@@ -27,8 +27,8 @@ import com.petal.browser.ui.theme.PetalTheme
  *   - PetalExtensionsSheet  (Chrome extension manager)
  *   - PetalFlagsSettingsScreen  (chrome://flags surface)
  *
- * All data flows down from PetalBraveActivityBridge (ViewModel) which reads from
- * Chromium's TabModelSelector and BraveShieldsNativeHelper via JNI.
+ * All data flows down from PetalChromiumActivityBridge (ViewModel) which reads from
+ * Chromium's TabModelSelector and PetalShieldEngine via JNI.
  */
 object PetalComposeShell {
 
@@ -48,7 +48,7 @@ object PetalComposeShell {
 
         composeView.setContent {
             PetalTheme {
-                PetalBraveUIRoot()
+                PetalChromiumUIRoot()
             }
         }
 
@@ -57,15 +57,14 @@ object PetalComposeShell {
 }
 
 /**
- * PetalBraveUIRoot
+ * PetalChromiumUIRoot
  *
- * Root composable for the Petal-on-Brave UI. All Petal screens and overlays
- * are composed here. This replaces the old BrowserActivity.java inflate path
- * that wired Petal screens into the GeckoView-based content frame.
+ * Root composable for the Petal-on-Chromium UI. All Petal screens and overlays
+ * are composed here. This replaces the old BrowserActivity.java inflate path.
  */
 @Composable
-private fun PetalBraveUIRoot() {
-    val bridge = remember { PetalBraveActivityBridge.getInstance() }
+private fun PetalChromiumUIRoot() {
+    val bridge = remember { PetalChromiumActivityBridge.getInstance() }
 
     // Tab state observed from Chromium TabModelSelector
     val currentUrl by bridge.currentUrl.collectAsState()
