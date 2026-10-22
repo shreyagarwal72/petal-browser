@@ -1,0 +1,48 @@
+--- a/chrome/android/java/src/org/chromium/chrome/browser/flags/AboutFlagsAndroid.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/flags/AboutFlagsAndroid.java
+@@ -62,6 +62,48 @@ public class AboutFlagsAndroid {
+ 
++    // Petal Patch 0007: Expose chrome://flags engine to PetalFlagsSettingsScreen.
++    // Petal surfaces flags in a searchable Compose screen inside Settings → Developer.
++
++    /**
++     * Returns all available flags as PetalFlagEntry list for display in
++     * PetalFlagsSettingsScreen (searchable, toggleable Compose list).
++     */
++    public static List<PetalFlagEntry> petalGetAllFlags() {
++        FlagEntry[] flags = nativeGetFlagEntries();
++        List<PetalFlagEntry> result = new ArrayList<>(flags.length);
++        for (FlagEntry f : flags) {
++            result.add(new PetalFlagEntry(
++                f.internalName,
++                f.description,
++                f.currentValue,
++                f.defaultValue,
++                f.options
++            ));
++        }
++        return result;
++    }
++
++    /**
++     * Sets a flag value and writes to Chromium's command-line file (petal-command-line).
++     * Renderer restart is required for most flags.
++     */
++    public static void petalSetFlagValue(String internalName, String value) {
++        nativeSetFlagValue(internalName, value);
++        // Persist to SharedPreferences so the flag survives process restart
++        android.preference.PreferenceManager
++            .getDefaultSharedPreferences(org.chromium.base.ContextUtils.getApplicationContext())
++            .edit().putString("petal_flag_" + internalName, value).apply();
++    }
++
++    /** Resets all Petal-modified flags to their default values. */
++    public static void petalResetAllFlags() {
++        nativeResetAllFlags();
++    }
++
++    private static native FlagEntry[] nativeGetFlagEntries();
++    private static native void nativeSetFlagValue(String name, String value);
++    private static native void nativeResetAllFlags();
++
+ }

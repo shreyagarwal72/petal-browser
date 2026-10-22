@@ -1,0 +1,478 @@
+package com.petal.browser.media;
+
+import android.app.Activity;
+import android.app.PictureInPictureParams;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Build;
+import android.util.Rational;
+import android.view.View;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
+import androidx.preference.PreferenceManager;
+
+/**
+ * PetalMediaBridge
+ * Connects WebView HTML5 media elements (audio/video) with MediaSessionService and PiP mode.
+ * Provides JavaScript injection to monitor play, pause, timeupdate, and fullscreen video state.
+ */
+public class PetalMediaBridge {
+
+    private static final String JS_INTERFACE_NAME = "PetalMediaInterface";
+
+    public static final String MEDIA_JS_INJECTION =
+            "(function() {" +
+            "   try {" +
+            "       Object.defineProperty(document, 'hidden', { get: function() { return false; }, configurable: true });" +
+            "       Object.defineProperty(document, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });" +
+            "       window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);" +
+            "       document.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);" +
+            "   } catch(e) {}" +
+            "   if (window.petalMediaInjected) return;" +
+            "   window.petalMediaInjected = true;" +
+            "   function hookMediaElements() {" +
+            "       var mediaEls = document.querySelectorAll('video, audio');" +
+            "       for (var i = 0; i < mediaEls.length; i++) {" +
+            "           var el = mediaEls[i];" +
+            "           if (el.dataset.petalHooked) continue;" +
+            "           el.dataset.petalHooked = 'true';" +
+            "           el.addEventListener('play', function() {" +
+            "               if (window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onMediaStateChanged(true, this.title || document.title, this.currentTime * 1000, (this.duration || 0) * 1000);" +
+            "               }" +
+            "           });" +
+            "           el.addEventListener('playing', function() {" +
+            "               if (window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onMediaStateChanged(true, this.title || document.title, this.currentTime * 1000, (this.duration || 0) * 1000);" +
+            "               }" +
+            "           });" +
+            "           el.addEventListener('pause', function() {" +
+            "               if (window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onMediaStateChanged(false, this.title || document.title, this.currentTime * 1000, (this.duration || 0) * 1000);" +
+            "               }" +
+            "           });" +
+            "           el.addEventListener('ended', function() {" +
+            "               if (window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onMediaStateChanged(false, this.title || document.title, this.currentTime * 1000, (this.duration || 0) * 1000);" +
+            "               }" +
+            "           });" +
+            "           el.addEventListener('timeupdate', function() {" +
+            "               if (!this.paused && window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onMediaProgress(this.currentTime * 1000, (this.duration || 0) * 1000);" +
+            "               }" +
+            "           });" +
+            "           el.addEventListener('loadedmetadata', function() {" +
+            "               if (window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onVideoDimensions(this.videoWidth || 0, this.videoHeight || 0);" +
+            "               }" +
+            "           });" +
+            "           el.addEventListener('resize', function() {" +
+            "               if (window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onVideoDimensions(this.videoWidth || 0, this.videoHeight || 0);" +
+            "               }" +
+            "           });" +
+            "           if (el.videoWidth && el.videoHeight && window." + JS_INTERFACE_NAME + ") {" +
+            "               window." + JS_INTERFACE_NAME + ".onVideoDimensions(el.videoWidth, el.videoHeight);" +
+            "           }" +
+            "           if (!el.paused && el.currentTime > 0 && !el.ended && window." + JS_INTERFACE_NAME + ") {" +
+            "               window." + JS_INTERFACE_NAME + ".onMediaStateChanged(true, el.title || document.title, el.currentTime * 1000, (el.duration || 0) * 1000);" +
+            "           }" +
+            "       }" +
+            "   }" +
+            "   var observer = new MutationObserver(function() { hookMediaElements(); });" +
+            "   observer.observe(document.documentElement || document.body, { childList: true, subtree: true });" +
+            "   window.addEventListener('yt-navigate-finish', hookMediaElements);" +
+            "   window.addEventListener('load', hookMediaElements);" +
+            "   setInterval(function() {" +
+            "       var vids = document.querySelectorAll('video');" +
+            "       var anyPlaying = false;" +
+            "       for (var j = 0; j < vids.length; j++) {" +
+            "           if (!vids[j].paused && vids[j].currentTime > 0 && !vids[j].ended) {" +
+            "               anyPlaying = true;" +
+            "               if (vids[j].videoWidth && vids[j].videoHeight && window." + JS_INTERFACE_NAME + ") {" +
+            "                   window." + JS_INTERFACE_NAME + ".onVideoDimensions(vids[j].videoWidth, vids[j].videoHeight);" +
+            "               }" +
+            "               break;" +
+            "           }" +
+            "       }" +
+            "   }, 1500);" +
+            "   hookMediaElements();" +
+            "})();";
+
+    private final Context context;
+    private WebView webView;
+    private com.petal.browser.view.PetalGeckoView geckoView;
+    private org.mozilla.geckoview.MediaSession activeGeckoMediaSession;
+    private mozilla.components.concept.engine.mediasession.MediaSession.Controller activeEngineMediaController;
+    private MediaStateListener listener;
+
+    public interface MediaStateListener {
+        void onMediaPlay(String title, long positionMs, long durationMs);
+        void onMediaPause(long positionMs, long durationMs);
+        void onMediaProgress(long positionMs, long durationMs);
+        default void onMediaPlayingStateChanged(boolean isPlaying) {}
+        default void onVideoDimensionsChanged(int width, int height) {}
+        default void onSpeedChanged(float speed) {}
+        default void onMuteChanged(boolean muted) {}
+    }
+
+    public void setListener(MediaStateListener listener) {
+        this.listener = listener;
+    }
+
+    public MediaStateListener getListener() {
+        return listener;
+    }
+
+    public PetalMediaBridge(Context context, MediaStateListener listener) {
+        this(context, (WebView) null, listener);
+    }
+
+    public PetalMediaBridge(Context context, WebView webView, MediaStateListener listener) {
+        this.context = context;
+        this.listener = listener;
+        attachWebView(webView);
+    }
+
+    public PetalMediaBridge(Context context, com.petal.browser.view.PetalGeckoView geckoView, MediaStateListener listener) {
+        this.context = context;
+        this.listener = listener;
+        attachGeckoView(geckoView);
+    }
+
+    public void attachWebView(WebView webView) {
+        this.webView = webView;
+        if (this.webView != null) {
+            this.webView.addJavascriptInterface(new MediaJsInterface(), JS_INTERFACE_NAME);
+        }
+    }
+
+    public void attachGeckoView(com.petal.browser.view.PetalGeckoView geckoView) {
+        this.geckoView = geckoView;
+    }
+
+    private com.petal.browser.browser.PetalTabViewController tabViewController;
+
+    public void attachTabViewController(com.petal.browser.browser.PetalTabViewController tabViewController) {
+        this.tabViewController = tabViewController;
+    }
+
+    public void evaluateJavascriptOnTab(String js) {
+        if (webView != null) {
+            webView.evaluateJavascript(js, null);
+        } else if (geckoView != null) {
+            geckoView.evaluateJavascript(js, null);
+        } else if (tabViewController != null) {
+            tabViewController.evaluateJavascript(js, null);
+        } else if (context instanceof Activity) {
+            Activity act = (Activity) context;
+            if (act instanceof com.petal.browser.activity.BrowserActivity) {
+                com.petal.browser.browser.AlbumController controller = ((com.petal.browser.activity.BrowserActivity) act).getCurrentAlbumController();
+                if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
+                    ((com.petal.browser.browser.PetalTabViewController) controller).evaluateJavascript(js, null);
+                } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
+                    ((com.petal.browser.view.PetalGeckoView) controller).evaluateJavascript(js, null);
+                }
+            }
+        }
+    }
+
+    public void setActiveGeckoMediaSession(org.mozilla.geckoview.MediaSession session) {
+        this.activeGeckoMediaSession = session;
+    }
+
+    public org.mozilla.geckoview.MediaSession getActiveGeckoMediaSession() {
+        return activeGeckoMediaSession;
+    }
+
+    public void setActiveEngineMediaController(
+            mozilla.components.concept.engine.mediasession.MediaSession.Controller controller) {
+        this.activeEngineMediaController = controller;
+    }
+
+    public void injectMediaHooks() {
+        evaluateJavascriptOnTab(MEDIA_JS_INJECTION);
+    }
+
+    private double lastKnownPositionSec = 0.0;
+    private double lastKnownDurationSec = 0.0;
+    private boolean isMutedState = false;
+
+    public void updatePositionState(double positionSec, double durationSec) {
+        this.lastKnownPositionSec = positionSec;
+        this.lastKnownDurationSec = durationSec;
+    }
+
+    public void playMedia() {
+        if (activeGeckoMediaSession != null) {
+            try {
+                activeGeckoMediaSession.play();
+                return;
+            } catch (Exception ignored) {}
+        }
+        if (activeEngineMediaController != null) {
+            try {
+                activeEngineMediaController.play();
+                return;
+            } catch (Exception ignored) {}
+        }
+        evaluateJavascriptOnTab(
+                "(function() {" +
+                "   var vids = document.querySelectorAll('video');" +
+                "   if (vids.length === 0) vids = document.querySelectorAll('audio');" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       try { vids[i].play(); } catch(e) {}" +
+                "   }" +
+                "})();"
+        );
+    }
+
+    public void pauseMedia() {
+        if (activeGeckoMediaSession != null) {
+            try {
+                activeGeckoMediaSession.pause();
+                return;
+            } catch (Exception ignored) {}
+        }
+        if (activeEngineMediaController != null) {
+            try {
+                activeEngineMediaController.pause();
+                return;
+            } catch (Exception ignored) {}
+        }
+        evaluateJavascriptOnTab(
+                "(function() {" +
+                "   var vids = document.querySelectorAll('video, audio');" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       try { vids[i].pause(); } catch(e) {}" +
+                "   }" +
+                "})();"
+        );
+    }
+
+    public void changeSpeed(float speed) {
+        String js = "(function() {" +
+                "   var vids = document.querySelectorAll('video, audio');" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       try { vids[i].playbackRate = " + speed + "; } catch(e) {}" +
+                "   }" +
+                "})();";
+        evaluateJavascriptOnTab(js);
+    }
+
+    public void setVideoAspectRatio(String mode) {
+        String js = "(function() {" +
+                "   var vids = document.querySelectorAll('video');" +
+                "   var mode = '" + mode + "';" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       var v = vids[i];" +
+                "       try {" +
+                "           if (mode === 'FIT') {" +
+                "               v.style.objectFit = 'contain';" +
+                "               v.style.width = '100%';" +
+                "               v.style.height = '100%';" +
+                "               v.style.aspectRatio = '';" +
+                "           } else if (mode === 'ZOOM') {" +
+                "               v.style.objectFit = 'cover';" +
+                "               v.style.width = '100%';" +
+                "               v.style.height = '100%';" +
+                "               v.style.aspectRatio = '';" +
+                "           } else if (mode === 'STRETCH') {" +
+                "               v.style.objectFit = 'fill';" +
+                "               v.style.width = '100%';" +
+                "               v.style.height = '100%';" +
+                "               v.style.aspectRatio = '';" +
+                "           } else if (mode === '16:9' || mode === 'WIDE_16_9') {" +
+                "               v.style.objectFit = 'contain';" +
+                "               v.style.aspectRatio = '16/9';" +
+                "           } else if (mode === '4:3' || mode === 'CLASSIC_4_3') {" +
+                "               v.style.objectFit = 'contain';" +
+                "               v.style.aspectRatio = '4/3';" +
+                "           } else if (mode === '1:1' || mode === 'SQUARE_1_1') {" +
+                "               v.style.objectFit = 'contain';" +
+                "               v.style.aspectRatio = '1/1';" +
+                "           } else if (mode === '9:16' || mode === 'VERTICAL_9_16') {" +
+                "               v.style.objectFit = 'contain';" +
+                "               v.style.aspectRatio = '9/16';" +
+                "           } else if (mode === '21:9' || mode === 'CINEMA_21_9') {" +
+                "               v.style.objectFit = 'contain';" +
+                "               v.style.aspectRatio = '21/9';" +
+                "           }" +
+                "       } catch(e) {}" +
+                "   }" +
+                "})();";
+        evaluateJavascriptOnTab(js);
+    }
+
+    public boolean isMuted() {
+        return isMutedState;
+    }
+
+    public void setMuted(boolean muted) {
+        if (isMutedState == muted) return;
+        toggleMute();
+    }
+
+    public void toggleMute() {
+        isMutedState = !isMutedState;
+        if (activeGeckoMediaSession != null) {
+            try {
+                activeGeckoMediaSession.muteAudio(isMutedState);
+                return;
+            } catch (Exception ignored) {}
+        }
+        if (activeEngineMediaController != null) {
+            try {
+                activeEngineMediaController.muteAudio(isMutedState);
+                return;
+            } catch (Exception ignored) {}
+        }
+        evaluateJavascriptOnTab(
+                "(function() {" +
+                "   var vids = document.querySelectorAll('video, audio');" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       try { vids[i].muted = !vids[i].muted; } catch(e) {}" +
+                "   }" +
+                "})();"
+        );
+    }
+
+    public void skip(int deltaSeconds) {
+        if (activeGeckoMediaSession != null) {
+            try {
+                double target = Math.max(0.0, lastKnownPositionSec + deltaSeconds);
+                if (lastKnownDurationSec > 0.0) {
+                    target = Math.min(lastKnownDurationSec, target);
+                }
+                activeGeckoMediaSession.seekTo(target, false);
+                lastKnownPositionSec = target;
+                return;
+            } catch (Exception ignored) {}
+        }
+        if (activeEngineMediaController != null) {
+            try {
+                double target = Math.max(0.0, lastKnownPositionSec + deltaSeconds);
+                if (lastKnownDurationSec > 0.0) target = Math.min(lastKnownDurationSec, target);
+                activeEngineMediaController.seekTo(target, false);
+                lastKnownPositionSec = target;
+                return;
+            } catch (Exception ignored) {}
+        }
+        String skipJs = "(function() {" +
+                "   var vids = document.querySelectorAll('video');" +
+                "   if (vids.length === 0) vids = document.querySelectorAll('audio');" +
+                "   var target = null;" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       if (!vids[i].paused && vids[i].currentTime > 0) { target = vids[i]; break; }" +
+                "   }" +
+                "   if (!target && vids.length > 0) target = vids[0];" +
+                "   if (target) {" +
+                "       try {" +
+                "           target.currentTime = Math.max(0, Math.min(target.duration || 1e9, target.currentTime + (" + deltaSeconds + ")));" +
+                "       } catch(e) {}" +
+                "   }" +
+                "})();";
+        evaluateJavascriptOnTab(skipJs);
+    }
+
+    public void seekMediaTo(long positionMs) {
+        if (activeGeckoMediaSession != null) {
+            try {
+                double target = positionMs / 1000.0;
+                activeGeckoMediaSession.seekTo(target, false);
+                lastKnownPositionSec = target;
+                return;
+            } catch (Exception ignored) {}
+        }
+        if (activeEngineMediaController != null) {
+            try {
+                double target = positionMs / 1000.0;
+                activeEngineMediaController.seekTo(target, false);
+                lastKnownPositionSec = target;
+                return;
+            } catch (Exception ignored) {}
+        }
+        double seconds = positionMs / 1000.0;
+        String seekJs = "(function() {" +
+                "   var vids = document.querySelectorAll('video');" +
+                "   if (vids.length === 0) vids = document.querySelectorAll('audio');" +
+                "   var target = null;" +
+                "   for (var i = 0; i < vids.length; i++) {" +
+                "       if (!vids[i].paused && vids[i].currentTime > 0) { target = vids[i]; break; }" +
+                "   }" +
+                "   if (!target && vids.length > 0) target = vids[0];" +
+                "   if (target) {" +
+                "       try {" +
+                "           target.currentTime = " + seconds + ";" +
+                "       } catch(e) {}" +
+                "   }" +
+                "})();";
+        evaluateJavascriptOnTab(seekJs);
+    }
+
+    /**
+     * Checks if Auto-PiP on home gesture is enabled and attempts entering PiP mode.
+     */
+    public static boolean enterPipIfSupported(Activity activity, View customView) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || activity == null) {
+            return false;
+        }
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(activity);
+        boolean autoPip = sp.getBoolean("sp_auto_pip", true);
+        if (!autoPip) return false;
+
+        try {
+            if (activity instanceof com.petal.browser.activity.BrowserActivity) {
+                com.petal.browser.media.BrowserMediaDelegate.triggerSystemPipMode(
+                        (com.petal.browser.activity.BrowserActivity) activity);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private class MediaJsInterface {
+        @JavascriptInterface
+        public void triggerPip() {
+            if (context instanceof Activity) {
+                Activity act = (Activity) context;
+                act.runOnUiThread(() -> {
+                    enterPipIfSupported(act, webView != null ? webView : geckoView);
+                });
+            }
+        }
+
+        @JavascriptInterface
+        public void onMediaStateChanged(boolean isPlaying, String title, double positionMs, double durationMs) {
+            if (listener != null) {
+                listener.onMediaPlayingStateChanged(isPlaying);
+                if (isPlaying) {
+                    listener.onMediaPlay(title, (long) positionMs, (long) durationMs);
+                } else {
+                    listener.onMediaPause((long) positionMs, (long) durationMs);
+                }
+            }
+        }
+
+        @JavascriptInterface
+        public void onMediaProgress(double positionMs, double durationMs) {
+            if (listener != null) {
+                listener.onMediaProgress((long) positionMs, (long) durationMs);
+            }
+        }
+
+        @JavascriptInterface
+        public void onVideoDimensions(int width, int height) {
+            if (context instanceof Activity) {
+                Activity act = (Activity) context;
+                act.runOnUiThread(() -> {
+                    if (listener != null) {
+                        listener.onVideoDimensionsChanged(width, height);
+                    }
+                });
+            }
+        }
+    }
+}

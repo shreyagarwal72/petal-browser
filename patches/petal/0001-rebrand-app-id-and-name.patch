@@ -1,0 +1,39 @@
+--- a/brave/browser/android/preferences/brave_android_preferences.cc
++++ b/brave/browser/android/preferences/brave_android_preferences.cc
+@@ -1,6 +1,8 @@
+ // Copyright (c) The Brave Authors. All rights reserved.
+ // This Source Code Form is subject to the terms of the Mozilla Public
+ // License, v. 2.0.
++//
++// Petal Patch 0001: Rebrand application ID, name, and notification channels.
+ 
+ #include "brave/browser/android/preferences/brave_android_preferences.h"
+ 
+--- a/chrome/android/java/res/values/channel_constants.xml
++++ b/chrome/android/java/res/values/channel_constants.xml
+@@ -1,5 +1,5 @@
+-<string name="app_name">Brave</string>
++<string name="app_name">Petal Browser</string>
+ 
+--- a/chrome/android/java/AndroidManifest.xml
++++ b/chrome/android/java/AndroidManifest.xml
+@@ -2,7 +2,7 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+-    package="com.brave.browser">
++    package="com.petal.browser">
+ 
+--- a/brave/android/java/org/chromium/chrome/browser/app/BraveActivity.java
++++ b/brave/android/java/org/chromium/chrome/browser/app/BraveActivity.java
+@@ -100,6 +100,15 @@ public class BraveActivity extends ChromeTabbedActivity {
+ 
++    // Petal Patch 0001: Instantiate PetalBraveActivity as the concrete subclass.
++    // BraveActivity delegates UI chrome to PetalBraveActivity via postInflation hook.
++    @Override
++    public void onPostInflationStartup() {
++        super.onPostInflationStartup();
++        com.petal.browser.engine.PetalBraveActivity petalShell =
++            new com.petal.browser.engine.PetalBraveActivity();
++        petalShell.onPostInflationStartup(this);
++    }
++
+ }

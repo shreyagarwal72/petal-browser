@@ -1,0 +1,108 @@
+package com.petal.browser.engine
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import com.petal.browser.browser.AlbumController
+import com.petal.browser.shields.PetalShieldsObserver
+
+/**
+ * PetalBraveActivityBridge
+ *
+ * Singleton ViewModel-style bridge between Brave's Chromium native layer and
+ * Petal's Compose UI (PetalBraveUIRoot → PetalComposeShell).
+ *
+ * All state is exposed as StateFlow so Compose collects it reactively.
+ * Updates are pushed from PetalTabManager (tab events) and PetalShieldsObserver
+ * (shields events) which themselves receive callbacks from Chromium JNI.
+ *
+ * Navigation commands (goBack, navigate, etc.) delegate down to Chromium's
+ * Tab / LoadUrlParams JNI via PetalTabManager.
+ */
+class PetalBraveActivityBridge private constructor() {
+
+    companion object {
+        @Volatile private var instance: PetalBraveActivityBridge? = null
+        fun getInstance() = instance ?: synchronized(this) {
+            instance ?: PetalBraveActivityBridge().also { instance = it }
+        }
+    }
+
+    // --- Tab state -----------------------------------------------------------
+    val currentUrl     = MutableStateFlow("about:blank")
+    val currentTitle   = MutableStateFlow("")
+    val loadProgress   = MutableStateFlow(0)
+    val canGoBack      = MutableStateFlow(false)
+    val canGoForward   = MutableStateFlow(false)
+    val tabCount       = MutableStateFlow(1)
+    val isIncognito    = MutableStateFlow(false)
+    val currentTabId   = MutableStateFlow("")
+    val allTabs        = MutableStateFlow<List<AlbumController>>(emptyList())
+
+    // --- Shields state (observed from PetalShieldsObserver) ------------------
+    lateinit var shieldsObserver: PetalShieldsObserver
+
+    // --- Navigation commands -------------------------------------------------
+
+    fun navigate(url: String) {
+        try {
+            val mgr = Class.forName("com.petal.browser.engine.PetalTabManager")
+                .getMethod("getInstance").invoke(null)
+            mgr.javaClass.getMethod("loadUrl", String::class.java).invoke(mgr, url)
+        } catch (e: Exception) {
+            android.util.Log.w("PetalBridge", "navigate: $e")
+        }
+    }
+
+    fun goBack() {
+        try {
+            val mgr = PetalTabManager::class.java.getDeclaredField("instance")
+                .get(null) as? PetalTabManager
+            mgr?.getActiveTab()?.let { tab ->
+                tab.javaClass.getMethod("goBack").invoke(tab)
+            }
+        } catch (e: Exception) { android.util.Log.w("PetalBridge", "goBack: $e") }
+    }
+
+    fun goForward() {
+        try {
+            val mgr = PetalTabManager::class.java.getDeclaredField("instance")
+                .get(null) as? PetalTabManager
+            mgr?.getActiveTab()?.let { tab ->
+                tab.javaClass.getMethod("goForward").invoke(tab)
+            }
+        } catch (e: Exception) { android.util.Log.w("PetalBridge", "goForward: $e") }
+    }
+
+    fun selectTab(tab: AlbumController) { /* delegate to TabModelSelector */ }
+    fun closeTab(tab: AlbumController) { /* delegate to TabModelSelector */ }
+    fun openNewTab(incognito: Boolean) { /* delegate to TabCreator */ }
+    fun openSettings() { /* start PetalSettingsActivity */ }
+    fun sharePage() { /* Android share intent */ }
+    fun toggleDesktopSite() { /* Chromium UserAgentOverride */ }
+    fun toggleReaderMode() { /* Chromium DomDistillerService */ }
+    fun bookmarkCurrentPage() { /* Chromium BookmarkModel */ }
+    fun downloadCurrentPage() { /* Chromium DownloadManagerService */ }
+
+    // --- State push from PetalTabManager/JNI callbacks -----------------------
+
+    fun onTabUpdated(url: String, title: String, progress: Int, backEnabled: Boolean,
+                     forwardEnabled: Boolean, tabId: String, incognito: Boolean) {
+        currentUrl.value     = url
+        currentTitle.value   = title
+        loadProgress.value   = progress
+        canGoBack.value      = backEnabled
+        canGoForward.value   = forwardEnabled
+        currentTabId.value   = tabId
+        isIncognito.value    = incognito
+        shieldsObserver.refreshForTab(tabId, extractHost(url))
+    }
+
+    fun onTabListChanged(tabs: List<AlbumController>) {
+        allTabs.value = tabs
+        tabCount.value = tabs.size
+    }
+
+    private fun extractHost(url: String): String {
+        return try { java.net.URL(url).host } catch (e: Exception) { url }
+    }
+}

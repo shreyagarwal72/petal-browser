@@ -1,0 +1,600 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network & Connectivity -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.NFC" />
+
+    <!-- Haptics, Audio & Media Capture -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16+ Live Updates (promoted ongoing notifications & status bar chips) -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.BIND_QUICK_SETTINGS_TILE" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <!-- Geolocation -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Storage & Modern Media Permissions (Android 13+) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
+    <!-- Security & Biometrics (WebAuthn / Passkeys) -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- Shortcuts & Desktop Integration -->
+    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+
+    <!-- Foreground Services & System Power/Boot -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Direct APK self-updater permission for petal (FOSS / GitHub Release Variant) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:node="remove" />
+
+    <!-- Samsung Internet Content Blocker Integration -->
+    <uses-permission android:name="com.samsung.android.sbrowser.permission.CONTENTBLOCKER" />
+
+    <queries>
+        <!-- Samsung Content Blocker packages and providers -->
+        <package android:name="com.samsung.android.app.sbrowser" />
+        <package android:name="com.sec.android.app.sbrowser" />
+        <intent>
+            <action android:name="com.samsung.android.sbrowser.contentBlocker.ACTION_UPDATE" />
+        </intent>
+        <package android:name="com.google.ar.lens" />
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <package android:name="com.google.android.apps.photos" />
+        <package android:name="idm.internet.download.manager" />
+        <package android:name="idm.internet.download.manager.adm.lite" />
+        <package android:name="idm.internet.download.manager.plus" />
+        <!-- Advanced Download Manager (ADM) -->
+        <package android:name="com.dv.adm" />
+        <package android:name="com.dv.adm.pay" />
+        <!-- AB Download Manager -->
+        <package android:name="com.abdownloadmanager" />
+        <package android:name="com.ab.abdownloadmanager" />
+        <!-- Navi Download Manager -->
+        <package android:name="com.arun.navi" />
+        <package android:name="com.arun.navi.pro" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="googlelens" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="googleapp" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="market" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".PetalApplication"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/petal_backup_rules"
+        android:dataExtractionRules="@xml/petal_data_extraction_rules"
+        android:hardwareAccelerated="true"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/AppTheme"
+        android:localeConfig="@xml/locales_config"
+        android:enableOnBackInvokedCallback="true"
+        tools:ignore="GoogleAppIndexingWarning">
+
+        <!-- Central Opt-Out for WebView Metrics -->
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+
+        <!-- Google AdMob App ID (Play Store variant) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
+
+        <!-- AppLocales Metadata Holder Service for AppCompat auto-store locales -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="true"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name="com.petal.browser.media.PetalMediaSessionService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name="com.petal.browser.compose.downloads.PetalDownloadService"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false"
+            android:exported="false" />
+
+        <service
+            android:name="com.petal.browser.download.PetalChromiumDownloadService"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false"
+            android:exported="false" />
+
+        <service
+            android:name="com.petal.browser.media.ytdlp.PetalSocialDownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- AndroidX Custom Tabs Provider Service -->
+        <service
+            android:name="com.petal.browser.customtabs.PetalCustomTabsService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.support.customtabs.action.CustomTabsService" />
+            </intent-filter>
+        </service>
+
+        <!-- Petal System Autofill Service -->
+        <service
+            android:name="com.petal.browser.passwords.PetalAutofillService"
+            android:label="@string/petal_autofill_service_name"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/petal_autofill_service_config" />
+        </service>
+
+        <activity
+            android:name="com.petal.browser.passwords.PetalAutofillAuthActivity"
+            android:theme="@style/Theme.AppCompat.Translucent"
+            android:exported="true"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name="com.petal.browser.activity.BrowserActivity"
+            android:theme="@style/Theme.Petal.Splash"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:supportsPictureInPicture="true"
+            android:windowSoftInputMode="adjustResize"
+            android:fitsSystemWindows="false"
+            android:exported="true"
+            android:resizeableActivity="true"
+            android:launchMode="singleTask">
+
+            <intent-filter android:priority="999" android:order="1">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:scheme="petal" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Fängt jede Form von Text- und Code-Struktur ab (inkl. .txt, .html etc.) -->
+                <data android:mimeType="text/*" />
+                <!-- Sicherheitsnetz für Dateimanager, die JSON/XML als App-Typ statt Text deklarieren -->
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/xml" />
+            </intent-filter>
+
+            <!-- 2. FILTER: Fängt alle anderen Dateien (inkl. .org) ab, bei denen der Mime-Type unbekannt ist -->
+            <intent-filter tools:ignore="AppLinkUrlError">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <!-- Verpflichtend, damit Android die URI unabhängig vom Namen an die App übergibt -->
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            
+            <!-- Chrome Extension package import (.crx). Petal handles CRX files
+                 sideloaded from Downloads/file managers (Chrome Web Store extensions). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/x-chrome-extension" />
+                <data android:scheme="file" android:mimeType="application/x-chrome-extension" />
+            </intent-filter>
+
+            <!-- Some file managers/download managers omit the MIME type and instead rely on
+                 the .xpi file extension alone (a bare file:// or content:// VIEW intent with
+                 no mimeType set). Match on the extension as a fallback path. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.xpi" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.xpi" />
+            </intent-filter>
+
+            <!-- Encrypted Petal password backups open directly into the vault importer. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.petal" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.petal" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="application/vnd.petal.password-vault" />
+                <data android:scheme="file" android:mimeType="application/vnd.petal.password-vault" />
+            </intent-filter>
+
+            <!-- Text über das Android 'Teilen'-Menü empfangen -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- Launcher-Eintrag & Systemweite Websuche -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.WEB_SEARCH" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Allow opening highlighted text from other apps directly in Petal Browser (Chromium) -->
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+        </activity>
+
+        <!--
+          Standalone Dedicated Viewers & Players:
+          Each activity defines its own distinct android:label and intent filters
+          so the Android system "Open with" chooser displays separate, dedicated entries:
+            - "Petal PDF Viewer" for PDF documents
+            - "Petal Image Viewer" for pictures / graphics
+            - "Petal Media Player" for video and audio playback
+        -->
+        <activity
+            android:name="com.petal.browser.activity.PdfViewerActivity"
+            android:label="@string/petal_pdf_viewer_name"
+            android:theme="@style/Theme.Petal.StandaloneViewer"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/pdf" />
+                <data android:scheme="file" android:mimeType="application/pdf" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.pdf" />
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.pdf" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.petal.browser.activity.FileViewerActivity"
+            android:label="@string/petal_file_viewer_name"
+            android:theme="@style/Theme.Petal.StandaloneViewer"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:exported="true">
+
+            <!-- Document and text files VIEW -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="text/*" />
+                <data android:scheme="file" android:mimeType="text/*" />
+            </intent-filter>
+
+            <!-- Office documents & archives VIEW -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/msword" />
+                <data android:scheme="content" android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:scheme="content" android:mimeType="application/vnd.ms-excel" />
+                <data android:scheme="content" android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <data android:scheme="content" android:mimeType="application/vnd.ms-powerpoint" />
+                <data android:scheme="content" android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <data android:scheme="content" android:mimeType="application/zip" />
+                <data android:scheme="content" android:mimeType="application/x-zip-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-tar" />
+                <data android:scheme="content" android:mimeType="application/x-7z-compressed" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" />
+                <data android:scheme="file" android:mimeType="application/msword" />
+                <data android:scheme="file" android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:scheme="file" android:mimeType="application/vnd.ms-excel" />
+                <data android:scheme="file" android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <data android:scheme="file" android:mimeType="application/vnd.ms-powerpoint" />
+                <data android:scheme="file" android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <data android:scheme="file" android:mimeType="application/zip" />
+                <data android:scheme="file" android:mimeType="application/x-zip-compressed" />
+                <data android:scheme="file" android:mimeType="application/x-tar" />
+                <data android:scheme="file" android:mimeType="application/x-7z-compressed" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- Text & files SEND -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.petal.browser.activity.ImageViewerActivity"
+            android:label="@string/petal_image_viewer_name"
+            android:theme="@style/Theme.Petal.StandaloneViewer"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="image/*" />
+                <data android:scheme="file" android:mimeType="image/*" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.petal.browser.activity.MediaPlayerActivity"
+            android:label="@string/petal_media_player_name"
+            android:theme="@style/Theme.Petal.StandaloneViewer"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:supportsPictureInPicture="true"
+            android:exported="true">
+
+            <!-- Video playback (ACTION_VIEW) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="video/*" />
+                <data android:scheme="file" android:mimeType="video/*" />
+            </intent-filter>
+
+            <!-- Audio playback (ACTION_VIEW) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="audio/*" />
+                <data android:scheme="file" android:mimeType="audio/*" />
+            </intent-filter>
+
+            <!-- Video & Audio share (ACTION_SEND) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- Standalone PWA / Web App Shell Activity -->
+        <activity
+            android:name="com.petal.browser.pwa.PetalPwaActivity"
+            android:label="@string/petal_pwa_name"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:documentLaunchMode="intoExisting"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.petal.browser.action.OPEN_PWA" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!-- Standalone AndroidX Custom Tabs Activity -->
+        <activity
+            android:name="com.petal.browser.customtabs.PetalCustomTabActivity"
+            android:label="@string/petal_custom_tab_name"
+            android:theme="@style/AppTheme"
+            android:configChanges="orientation|uiMode|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation"
+            android:exported="true">
+        </activity>
+
+        <!--
+          Einstellungs-Activities:
+          WICHTIG ab Android 12+: Müssen explizit android:exported="false" deklariert werden,
+          da sie nur App-intern aufgerufen werden und sonst ein Sicherheitsrisiko darstellen!
+        -->
+        <activity android:name="com.petal.browser.activity.Settings_Activity" android:label="@string/setting_title_browser" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_ProfileList" android:label="@string/setting_title_savedWebSites" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_Delete" android:label="@string/menu_delete" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_Backup" android:label="@string/setting_title_data" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_Gesture" android:label="@string/setting_gestures" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_Filter" android:label="@string/setting_filter" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_Profile" android:label="@string/setting_title_profiles_standard" android:exported="false" />
+        <activity android:name="com.petal.browser.activity.Settings_Menu" android:label="@string/setting_menu" android:exported="false" />
+
+        <receiver
+            android:name="com.petal.browser.compose.downloads.PetalDownloadCancelReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.petal.browser.compose.downloads.PetalDownloadBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+
+
+        <receiver
+            android:name="com.petal.browser.widget.glance.PetalSearchPetal1WidgetReceiver"
+            android:label="@string/widget_search_petal1_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/petal_search_petal1_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.petal.browser.widget.glance.PetalSearchPetal2WidgetReceiver"
+            android:label="@string/widget_search_petal2_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/petal_search_petal2_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name="com.petal.browser.widget.glance.PetalSearchPetal3WidgetReceiver"
+            android:label="@string/widget_search_petal3_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/petal_search_petal3_widget_info" />
+        </receiver>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
+        <activity android:name="com.petal.browser.lens.PetalScannerActivity" android:exported="false" android:screenOrientation="portrait" />
+        <service
+            android:name="com.petal.browser.lens.PetalScannerTileService"
+            android:label="Petal Scanner"
+            android:icon="@drawable/ic_lens_scanner"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Samsung Content Blocker Dynamic Update Receiver -->
+        <receiver
+            android:name="com.petal.browser.browser.samsung.SamsungContentBlockerUpdateReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.samsung.android.sbrowser.contentBlocker.ACTION_UPDATE" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

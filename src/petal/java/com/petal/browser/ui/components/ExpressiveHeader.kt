@@ -1,0 +1,338 @@
+package com.petal.browser.ui.components
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.petal.browser.ui.containment.liquidGlassChrome
+
+/** Only the bottom corners are rounded (24dp) for a clean Material 3 Expressive header look */
+private val HeaderShape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+
+/**
+ * Material 3 Expressive Header component ported from LastWave-native (duxtami).
+ * Features full-bleed edge-to-edge width, dynamic radial glow animations,
+ * optional leading back button, title/subtitle layout, and trailing actions.
+ */
+@Composable
+fun ExpressiveHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onBack: (() -> Unit)? = null,
+    enableLiquidGlass: Boolean = com.petal.browser.ui.containment.isLiquidGlassEnabled(),
+    // Optional real-glass backdrop (must be a sibling of the screen background, see PetalLiquidGlass.kt)
+    backdrop: com.petal.browser.ui.containment.PetalBackdrop? = null,
+    maxTitleLines: Int = 2,
+    maxSubtitleLines: Int = 2,
+    actions: @Composable RowScope.() -> Unit = {},
+) {
+    val glow = MaterialTheme.colorScheme.primary
+    val secondaryGlow = MaterialTheme.colorScheme.tertiary
+
+    Box(modifier.fillMaxWidth().zIndex(1f)) {
+        val sharedWallpaper = com.petal.browser.ui.glass.LocalPetalGlassWallpaper.current?.ready == true
+        val realGlass = enableLiquidGlass && ((backdrop != null &&
+            com.petal.browser.ui.containment.petalRealGlassSupported) ||
+            sharedWallpaper)
+        val isDarkSurface = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        val headerColor = when {
+            realGlass -> Color.Transparent
+            enableLiquidGlass -> com.petal.browser.ui.containment.petalGroupSurfaceColor()
+            else -> MaterialTheme.colorScheme.surfaceContainer
+        }
+        Surface(
+            shape = HeaderShape,
+            // Real glass draws its own blurred backdrop, so the container must be see-through.
+            color = headerColor,
+            tonalElevation = if (enableLiquidGlass) 0.dp else 2.dp,
+            modifier = Modifier.fillMaxWidth().liquidGlassChrome(
+                shape = HeaderShape,
+                enabled = enableLiquidGlass,
+                backdrop = if (realGlass && !sharedWallpaper) backdrop else null,
+                isDark = isDarkSurface
+            ),
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (!enableLiquidGlass) Modifier.drawGlowBackground(glow, secondaryGlow) else Modifier)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 4.dp, bottom = 12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = onBack != null,
+                        enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessLow)) +
+                                scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)) +
+                                androidx.compose.animation.slideInHorizontally(initialOffsetX = { -it / 2 }, animationSpec = spring(stiffness = Spring.StiffnessLow)),
+                        exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessLow)) +
+                                scaleOut(targetScale = 0.92f) +
+                                androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it / 2 }, animationSpec = spring(stiffness = Spring.StiffnessLow))
+                    ) {
+                        Row {
+                            FilledTonalIconButton(
+                                onClick = { onBack?.invoke() },
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = if (enableLiquidGlass) {
+                                        com.petal.browser.ui.containment.petalGroupSurfaceColor()
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainerHighest
+                                    },
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                modifier = if (enableLiquidGlass) {
+                                    Modifier.liquidGlassChrome(CircleShape, enabled = true)
+                                } else Modifier
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                            Spacer(Modifier.width(12.dp))
+                        }
+                    }
+
+                    AnimatedContent(
+                        targetState = title to (subtitle ?: ""),
+                        transitionSpec = {
+                            (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessLow)) +
+                             slideInVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) { it / 3 } +
+                             scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)))
+                                .togetherWith(
+                                    fadeOut(animationSpec = spring(stiffness = Spring.StiffnessLow)) +
+                                    slideOutVertically(animationSpec = spring(stiffness = Spring.StiffnessLow)) { -it / 3 } +
+                                    scaleOut(targetScale = 0.92f)
+                                )
+                        },
+                        label = "ExpressiveHeaderTransition",
+                        modifier = Modifier.weight(1f)
+                    ) { (currentTitle, currentSubtitle) ->
+                        Column(modifier = Modifier.fillMaxWidth().clipToBounds()) {
+                            val titleFontSize = remember(currentTitle, onBack) {
+                                when {
+                                    onBack != null && currentTitle.length > 22 -> 14.sp
+                                    onBack != null && currentTitle.length > 18 -> 15.sp
+                                    onBack != null && currentTitle.length > 14 -> 16.5.sp
+                                    onBack != null -> 18.sp
+                                    currentTitle.length > 22 -> 16.5.sp
+                                    currentTitle.length > 18 -> 17.5.sp
+                                    currentTitle.length > 14 -> 19.5.sp
+                                    else -> 22.sp
+                                }
+                            }
+
+                            Text(
+                                text = currentTitle,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = titleFontSize,
+                                    lineHeight = (titleFontSize.value + 4).sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            if (currentSubtitle.isNotBlank()) {
+                                val subtitleFontSize = remember(currentSubtitle) {
+                                    when {
+                                        currentSubtitle.length > 32 -> 11.5.sp
+                                        currentSubtitle.length > 24 -> 12.sp
+                                        else -> 13.sp
+                                    }
+                                }
+                                Text(
+                                    text = currentSubtitle,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = subtitleFontSize,
+                                        lineHeight = (subtitleFontSize.value + 4).sp
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = maxSubtitleLines,
+                                    softWrap = maxSubtitleLines > 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = true,
+                        enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessLow)) +
+                                scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)),
+                        exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessLow)) +
+                                scaleOut(targetScale = 0.92f)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            actions()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Paints two soft radial glows whose centers drift side-to-side when foregrounded.
+ */
+@Composable
+private fun Modifier.drawGlowBackground(color: Color, secondaryColor: Color): Modifier {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumed by remember { mutableStateOf(true) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            resumed = event == Lifecycle.Event.ON_RESUME
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val drift: Float = if (resumed) {
+        val transition = rememberInfiniteTransition(label = "headerGlowDrift")
+        val animated by transition.animateFloat(
+            initialValue = -1f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 7000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "headerGlowDriftX",
+        )
+        animated
+    } else {
+        0f
+    }
+    return this.drawBehind {
+        val cx = size.width / 2f + drift * size.width * 0.30f
+        val cy = size.height * 0.46f
+        val radius = (size.width.coerceAtLeast(size.height) * 1.08f).coerceAtLeast(1f)
+        val secondaryCx = size.width / 2f - drift * size.width * 0.24f
+        val secondaryRadius = (size.width.coerceAtLeast(size.height) * 0.72f).coerceAtLeast(1f)
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    secondaryColor.copy(alpha = 0.13f),
+                    secondaryColor.copy(alpha = 0.045f),
+                    secondaryColor.copy(alpha = 0f),
+                ),
+                center = Offset(secondaryCx, size.height * 0.78f),
+                radius = secondaryRadius,
+            ),
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    color.copy(alpha = 0.23f),
+                    color.copy(alpha = 0.07f),
+                    color.copy(alpha = 0f),
+                ),
+                center = Offset(cx, cy),
+                radius = radius,
+            ),
+        )
+    }
+}
+
+/**
+ * Trailing action icon for [ExpressiveHeader].
+ */
+@Composable
+fun HeaderActionIcon(
+    icon: ImageVector,
+    contentDescription: String?,
+    onClick: () -> Unit,
+    enableLiquidGlass: Boolean = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments"),
+) {
+    FilledTonalIconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = if (enableLiquidGlass) {
+                com.petal.browser.ui.containment.petalGroupSurfaceColor()
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHighest
+            },
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+        modifier = if (enableLiquidGlass) {
+            Modifier.liquidGlassChrome(CircleShape, enabled = true)
+        } else Modifier,
+    ) {
+        Icon(icon, contentDescription = contentDescription)
+    }
+}
+

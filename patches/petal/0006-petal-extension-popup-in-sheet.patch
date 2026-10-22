@@ -1,0 +1,61 @@
+--- a/brave/browser/extensions/android/brave_extension_bridge.cc
++++ b/brave/browser/extensions/android/brave_extension_bridge.cc
+@@ -88,6 +88,44 @@ void BraveExtensionBridge::LoadExtension(
+ 
++// Petal Patch 0006: Route extension popup windows into PetalSheet (Liquid Glass bottom sheet)
++// instead of Brave's default popup window. This gives extension popups the full Petal
++// frosted-glass treatment without any chrome gaps or separate windows.
++
+--- a/brave/android/java/org/chromium/chrome/browser/extensions/BraveExtensionBridge.java
++++ b/brave/android/java/org/chromium/chrome/browser/extensions/BraveExtensionBridge.java
+@@ -60,6 +60,50 @@ public class BraveExtensionBridge {
+ 
++    // Petal Patch 0006: Popup routing into PetalSheet.
++
++    /**
++     * Returns all installed extension IDs + metadata for PetalExtensionsScreen.
++     */
++    public static List<PetalExtensionInfo> getInstalledExtensions() {
++        String[] ids = nativeGetInstalledExtensionIds();
++        List<PetalExtensionInfo> result = new ArrayList<>();
++        for (String id : ids) {
++            result.add(new PetalExtensionInfo(
++                id,
++                nativeGetExtensionName(id),
++                nativeGetExtensionIconUrl(id),
++                nativeGetExtensionVersion(id),
++                nativeIsExtensionEnabled(id)
++            ));
++        }
++        return result;
++    }
++
++    /**
++     * Opens the extension's popup.html inside a PetalSheet (Compose Liquid Glass sheet).
++     * Called from PetalExtensionsScreen when the user taps an extension action.
++     */
++    public static void openExtensionPopupInPetalSheet(Context context, String extensionId) {
++        String popupUrl = "chrome-extension://" + extensionId + "/popup.html";
++        // PetalExtensionPopupSheet opens a PetalSheet whose content is a Chromium ContentView
++        // loading the popup URL in a dedicated renderer process.
++        com.petal.browser.compose.extensions.PetalExtensionPopupSheet.INSTANCE
++            .open(context, extensionId, popupUrl);
++    }
++
++    public static void setExtensionEnabled(String extensionId, boolean enabled) {
++        nativeSetExtensionEnabled(extensionId, enabled);
++    }
++
++    public static void uninstallExtension(String extensionId) {
++        nativeUninstallExtension(extensionId);
++    }
++
++    private static native String[] nativeGetInstalledExtensionIds();
++    private static native String nativeGetExtensionName(String id);
++    private static native String nativeGetExtensionIconUrl(String id);
++    private static native String nativeGetExtensionVersion(String id);
++    private static native boolean nativeIsExtensionEnabled(String id);
++    private static native void nativeSetExtensionEnabled(String id, boolean enabled);
++    private static native void nativeUninstallExtension(String id);
++
+ }

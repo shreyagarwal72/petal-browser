@@ -1,0 +1,1731 @@
+/*
+ * PetalHomeScreen.kt
+ * ─────────────────────────────────────────────────────────────────────────
+ * Material 3 professional home screen for Petal Browser — Chrome/Edge-style
+ * squircle shortcut grid with merged frequently-visited sites, slim top bar,
+ * and existing search bar / edit dialog / persistence intact.
+ *
+ * MIT License — Copyright (c) 2026
+ */
+
+package com.petal.browser.compose.home
+import com.petal.browser.ui.components.scrollMotionBlur
+
+import android.content.Context
+import android.net.Uri
+import java.util.Locale
+import androidx.activity.ComponentActivity
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import com.petal.browser.ui.glass.captureGlassWallpaper
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
+import com.petal.browser.account.GoogleAccountManager
+import com.petal.browser.account.GoogleUserProfile
+import com.petal.browser.profile.PetalProfileAvatar
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.preference.PreferenceManager
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.petal.browser.ui.components.entrance
+import com.petal.browser.ui.components.homeLaunchEntrance
+import com.petal.browser.ui.containment.PetalFloatingToolbar
+import com.petal.browser.ui.containment.PetalGroupIconBadge
+import com.petal.browser.ui.containment.PetalHeroCard
+import com.petal.browser.ui.containment.liquidGlassChrome
+import com.petal.browser.ui.containment.petalGroupSurfaceColor
+import com.petal.browser.ui.theme.PetalExpressiveTheme
+import com.petal.browser.ui.theme.PetalMaterialShapes
+import com.petal.browser.ui.theme.mediumIncreased
+import com.petal.browser.ui.theme.toShape
+import com.petal.browser.ui.theme.defaultPaletteId
+import com.petal.browser.ui.theme.isDynamicColorSupported
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import androidx.compose.ui.res.stringResource
+import com.petal.browser.R
+
+// ── 1. Data model & Persistence ───────────────────────────────────────────
+
+@Immutable
+data class PetalShortcut(
+    val label: String,
+    val url: String,
+    val siteId: String,
+    val containerColor: Color,
+    val contentColor: Color = Color.White,
+    val shapeName: String? = null
+)
+
+fun loadRemovedShortcutUrls(context: Context): Set<String> {
+    val sp = PreferenceManager.getDefaultSharedPreferences(context)
+    val key = com.petal.browser.profile.PetalProfileManager.getScopedKey("sp_removed_home_shortcut_urls_v1")
+    return sp.getStringSet(key, emptySet()) ?: emptySet()
+}
+
+fun saveRemovedShortcutUrls(context: Context, set: Set<String>) {
+    val key = com.petal.browser.profile.PetalProfileManager.getScopedKey("sp_removed_home_shortcut_urls_v1")
+    PreferenceManager.getDefaultSharedPreferences(context)
+        .edit()
+        .putStringSet(key, set)
+        .apply()
+}
+
+fun loadHomeShortcuts(context: Context): List<PetalShortcut> {
+    val sp = PreferenceManager.getDefaultSharedPreferences(context)
+    val scopedKey = com.petal.browser.profile.PetalProfileManager.getScopedKey("sp_custom_home_shortcuts_json_v3")
+    val jsonStr = sp.getString(scopedKey, null) ?: if (com.petal.browser.profile.PetalProfileManager.activeProfile.isDefault) {
+        sp.getString("sp_custom_home_shortcuts_json_v3", null)
+    } else null
+
+    if (jsonStr != null) {
+        try {
+            val array = JSONArray(jsonStr)
+            val list = mutableListOf<PetalShortcut>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val label = obj.optString("label", "Shortcut ${i + 1}")
+                val url = obj.optString("url", "https://google.com")
+                val siteId = obj.optString("siteId", "globe")
+                val colorStr = obj.optString("color", "#4285F4")
+                val shapeName = if (obj.has("shapeName")) obj.optString("shapeName") else null
+                val parsedColor = try {
+                    Color(android.graphics.Color.parseColor(colorStr))
+                } catch (_: Throwable) {
+                    Color(0xFF4285F4)
+                }
+                list.add(PetalShortcut(label, url, siteId, parsedColor, shapeName = shapeName))
+            }
+            return list
+        } catch (_: Throwable) { }
+    }
+
+    return emptyList()
+}
+
+fun fetchTopVisitedShortcuts(context: Context): List<PetalShortcut> {
+    val list = mutableListOf<PetalShortcut>()
+    try {
+        val action = com.petal.browser.database.RecordAction(context)
+        action.open(false)
+        val records = action.listHistory(context)
+        action.close()
+
+        val paletteColors = listOf(
+            Color(0xFF4285F4), Color(0xFF34A853), Color(0xFFEA4335),
+            Color(0xFFFBBC05), Color(0xFF9C27B0), Color(0xFF00BCD4)
+        )
+
+        val removedUrls = loadRemovedShortcutUrls(context)
+
+        // Group history records by domain host to find sites visited more than 3 times
+        val topSites = records
+            .filter { !it.url.isNullOrBlank() && !it.url.startsWith("about:") && !it.url.startsWith("petal://") && !removedUrls.contains(it.url) }
+            .groupBy {
+                try { Uri.parse(it.url).host ?: it.url } catch (e: Exception) { it.url }
+            }
+            .entries
+            .filter { it.value.size > 3 }
+            .sortedByDescending { it.value.size }
+            .take(12)
+
+        topSites.forEachIndexed { idx, entry ->
+            val host = entry.key
+            val firstRecord = entry.value.first()
+            var rawLabel = firstRecord.title
+            if (rawLabel.isNullOrBlank() || rawLabel.length > 25 || rawLabel.contains("http")) {
+                rawLabel = host.removePrefix("www.").substringBefore(".")
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            }
+
+            val siteId = when {
+                host.contains("youtube") -> "youtube"
+                host.contains("github") -> "github"
+                host.contains("wikipedia") -> "wikipedia"
+                host.contains("duckduckgo") -> "duckduckgo"
+                host.contains("google") -> "google"
+                else -> "globe"
+            }
+
+            val color = paletteColors[idx % paletteColors.size]
+            list.add(PetalShortcut(label = rawLabel, url = firstRecord.url, siteId = siteId, containerColor = color))
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return list
+}
+
+fun saveHomeShortcuts(context: Context, list: List<PetalShortcut>) {
+    val array = JSONArray()
+    for (item in list) {
+        val obj = JSONObject()
+        obj.put("label", item.label)
+        obj.put("url", item.url)
+        obj.put("siteId", item.siteId)
+        val argb = item.containerColor.toArgb()
+        obj.put("color", String.format("#%08X", argb))
+        if (item.shapeName != null) {
+            obj.put("shapeName", item.shapeName)
+        }
+        array.put(obj)
+    }
+    val scopedKey = com.petal.browser.profile.PetalProfileManager.getScopedKey("sp_custom_home_shortcuts_json_v3")
+    PreferenceManager.getDefaultSharedPreferences(context)
+        .edit()
+        .putString(scopedKey, array.toString())
+        .apply()
+}
+
+val availableColors = listOf(
+    Color(0xFFFF0000) to "YouTube Red",
+    Color(0xFF4285F4) to "Google Blue",
+    Color(0xFF34A853) to "Emerald",
+    Color(0xFFFBBC05) to "Amber Gold",
+    Color(0xFFEA4335) to "Crimson",
+    Color(0xFF9C27B0) to "Violet",
+    Color(0xFF00BCD4) to "Cyan Oceanic",
+    Color(0xFF24292E) to "GitHub Black",
+    Color(0xFFDE5833) to "DuckDuckGo Orange",
+    Color(0xFF673AB7) to "Deep Purple"
+)
+
+val availableIcons = listOf(
+    "youtube" to "YouTube",
+    "google" to "Search",
+    "github" to "Code",
+    "wikipedia" to "Wikipedia (W)",
+    "duckduckgo" to "Shield",
+    "weather" to "Weather Sun",
+    "globe" to "Globe",
+    "star" to "Star",
+    "heart" to "Heart",
+    "bookmark" to "Bookmark",
+    "lock" to "Lock"
+)
+
+// ── Shapes kept as public API — referenced by other screens (e.g. PetalDownloadManagerScreen) ──
+
+val FlowerShape: Shape = GenericShape { size, _ ->
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val maxR = Math.min(cx, cy)
+    val petals = 5
+    var first = true
+    for (i in 0..360 step 2) {
+        val rad = Math.toRadians(i.toDouble())
+        val r = maxR * (0.81f + 0.19f * Math.cos(petals * rad - Math.PI / 2).toFloat())
+        val x = (cx + r * Math.cos(rad)).toFloat()
+        val y = (cy + r * Math.sin(rad)).toFloat()
+        if (first) { moveTo(x, y); first = false } else lineTo(x, y)
+    }
+    close()
+}
+
+val CloverShape: Shape = GenericShape { size, _ ->
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val maxR = Math.min(cx, cy)
+    val lobes = 4
+    var first = true
+    for (i in 0..360 step 2) {
+        val rad = Math.toRadians(i.toDouble())
+        val r = maxR * (0.72f + 0.28f * Math.sin(lobes * rad).toFloat())
+        val x = (cx + r * Math.cos(rad)).toFloat()
+        val y = (cy + r * Math.sin(rad)).toFloat()
+        if (first) { moveTo(x, y); first = false } else lineTo(x, y)
+    }
+    close()
+}
+
+val StarburstShape: Shape = GenericShape { size, _ ->
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    val maxR = Math.min(cx, cy)
+    val innerR = maxR * 0.68f
+    val points = 8
+    var first = true
+    for (i in 0 until points * 2) {
+        val rad = Math.toRadians((i * 360.0 / (points * 2)))
+        val r = if (i % 2 == 0) maxR else innerR
+        val x = (cx + r * Math.cos(rad)).toFloat()
+        val y = (cy + r * Math.sin(rad)).toFloat()
+        if (first) { moveTo(x, y); first = false } else lineTo(x, y)
+    }
+    close()
+}
+
+val ArchShape: Shape = GenericShape { size, _ ->
+    val w = size.width
+    val h = size.height
+    val r = w / 2f
+    moveTo(0f, h)
+    lineTo(0f, r)
+    arcTo(
+        rect = androidx.compose.ui.geometry.Rect(0f, 0f, w, w),
+        startAngleDegrees = 180f,
+        sweepAngleDegrees = 180f,
+        forceMoveTo = false
+    )
+    lineTo(w, h)
+    close()
+}
+
+// Kept for EditShortcutDialog live preview — shape preserved but bloom ring removed from screen.
+val PetalContainerShape: Shape = GenericShape { size, _ ->
+    val w = size.width
+    val h = size.height
+    moveTo(w * 0.5f, h)
+    cubicTo(
+        w * 0.05f, h * 0.64f,
+        w * 0.10f, h * 0.08f,
+        w * 0.5f, 0f
+    )
+    cubicTo(
+        w * 0.90f, h * 0.08f,
+        w * 0.95f, h * 0.64f,
+        w * 0.5f, h
+    )
+    close()
+}
+
+// ── 2. Java Interop Callback Interface & Bridge ───────────────────────────
+
+interface PetalHomeActionHandler {
+    fun onSearch(query: String)
+    fun onOpenUrl(url: String)
+    fun onAddShortcut()
+    fun onNewTab()
+    fun onOpenBookmarks()
+    fun onOpenHistory()
+    fun onOpenDownloads()
+    fun onOpenSettings()
+    fun onOpenTabsOverview()
+    fun onOpenAccountSync()
+}
+
+object PetalComposeBridge {
+    @JvmStatic
+    fun createComposeHomeView(
+        activity: ComponentActivity,
+        tabCount: Int,
+        handler: PetalHomeActionHandler
+    ): ComposeView {
+        return ComposeView(activity).apply {
+            setupExpressiveHomeScreen(
+                activity = activity,
+                onSearch = { query -> handler.onSearch(query) },
+                onOpenShortcutUrl = { url -> handler.onOpenUrl(url) },
+                onOpenAccountSync = { handler.onOpenAccountSync() },
+                onOpenBookmarks = { handler.onOpenBookmarks() },
+                onOpenHistory = { handler.onOpenHistory() },
+                onOpenDownloads = { handler.onOpenDownloads() },
+                onNewTab = { handler.onNewTab() },
+                onOpenTabSwitcher = { handler.onOpenTabsOverview() }
+            )
+        }
+    }
+}
+
+// ── 3. Compose View Host Extension ────────────────────────────────────────
+
+fun ComposeView.setupExpressiveHomeScreen(
+    activity: ComponentActivity,
+    onSearch: (String) -> Unit,
+    onOpenShortcutUrl: (String) -> Unit,
+    onOpenAccountSync: () -> Unit,
+    onOpenBookmarks: () -> Unit = {},
+    onOpenHistory: () -> Unit = {},
+    onOpenDownloads: () -> Unit = {},
+    onNewTab: () -> Unit = {},
+    onOpenTabSwitcher: () -> Unit = {}
+) {
+    setViewTreeLifecycleOwner(activity)
+    setViewTreeViewModelStoreOwner(activity)
+    setViewTreeSavedStateRegistryOwner(activity)
+    setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+    setContent {
+        val sp = remember { PreferenceManager.getDefaultSharedPreferences(activity) }
+        var currentPaletteId by remember { mutableStateOf(sp.getString("sp_palette_id", defaultPaletteId) ?: defaultPaletteId) }
+        var isAmoled by remember { mutableStateOf(sp.getBoolean("sp_amoled", false)) }
+        var useDynamic by remember { mutableStateOf(sp.getBoolean("useDynamicColor", isDynamicColorSupported)) }
+        var isExpressiveColors by remember { mutableStateOf(sp.getBoolean("sp_expressive_colors", false)) }
+
+        DisposableEffect(sp) {
+            val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                when (key) {
+                    "sp_palette_id" -> currentPaletteId = sp.getString("sp_palette_id", defaultPaletteId) ?: defaultPaletteId
+                    "sp_amoled" -> isAmoled = sp.getBoolean("sp_amoled", false)
+                    "useDynamicColor" -> useDynamic = sp.getBoolean("useDynamicColor", isDynamicColorSupported)
+                    "sp_expressive_colors" -> isExpressiveColors = sp.getBoolean("sp_expressive_colors", false)
+                }
+            }
+            sp.registerOnSharedPreferenceChangeListener(listener)
+            onDispose { sp.unregisterOnSharedPreferenceChangeListener(listener) }
+        }
+
+        PetalExpressiveTheme(
+            paletteId = currentPaletteId,
+            useAmoled = isAmoled,
+            dynamicColor = useDynamic,
+            expressiveColors = isExpressiveColors
+        ) {
+            PetalHomeScreen(
+                backgroundSnapshot = null,
+                onSearch = onSearch,
+                onOpenShortcutUrl = onOpenShortcutUrl,
+                onOpenAccountSync = onOpenAccountSync,
+                onOpenBookmarksAction = onOpenBookmarks,
+                onOpenHistoryAction = onOpenHistory,
+                onOpenDownloadsAction = onOpenDownloads,
+                onNewTabAction = onNewTab,
+                onOpenTabSwitcher = onOpenTabSwitcher
+            )
+        }
+    }
+}
+
+// ── 4. Main Petal Home Screen Composable ──────────────────────────────────
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun PetalHomeScreen(
+    backgroundSnapshot: ImageBitmap? = null,
+    profile: GoogleUserProfile = GoogleAccountManager.currentProfile,
+    onSearch: (String) -> Unit = {},
+    onOpenShortcutUrl: (String) -> Unit = {},
+    onOpenAccountSync: () -> Unit = {},
+    onOpenBookmarksAction: () -> Unit = {},
+    onOpenHistoryAction: () -> Unit = {},
+    onOpenDownloadsAction: () -> Unit = {},
+    onNewTabAction: () -> Unit = {},
+    onOpenTabSwitcher: () -> Unit = {}
+) {
+    var context = LocalContext.current
+    var shortcuts by remember { mutableStateOf(loadHomeShortcuts(context)) }
+    var removedUrls by remember { mutableStateOf(loadRemovedShortcutUrls(context)) }
+    var editingItem by remember { mutableStateOf<Pair<PetalShortcut, Boolean>?>(null) }
+    var isAddingNewShortcut by remember { mutableStateOf(false) }
+
+    // Fix (Bug 3): fetchTopVisitedShortcuts() opens SQLite on the composition (main) thread,
+    // blocking the first Compose frame by 100–500ms and leaving contentFrame visually black.
+    // Use LaunchedEffect + Dispatchers.IO so the screen renders immediately with an empty list
+    // that is then populated once the DB query completes off-thread.
+    var autoVisitedSites by remember { mutableStateOf<List<PetalShortcut>>(emptyList()) }
+    LaunchedEffect(removedUrls) {
+        val sites = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try { fetchTopVisitedShortcuts(context).take(8) } catch (_: Throwable) { emptyList() }
+        }
+        autoVisitedSites = sites
+    }
+    val mergedItems: List<Pair<PetalShortcut, Boolean>> = remember(shortcuts, autoVisitedSites) {
+        val savedUrls = shortcuts.map { it.url }.toSet()
+        val extraVisited = autoVisitedSites.filter { it.url !in savedUrls }
+        // true = user-editable saved shortcut; false = auto-visited
+        shortcuts.map { it to true } + extraVisited.map { it to false }
+    }
+
+    val sp = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    var isWelcomeShown by remember { mutableStateOf(sp.getBoolean("sp_welcome_shown", true)) }
+
+    // Launch Animation state: shows once per cold-start / app launch
+    val appLaunchAnimEnabled = remember { sp.getBoolean("sp_app_launch_animation", true) }
+    var showLaunchSplash by remember {
+        mutableStateOf(appLaunchAnimEnabled && !com.petal.browser.compose.splash.PetalSplashState.hasShownThisSession)
+    }
+
+    DisposableEffect(sp) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "sp_welcome_shown") {
+                isWelcomeShown = sp.getBoolean("sp_welcome_shown", false)
+            }
+        }
+        sp.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { sp.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    val profileSwitchProgress = remember { Animatable(1f) }
+    var showProfileSwitchSheet by remember { mutableStateOf(false) }
+    var showWallpaperSheet by remember { mutableStateOf(false) }
+
+    // Candy-browser profile transition function
+    fun switchProfile(targetProfileId: String) {
+        if (targetProfileId == com.petal.browser.profile.PetalProfileManager.activeProfile.id) return
+        coroutineScope.launch {
+            // Exit: 120ms tween fade & slide down
+            profileSwitchProgress.animateTo(0f, tween(120, easing = FastOutSlowInEasing))
+            com.petal.browser.profile.PetalProfileManager.switchProfile(context, targetProfileId)
+            com.petal.browser.wallpaper.PetalWallpaperManager.loadForActiveProfile(context)
+            shortcuts = loadHomeShortcuts(context)
+            removedUrls = loadRemovedShortcutUrls(context)
+            com.petal.browser.haptics.PetalHapticEngine.getInstance(context).play(com.petal.browser.haptics.PetalHapticEngine.Pattern.CLICK, 0.5f)
+            // Entrance: 460f stiffness / 0.78f damping ratio spring bounce
+            profileSwitchProgress.animateTo(1f, spring(dampingRatio = 0.78f, stiffness = 460f))
+        }
+    }
+
+    // Initialize wallpaper, profile, and tab collections managers for active profile
+    LaunchedEffect(Unit) {
+        com.petal.browser.profile.PetalProfileManager.init(context)
+        com.petal.browser.wallpaper.PetalWallpaperManager.init(context)
+        com.petal.browser.collections.PetalCollectionManager.init(context)
+    }
+
+    val glassWallpaper = com.petal.browser.ui.glass.rememberPetalGlassWallpaper()
+    CompositionLocalProvider(com.petal.browser.ui.glass.LocalPetalGlassWallpaper provides glassWallpaper) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                    // ── Layer 0: OmniBrowser Wallpaper engine OR Living M3 background ───────────
+                    val activeWallpaperUri = com.petal.browser.wallpaper.PetalWallpaperManager.wallpaperUri
+                    val homeSp = remember(context) { androidx.preference.PreferenceManager.getDefaultSharedPreferences(context) }
+                    val isGlassEnabled = homeSp.getBoolean("sp_liquid_glass_enabled", false)
+                    val glassBgMode = homeSp.getString("sp_liquid_glass_bg_mode", "STRIDE") ?: "STRIDE"
+                    val glassImageUri = homeSp.getString("sp_liquid_glass_bg_image_uri", "").orEmpty()
+                    val effectiveWallpaperUri = when {
+                        !activeWallpaperUri.isNullOrBlank() -> activeWallpaperUri
+                        isGlassEnabled && glassBgMode == "IMAGE" && glassImageUri.isNotBlank() -> glassImageUri
+                        else -> null
+                    }
+
+                    if (!effectiveWallpaperUri.isNullOrBlank()) {
+                        val glassWallpaper = com.petal.browser.ui.glass.LocalPetalGlassWallpaper.current
+                        val effDim = if (!activeWallpaperUri.isNullOrBlank()) {
+                            com.petal.browser.wallpaper.PetalWallpaperManager.wallpaperDim
+                        } else {
+                            homeSp.getFloat("sp_liquid_glass_bg_dim", 0.35f)
+                        }
+                        val effBlur = if (!activeWallpaperUri.isNullOrBlank()) {
+                            com.petal.browser.wallpaper.PetalWallpaperManager.wallpaperBlur
+                        } else {
+                            homeSp.getFloat("sp_liquid_glass_bg_blur", 16f)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (glassWallpaper != null) {
+                                        Modifier.captureGlassWallpaper(glassWallpaper)
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        ) {
+                            com.petal.browser.wallpaper.PetalAnimatedWallpaperBackground(
+                                wallpaperUri = effectiveWallpaperUri,
+                                dim = effDim,
+                                blur = effBlur,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    } else {
+                        com.petal.browser.ui.components.M3ExpressiveVariableBackground(
+                            modifier = Modifier.fillMaxSize(),
+                            pageSeed = "home_page"
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        com.petal.browser.ui.components.ExpressiveHeader(
+                            title = "Petal",
+                            subtitle = "Personal Window to the Web",
+                            actions = {
+                                // Wallpaper Customizer Action Button
+                                IconButton(
+                                    onClick = { showWallpaperSheet = true },
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Palette,
+                                        contentDescription = stringResource(R.string.ui_customize_wallpaper),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                Spacer(Modifier.width(4.dp))
+
+                                // Expressive Profile Switcher Pill Button (Issue #23)
+                                val currentProfile = com.petal.browser.profile.PetalProfileManager.activeProfile
+                                val isGlass = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments")
+                                val profilePillShape = RoundedCornerShape(20.dp)
+                                Surface(
+                                    shape = profilePillShape,
+                                    color = if (isGlass) petalGroupSurfaceColor() else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
+                                    border = if (isGlass) null else BorderStroke(1.dp, currentProfile.getComposeColor().copy(alpha = 0.5f)),
+                                    modifier = Modifier
+                                        .height(34.dp)
+                                        .liquidGlassChrome(shape = profilePillShape, enabled = isGlass)
+                                        .clickable { showProfileSwitchSheet = true }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .background(currentProfile.getComposeColor().copy(alpha = 0.25f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            PetalProfileAvatar(
+                                                profile = currentProfile,
+                                                size = 20.dp,
+                                                shape = CircleShape
+                                            )
+                                        }
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            text = currentProfile.name,
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.widthIn(max = 84.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        )
+
+                        // Main home scrolling column wrapped with Candy-Browser profile switch animation
+                        val homeScrollState = rememberScrollState()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .graphicsLayer {
+                                    alpha = profileSwitchProgress.value
+                                    translationY = (1f - profileSwitchProgress.value) * 14.dp.toPx()
+                                    val scale = 0.97f + profileSwitchProgress.value * 0.03f
+                                    scaleX = scale
+                                    scaleY = scale
+                                }
+                                .scrollMotionBlur(homeScrollState)
+                                .verticalScroll(homeScrollState)
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Cap the content column width on large screens/tablets so the
+                            // hero search bar and grid don't stretch edge-to-edge.
+                            Column(
+                                modifier = Modifier.widthIn(max = 640.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Spacer(Modifier.height(20.dp))
+
+                                // ── Greeting Tagline (replaces removed quick shortcuts row) ──
+                                PetalGreetingTagline(profile = profile)
+
+                                Spacer(Modifier.height(18.dp))
+
+                                // ── Hero Search Bar (moved down into former quick-actions slot) ──
+                                PetalSearchBar(onSearch = onSearch)
+
+                                Spacer(Modifier.height(26.dp))
+
+                                // ── Shortcuts Grid (4 columns, squircle tiles) ──────────
+                                PetalShortcutGrid(
+                                    items = mergedItems,
+                                    onOpenShortcut = { shortcut -> onOpenShortcutUrl(shortcut.url) },
+                                    onEditShortcutItem = { item -> editingItem = item },
+                                    onAddShortcutClick = { isAddingNewShortcut = true }
+                                )
+
+                                // ── Brave News: Privacy RSS Top Stories ──────────────
+                                Spacer(Modifier.height(24.dp))
+                                com.petal.browser.home.news.PetalNewsSection(
+                                    onArticleClick = { url -> onOpenShortcutUrl(url) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                // ── Tab Collections Section (Firefox-style persistent groups) ──
+                                LaunchedEffect(Unit) {
+                                    com.petal.browser.collections.PetalCollectionManager.init(context)
+                                }
+                                val collections = com.petal.browser.collections.PetalCollectionManager.collections
+                                if (collections.isNotEmpty()) {
+                                    Spacer(Modifier.height(28.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.ui_collections),
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.ui_saved, collections.size),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(12.dp))
+
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        collections.forEach { col ->
+                                            var isExpanded by remember { mutableStateOf(false) }
+                                            PetalHeroCard(
+                                                shape = RoundedCornerShape(20.dp),
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                            modifier = Modifier.weight(1f).clickable { isExpanded = !isExpanded }
+                                                        ) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(10.dp)
+                                                                    .clip(CircleShape)
+                                                                    .background(
+                                                                        try {
+                                                                            Color(android.graphics.Color.parseColor(col.colorHex))
+                                                                        } catch (_: Exception) {
+                                                                            MaterialTheme.colorScheme.primary
+                                                                        }
+                                                                    )
+                                                            )
+                                                            Text(
+                                                                text = col.name,
+                                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            Text(
+                                                                text = stringResource(R.string.ui_tabs_3, col.items.size),
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            IconButton(
+                                                                onClick = {
+                                                                    // Open all tabs in collection
+                                                                    col.items.forEach { item -> onOpenShortcutUrl(item.url) }
+                                                                },
+                                                                modifier = Modifier.size(32.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Rounded.OpenInNew,
+                                                                    contentDescription = stringResource(R.string.ui_open_all),
+                                                                    tint = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier.size(18.dp)
+                                                                )
+                                                            }
+                                                            IconButton(
+                                                                onClick = {
+                                                                    com.petal.browser.collections.PetalCollectionManager.deleteCollection(context, col.id)
+                                                                },
+                                                                modifier = Modifier.size(32.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Rounded.DeleteOutline,
+                                                                    contentDescription = stringResource(R.string.ui_delete_collection),
+                                                                    tint = MaterialTheme.colorScheme.error,
+                                                                    modifier = Modifier.size(18.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+
+                                                    androidx.compose.animation.AnimatedVisibility(
+                                                        visible = isExpanded,
+                                                        enter = androidx.compose.animation.expandVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) + androidx.compose.animation.fadeIn(),
+                                                        exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 400f)) + androidx.compose.animation.fadeOut()
+                                                    ) {
+                                                        Column {
+                                                            Spacer(Modifier.height(10.dp))
+                                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                                            Spacer(Modifier.height(8.dp))
+                                                            col.items.forEach { tabItem ->
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .clip(RoundedCornerShape(10.dp))
+                                                                        .clickable { onOpenShortcutUrl(tabItem.url) }
+                                                                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                                ) {
+                                                                    Column(modifier = Modifier.weight(1f)) {
+                                                                        Text(
+                                                                            text = tabItem.title.ifBlank { tabItem.url },
+                                                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                                                            color = MaterialTheme.colorScheme.onSurface,
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                        Text(
+                                                                            text = tabItem.url,
+                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                    }
+                                                                    Icon(
+                                                                        Icons.Rounded.ChevronRight,
+                                                                        contentDescription = null,
+                                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                        modifier = Modifier.size(18.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(Modifier.height(96.dp))
+                            }
+                        }
+                    }
+
+                    // ── Profile Switcher Modal Sheet ──────────────────────────────────
+                    if (showProfileSwitchSheet) {
+                        com.petal.browser.ui.components.PetalProfileSwitchSheet(
+                            onDismissRequest = { showProfileSwitchSheet = false },
+                            onOpenAccountSettings = onOpenAccountSync,
+                            onSelectProfile = { selectedId ->
+                                switchProfile(selectedId)
+                            }
+                        )
+                    }
+
+                    // ── Wallpaper Customizer Modal Sheet ──────────────────────────────
+                    if (showWallpaperSheet) {
+                        com.petal.browser.ui.components.PetalWallpaperSheet(
+                            onDismissRequest = { showWallpaperSheet = false }
+                        )
+                    }
+
+                    // ── Create New Shortcut Dialog ────────────────────────────────────
+                    if (isAddingNewShortcut) {
+                        EditShortcutDialog(
+                            dialogTitle = "Add Shortcut",
+                            initialName = "",
+                            initialUrl = "",
+                            initialColor = Color(0xFF4285F4),
+                            onDismiss = { isAddingNewShortcut = false },
+                            onSave = { newShortcut ->
+                                val newList = shortcuts.toMutableList()
+                                newList.add(newShortcut)
+                                shortcuts = newList
+                                saveHomeShortcuts(context, newList)
+                                isAddingNewShortcut = false
+                            },
+                            onDelete = null
+                        )
+                    }
+
+                    // ── Edit / Remove Shortcut Dialog ─────────────────────────────────
+                    editingItem?.let { (current, isCustom) ->
+                        EditShortcutDialog(
+                            dialogTitle = if (isCustom) "Edit Shortcut" else "Remove Shortcut",
+                            initialName = current.label,
+                            initialUrl = current.url,
+                            initialColor = current.containerColor,
+                            initialShapeName = current.shapeName,
+                            onDismiss = { editingItem = null },
+                            onSave = { updatedShortcut ->
+                                if (isCustom) {
+                                    val newList = shortcuts.toMutableList()
+                                    val idx = newList.indexOfFirst { it.url == current.url }
+                                    if (idx != -1) {
+                                        newList[idx] = updatedShortcut
+                                    } else {
+                                        newList.add(updatedShortcut)
+                                    }
+                                    shortcuts = newList
+                                    saveHomeShortcuts(context, newList)
+                                } else {
+                                    // Convert the visited item to a custom shortcut and hide the
+                                    // original auto-visited URL so editing never creates a duplicate.
+                                    val newRemoved = removedUrls + current.url
+                                    removedUrls = newRemoved
+                                    saveRemovedShortcutUrls(context, newRemoved)
+                                    val newList = shortcuts.toMutableList()
+                                    newList.add(updatedShortcut)
+                                    shortcuts = newList
+                                    saveHomeShortcuts(context, newList)
+                                }
+                                editingItem = null
+                            },
+                            onDelete = {
+                                if (isCustom) {
+                                    val newList = shortcuts.toMutableList()
+                                    newList.removeAll { it.url == current.url }
+                                    shortcuts = newList
+                                    saveHomeShortcuts(context, newList)
+                                }
+                                // Also blocklist URL so it does not reappear under auto-visited
+                                val newRemoved = removedUrls.toMutableSet()
+                                newRemoved.add(current.url)
+                                removedUrls = newRemoved
+                                saveRemovedShortcutUrls(context, newRemoved)
+                                editingItem = null
+                            }
+                        )
+                    }
+
+                    // ── Built-in Crash Recovery Dialog Host (Auto / Off) ──
+                    com.petal.browser.ui.components.PetalCrashRecoveryHost()
+
+                    // ── Procedural Quantum Web Stream Launch Animation ──
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showLaunchSplash,
+                        enter = androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.fadeOut(animationSpec = tween(400)) + androidx.compose.animation.scaleOut(targetScale = 1.08f, animationSpec = tween(400))
+                    ) {
+                        com.petal.browser.compose.splash.PetalSplashScreen(
+                            onSplashComplete = { showLaunchSplash = false },
+                            durationMs = 1800L
+                        )
+                    }
+            }
+        }
+    }
+}
+
+// ── 5. Shortcut Grid ──────────────────────────────────────────────────────
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@Composable
+private fun PetalShortcutGrid(
+    items: List<Pair<PetalShortcut, Boolean>>, // shortcut to isEditable
+    onOpenShortcut: (PetalShortcut) -> Unit,
+    onEditShortcutItem: (Pair<PetalShortcut, Boolean>) -> Unit,
+    onAddShortcutClick: () -> Unit
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        maxItemsInEachRow = 4,
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items.forEachIndexed { index, item ->
+            val (shortcut, isEditable) = item
+            Box(modifier = Modifier.width(68.dp)) {
+                ShortcutTile(
+                    shortcut = shortcut,
+                    isEditable = isEditable,
+                    index = index,
+                    onClick = { onOpenShortcut(shortcut) },
+                    onLongClick = { onEditShortcutItem(item) }
+                )
+            }
+        }
+
+        // "+" Add tile at end
+        Box(modifier = Modifier.width(68.dp)) {
+            AddShortcutTile(index = items.size, onClick = onAddShortcutClick)
+        }
+    }
+}
+
+fun getFaviconUrl(url: String): String? {
+    if (url.isBlank()) return null
+    val cleanUrl = if (!url.startsWith("http://") && !url.startsWith("https://")) "https://$url" else url
+    return try {
+        val host = Uri.parse(cleanUrl).host
+        if (!host.isNullOrBlank()) {
+            "https://www.google.com/s2/favicons?domain=$host&sz=128"
+        } else null
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ShortcutTile(
+    shortcut: PetalShortcut,
+    isEditable: Boolean,
+    index: Int = 0,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "shortcut_press_scale"
+    )
+
+    val faviconUrl = remember(shortcut.url) { getFaviconUrl(shortcut.url) }
+    var isImageError by remember(shortcut.url) { mutableStateOf(false) }
+
+    val defaultShape = homeShortcutShape(index, shortcut.url.ifBlank { shortcut.label })
+    val isExpressiveEnabled = com.petal.browser.ui.theme.LocalExpressiveShapesEnabled.current
+    val tileShape = remember(shortcut.shapeName, index, isExpressiveEnabled) {
+        if (!isExpressiveEnabled) {
+            RoundedCornerShape(16.dp)
+        } else if (!shortcut.shapeName.isNullOrBlank()) {
+            val matched = PetalMaterialShapes.allShapes.find { it.name.equals(shortcut.shapeName, ignoreCase = true) }
+            matched?.toShape() ?: defaultShape
+        } else {
+            defaultShape
+        }
+    }
+
+    val isGlass = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments")
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .homeLaunchEntrance(3 + index)
+            .padding(vertical = 4.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(60.dp)
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .shadow(elevation = if (isGlass) 0.dp else 2.dp, shape = tileShape, clip = false)
+                .liquidGlassChrome(shape = tileShape, enabled = isGlass)
+                .clip(tileShape)
+                .background(if (isGlass) petalGroupSurfaceColor() else MaterialTheme.colorScheme.surfaceContainerHighest)
+                .border(
+                    width = 0.75.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isGlass) 0.30f else 0.45f),
+                    shape = tileShape
+                )
+        ) {
+            if (!faviconUrl.isNullOrEmpty() && !isImageError) {
+                // 0-padding full-bleed clipping to the expressive shape
+                AsyncImage(
+                    model = faviconUrl,
+                    contentDescription = shortcut.label,
+                    contentScale = ContentScale.Crop,
+                    onError = { isImageError = true },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(tileShape)
+                )
+            } else {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(tileShape)
+                        .background(shortcut.containerColor.copy(alpha = 0.22f))
+                ) {
+                    SiteBrandIconTinted(
+                        siteId = shortcut.siteId,
+                        label = shortcut.label,
+                        tint = shortcut.containerColor
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = shortcut.label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun AddShortcutTile(index: Int = 0, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .homeLaunchEntrance(3 + index)
+            .padding(vertical = 4.dp)
+    ) {
+        val isGlass = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments")
+        val addTileShape = homeShortcutShape(index)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(60.dp)
+                .liquidGlassChrome(shape = addTileShape, enabled = isGlass)
+                .clip(addTileShape)
+                .background(if (isGlass) petalGroupSurfaceColor() else MaterialTheme.colorScheme.surfaceContainerLow)
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isGlass) 0.35f else 0.65f),
+                    shape = addTileShape
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = stringResource(R.string.ui_add_shortcut),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = stringResource(R.string.ui_add),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun homeShortcutShape(index: Int, key: Any? = null): Shape {
+    val enabled = com.petal.browser.ui.theme.LocalExpressiveShapesEnabled.current
+    if (!enabled) return RoundedCornerShape(16.dp)
+    val all = PetalMaterialShapes.allShapes
+    if (all.isEmpty()) return RoundedCornerShape(16.dp)
+    val hash = if (key != null) key.hashCode() xor (index * 31) else (index * 7919)
+    val idx = (hash and 0x7FFFFFFF) % all.size
+    return all[idx].toShape()
+}
+
+// ── 6. Search Bar ─────────────────────────────────────────────────────────
+
+@Composable
+private fun PetalSearchBar(onSearch: (String) -> Unit) {
+    // This is a decoy bar, matching Chrome's home-screen search box behavior.
+    // It never accepts typed input itself - tapping anywhere on it (including
+    // the placeholder text area) hands off immediately to the real full-screen
+    // omnibox (PetalOmniboxPage, opened via onSearch("") -> showOmniboxPage("")
+    // in BrowserActivity), which is where live suggestions/history/voice/engine
+    // preference all actually live. Do not reintroduce a local TextField or
+    // local suggestion-fetching here - that previously duplicated and shadowed
+    // the omnibox page instead of opening it.
+    val context = LocalContext.current
+    val activity = context as? ComponentActivity
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.98f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "search_bar_press_scale"
+    )
+
+    PetalFloatingToolbar(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .homeLaunchEntrance(2)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.foundation.LocalIndication.current
+            ) { onSearch("") }
+    ) {
+            // One inner row owns all spacing. PetalFloatingToolbar adds 12dp between its direct
+            // children and IconButtons default to 48dp, which made every gap in this bar too wide.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(R.string.ui_search),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = stringResource(R.string.ui_search_or_type_url_2),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(2.dp))
+
+                IconButton(
+                    onClick = {
+                        if (activity != null) {
+                            com.petal.browser.ui.components.PetalAiSearchBridge.showAiSearchResult(activity, "")
+                        }
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.AutoAwesome,
+                        contentDescription = stringResource(R.string.ui_petal_ai),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        if (activity != null) {
+                            com.petal.browser.ui.components.PetalVoiceSearchBridge.showVoiceSearchSheet(activity) { result ->
+                                if (result.isNotBlank()) onSearch(result)
+                            }
+                        }
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.Mic,
+                        contentDescription = stringResource(R.string.ui_voice_search_2),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+    }
+}
+
+// ── 6b. Greeting Tagline ─────────────────────────────────────────────────────
+// Replaces the old quick-shortcuts row (bookmarks/history/downloads/new tab).
+// Shows a rotating, personalized greeting where the search bar used to sit.
+// Holds a process-singleton greeting template chosen when the app starts,
+// ensuring the greeting stays identical across all tabs and only changes when
+// the app is restarted.
+
+private val generalGreetingTaglines = listOf(
+    "Welcome back, %s—the web is ready whenever you are.",
+    "What are you curious about today, %s?",
+    "Ready to discover something amazing, %s?",
+    "%s, here is your personal window to the web.",
+    "Search deeper and expand your world, %s.",
+    "Bring your biggest ideas to life today, %s.",
+    "Your next breakthrough starts right here, %s.",
+    "Designed for your speed and creativity, %s.",
+    "Stay inspired and keep building, %s.",
+    "Good to see you again, %s—let's explore.",
+    "Clear mind and a fresh tab, %s.",
+    "Everything is set up and waiting for you, %s.",
+    "Your digital workspace is ready, %s."
+)
+
+private val morningGreetingTaglines = listOf(
+    "Good morning, %s! Start the day with a fresh perspective."
+)
+
+private val afternoonGreetingTaglines = listOf(
+    "Good afternoon, %s—keep that momentum rolling."
+)
+
+private val eveningGreetingTaglines = listOf(
+    "Good evening, %s—time to unwind and explore."
+)
+
+private object PetalSessionGreeting {
+    private var sessionTemplate: String? = null
+
+    fun getGreeting(username: String): String {
+        return try {
+            if (sessionTemplate == null) {
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val timeSpecificTaglines = when {
+                    hour in 4..11 -> morningGreetingTaglines
+                    hour in 12..16 -> afternoonGreetingTaglines
+                    else -> eveningGreetingTaglines
+                }
+                val pool = generalGreetingTaglines + timeSpecificTaglines
+                sessionTemplate = pool.randomOrNull() ?: "Welcome back, %s—the web is ready whenever you are."
+            }
+            (sessionTemplate ?: "Welcome back, %s").replace("%s", username)
+        } catch (_: Throwable) {
+            "Welcome back, $username"
+        }
+    }
+}
+
+@Composable
+private fun PetalGreetingTagline(profile: com.petal.browser.account.GoogleUserProfile) {
+    val context = LocalContext.current
+    val username = profile.displayName.ifBlank { "Petal Explorer" }
+
+    var updateWelcomeMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        try {
+            val sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            val currentVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            val lastSeenVersion = sp.getString("sp_last_seen_welcome_version", "")
+            if (!currentVersion.isNullOrBlank() && currentVersion != lastSeenVersion) {
+                sp.edit().putString("sp_last_seen_welcome_version", currentVersion).apply()
+                updateWelcomeMessage = "Welcome to Petal v$currentVersion! 🎉 Enjoy the latest updates."
+            }
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
+    }
+
+    val tagline = remember(username, updateWelcomeMessage) {
+        if (!updateWelcomeMessage.isNullOrBlank()) {
+            updateWelcomeMessage!!
+        } else {
+            PetalSessionGreeting.getGreeting(username)
+        }
+    }
+
+    PetalHeroCard(
+        shape = RoundedCornerShape(32.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .homeLaunchEntrance(1)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            PetalGroupIconBadge(Icons.Filled.AutoAwesome, modifier = Modifier.size(36.dp), size = 36.dp, iconSize = 20.dp)
+
+            Spacer(Modifier.width(14.dp))
+
+            Text(
+                text = tagline,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.5.sp,
+                    lineHeight = 20.sp
+                ),
+                color = if (updateWelcomeMessage != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Start,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+// ── 7. Site Brand Icons ────────────────────────────────────────────────────
+
+/**
+ * Tinted variant used inside the grid tiles — icon uses the brand color as tint
+ * rather than white, so it reads well on the neutral surfaceContainerHigh tile bg.
+ */
+@Composable
+private fun SiteBrandIconTinted(siteId: String, label: String, tint: Color) {
+    when (siteId) {
+        "youtube" -> {
+            Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.ui_youtube), tint = tint, modifier = Modifier.size(26.dp))
+        }
+        "google", "search" -> {
+            Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.ui_google), tint = tint, modifier = Modifier.size(24.dp))
+        }
+        "github" -> {
+            androidx.compose.foundation.Image(
+                painter = painterResource(com.petal.browser.R.drawable.ic_shortcut_github),
+                contentDescription = stringResource(R.string.ui_github),
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        "wikipedia" -> {
+            androidx.compose.foundation.Image(
+                painter = painterResource(com.petal.browser.R.drawable.ic_shortcut_wikipedia),
+                contentDescription = stringResource(R.string.ui_wikipedia),
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        "duckduckgo" -> {
+            androidx.compose.foundation.Image(
+                painter = painterResource(com.petal.browser.R.drawable.ic_shortcut_duckduckgo),
+                contentDescription = stringResource(R.string.ui_duckduckgo),
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        "weather" -> {
+            Icon(Icons.Rounded.WbSunny, contentDescription = stringResource(R.string.ui_google_weather), tint = Color(0xFFFFD54F), modifier = Modifier.size(24.dp))
+        }
+        "globe" -> {
+            Icon(Icons.Rounded.Public, contentDescription = stringResource(R.string.ui_web), tint = tint, modifier = Modifier.size(24.dp))
+        }
+        "star" -> {
+            Icon(Icons.Rounded.Star, contentDescription = stringResource(R.string.ui_star), tint = tint, modifier = Modifier.size(24.dp))
+        }
+        "heart" -> {
+            Icon(Icons.Rounded.Favorite, contentDescription = stringResource(R.string.ui_heart), tint = tint, modifier = Modifier.size(24.dp))
+        }
+        "bookmark" -> {
+            Icon(Icons.Rounded.Bookmark, contentDescription = stringResource(R.string.ui_bookmark), tint = tint, modifier = Modifier.size(24.dp))
+        }
+        "lock" -> {
+            Icon(Icons.Rounded.Lock, contentDescription = stringResource(R.string.ui_lock), tint = tint, modifier = Modifier.size(24.dp))
+        }
+        else -> {
+            Text(
+                label.take(1).uppercase(),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = tint
+            )
+        }
+    }
+}
+
+/**
+ * White-icon variant preserved for the EditShortcutDialog live preview surface
+ * which still uses PetalContainerShape with a solid brand-color background.
+ */
+@Composable
+private fun SiteBrandIcon(siteId: String, label: String) {
+    when (siteId) {
+        "youtube" -> {
+            Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.ui_youtube), tint = Color.White, modifier = Modifier.size(28.dp))
+        }
+        "google", "search" -> {
+            Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.ui_google), tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        "github" -> {
+            androidx.compose.foundation.Image(
+                painter = painterResource(com.petal.browser.R.drawable.ic_shortcut_github),
+                contentDescription = stringResource(R.string.ui_github),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        "wikipedia" -> {
+            androidx.compose.foundation.Image(
+                painter = painterResource(com.petal.browser.R.drawable.ic_shortcut_wikipedia),
+                contentDescription = stringResource(R.string.ui_wikipedia),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        "duckduckgo" -> {
+            androidx.compose.foundation.Image(
+                painter = painterResource(com.petal.browser.R.drawable.ic_shortcut_duckduckgo),
+                contentDescription = stringResource(R.string.ui_duckduckgo),
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        "weather" -> {
+            Icon(Icons.Rounded.WbSunny, contentDescription = stringResource(R.string.ui_google_weather), tint = Color(0xFFFFD54F), modifier = Modifier.size(26.dp))
+        }
+        "globe" -> {
+            Icon(Icons.Rounded.Public, contentDescription = stringResource(R.string.ui_web), tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        "star" -> {
+            Icon(Icons.Rounded.Star, contentDescription = stringResource(R.string.ui_star), tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        "heart" -> {
+            Icon(Icons.Rounded.Favorite, contentDescription = stringResource(R.string.ui_heart), tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        "bookmark" -> {
+            Icon(Icons.Rounded.Bookmark, contentDescription = stringResource(R.string.ui_bookmark), tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        "lock" -> {
+            Icon(Icons.Rounded.Lock, contentDescription = stringResource(R.string.ui_lock), tint = Color.White, modifier = Modifier.size(26.dp))
+        }
+        else -> {
+            Text(
+                label.take(1).uppercase(),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+        }
+    }
+}
+
+// ── 8. Edit Shortcut Dialog ───────────────────────────────────────────────
+
+@Composable
+private fun EditShortcutDialog(
+    dialogTitle: String,
+    initialName: String,
+    initialUrl: String,
+    initialColor: Color,
+    initialShapeName: String? = null,
+    onDismiss: () -> Unit,
+    onSave: (PetalShortcut) -> Unit,
+    onDelete: (() -> Unit)? = null
+) {
+    var nameText by remember(initialName) { mutableStateOf(initialName) }
+    var urlText by remember(initialUrl) { mutableStateOf(initialUrl) }
+    var selectedShapeName by remember(initialShapeName) { mutableStateOf(initialShapeName ?: "Flower") }
+
+    val currentFaviconUrl = remember(urlText) { getFaviconUrl(urlText) }
+    var isImageError by remember(urlText) { mutableStateOf(false) }
+
+    val previewTileShape = remember(selectedShapeName) {
+        val matched = PetalMaterialShapes.allShapes.find { it.name.equals(selectedShapeName, ignoreCase = true) }
+        matched?.toShape() ?: PetalMaterialShapes.Flower.toShape()
+    }
+
+    com.petal.browser.ui.containment.PetalMaterialAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(dialogTitle) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                OutlinedTextField(
+                    value = nameText,
+                    onValueChange = { nameText = it },
+                    label = { Text(stringResource(R.string.ui_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = urlText,
+                    onValueChange = { urlText = it },
+                    label = { Text(stringResource(R.string.ui_url)) },
+                    singleLine = true,
+                    placeholder = { Text("example.com") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = stringResource(R.string.ui_material_3_expressive_shape),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Shape selector horizontal carousel showcasing all 35 M3 Expressive shapes
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    PetalMaterialShapes.allShapes.forEach { shapeHolder ->
+                        val isSelected = shapeHolder.name.equals(selectedShapeName, ignoreCase = true)
+                        val shape = shapeHolder.toShape()
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(shape)
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surfaceContainerHighest
+                                )
+                                .border(
+                                    width = if (isSelected) 2.dp else 0.5.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                    shape = shape
+                                )
+                                .clickable {
+                                    selectedShapeName = shapeHolder.name
+                                }
+                        ) {
+                            Text(
+                                text = shapeHolder.name.take(2),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Live Preview with 0-padding full-bleed expressive shape
+                val isGlass = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments")
+                val previewRowShape = RoundedCornerShape(16.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .liquidGlassChrome(shape = previewRowShape, enabled = isGlass)
+                        .background(
+                            if (isGlass) com.petal.browser.ui.containment.petalGroupSurfaceColor() else MaterialTheme.colorScheme.surfaceContainerLow,
+                            previewRowShape
+                        )
+                        .padding(12.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(54.dp)
+                            .shadow(elevation = 2.dp, shape = previewTileShape)
+                            .clip(previewTileShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .border(
+                                width = 0.75.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                                shape = previewTileShape
+                            )
+                    ) {
+                        if (!currentFaviconUrl.isNullOrEmpty() && !isImageError) {
+                            // 0-padding full bleed
+                            AsyncImage(
+                                model = currentFaviconUrl,
+                                contentDescription = nameText,
+                                contentScale = ContentScale.Crop,
+                                onError = { isImageError = true },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(previewTileShape)
+                            )
+                        } else {
+                            Text(
+                                nameText.ifBlank { "S" }.take(1).uppercase(),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Column {
+                        Text(stringResource(R.string.ui_live_preview, selectedShapeName), style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        Text(
+                            nameText.ifBlank { "Shortcut" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalUrl = if (urlText.isNotBlank() && !urlText.startsWith("http://") && !urlText.startsWith("https://")) {
+                        "https://$urlText"
+                    } else urlText.ifBlank { "https://google.com" }
+
+                    val derivedName = if (nameText.isNotBlank()) {
+                        nameText
+                    } else {
+                        try {
+                            Uri.parse(finalUrl).host?.removePrefix("www.")?.substringBefore(".")
+                                ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                                ?: "Shortcut"
+                        } catch (_: Throwable) {
+                            "Shortcut"
+                        }
+                    }
+
+                    val siteId = try {
+                        val host = Uri.parse(finalUrl).host ?: ""
+                        when {
+                            host.contains("youtube") -> "youtube"
+                            host.contains("github") -> "github"
+                            host.contains("wikipedia") -> "wikipedia"
+                            host.contains("duckduckgo") -> "duckduckgo"
+                            host.contains("google") -> "google"
+                            else -> "globe"
+                        }
+                    } catch (_: Throwable) { "globe" }
+
+                    onSave(
+                        PetalShortcut(
+                            label = derivedName,
+                            url = finalUrl,
+                            siteId = siteId,
+                            containerColor = initialColor,
+                            shapeName = selectedShapeName
+                        )
+                    )
+                }
+            ) {
+                Text(stringResource(R.string.ui_save))
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (onDelete != null) {
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.ui_delete))
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.ui_cancel))
+                }
+            }
+        }
+    )
+}

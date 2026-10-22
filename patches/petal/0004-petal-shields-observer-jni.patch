@@ -1,0 +1,50 @@
+--- a/brave/browser/shields/android/java/org/chromium/chrome/browser/shields/BraveShieldsHandler.java
++++ b/brave/browser/shields/android/java/org/chromium/chrome/browser/shields/BraveShieldsHandler.java
+@@ -200,6 +200,40 @@ public class BraveShieldsHandler {
+ 
++    // Petal Patch 0004: Expose per-tab blocked-count accessors for PetalShieldsObserver.
++    // PetalPrivacyShieldSheet reads these to display the blocked ads/trackers badge count.
++
++    /**
++     * Returns number of ads blocked for the given tabId in the current page session.
++     */
++    public static int getAdsBlocked(String tabId) {
++        return nativeGetAdsBlockedForTab(Long.parseLong(tabId));
++    }
++
++    /**
++     * Returns number of trackers blocked for the given tabId.
++     */
++    public static int getTrackersBlocked(String tabId) {
++        return nativeGetTrackersBlockedForTab(Long.parseLong(tabId));
++    }
++
++    /**
++     * Returns number of fingerprint attempts blocked for the given tabId.
++     */
++    public static int getFingerprintsBlocked(String tabId) {
++        return nativeGetFingerprintsBlockedForTab(Long.parseLong(tabId));
++    }
++
++    /**
++     * Returns whether Brave Shields is currently enabled for the given tab.
++     */
++    public static boolean isShieldsEnabled(String tabId) {
++        return nativeIsShieldsEnabled(Long.parseLong(tabId));
++    }
++
++    /**
++     * Enables or disables Brave Shields for the given tab.
++     */
++    public static void setShieldsEnabled(String tabId, boolean enabled) {
++        nativeSetShieldsEnabled(Long.parseLong(tabId), enabled);
++    }
++
++    // JNI declarations (implemented in brave/browser/shields/shields_p3a_service.cc)
++    private static native int nativeGetAdsBlockedForTab(long tabId);
++    private static native int nativeGetTrackersBlockedForTab(long tabId);
++    private static native int nativeGetFingerprintsBlockedForTab(long tabId);
++    private static native boolean nativeIsShieldsEnabled(long tabId);
++    private static native void nativeSetShieldsEnabled(long tabId, boolean enabled);
++
+ }

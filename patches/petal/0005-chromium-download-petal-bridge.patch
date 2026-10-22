@@ -1,0 +1,53 @@
+--- a/chrome/android/java/src/org/chromium/chrome/browser/download/DownloadManagerService.java
++++ b/chrome/android/java/src/org/chromium/chrome/browser/download/DownloadManagerService.java
+@@ -180,6 +180,52 @@ public class DownloadManagerService {
+ 
++    // Petal Patch 0005: Expose download state to PetalDownloadBridge.
++    // PetalDownloadManagerScreen reads from this bridge instead of Fetch2/aria2c.
++
++    private static final List<PetalDownloadObserver> sPetalObservers = new ArrayList<>();
++
++    public static void addPetalDownloadObserver(PetalDownloadObserver observer) {
++        if (!sPetalObservers.contains(observer)) sPetalObservers.add(observer);
++    }
++
++    public static void removePetalDownloadObserver(PetalDownloadObserver observer) {
++        sPetalObservers.remove(observer);
++    }
++
++    /** Called by existing onDownloadUpdated() path — notify Petal UI. */
++    private void notifyPetalObservers(PetalDownloadItem item) {
++        for (PetalDownloadObserver obs : sPetalObservers) obs.onDownloadUpdated(item);
++    }
++
++    /** Pause a download via Chromium native pipeline. */
++    public static void petalPauseDownload(String guid) {
++        nativePauseDownload(guid);
++    }
++
++    /** Resume a paused download. */
++    public static void petalResumeDownload(String guid) {
++        nativeResumeDownload(guid);
++    }
++
++    /** Cancel and remove a download. */
++    public static void petalCancelDownload(String guid) {
++        nativeCancelDownload(guid);
++    }
++
++    /** Returns all current downloads as PetalDownloadItem list. */
++    public static List<PetalDownloadItem> petalGetAllDownloads() {
++        return nativeGetAllDownloads();
++    }
++
++    private static native void nativePauseDownload(String guid);
++    private static native void nativeResumeDownload(String guid);
++    private static native void nativeCancelDownload(String guid);
++    private static native List<PetalDownloadItem> nativeGetAllDownloads();
++
++    /** Observer interface for Petal download UI. */
++    public interface PetalDownloadObserver {
++        void onDownloadUpdated(PetalDownloadItem item);
++    }
++
+ }

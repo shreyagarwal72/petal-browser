@@ -1,0 +1,672 @@
+package com.petal.browser.compose.menu
+
+import android.content.Intent
+import android.net.Uri
+import android.webkit.URLUtil
+import androidx.lifecycle.lifecycleScope
+import com.petal.browser.activity.BrowserActivity
+import com.petal.browser.database.Record
+import com.petal.browser.database.RecordAction
+import com.petal.browser.compose.mlkit.PetalImageScannerBridge
+import com.petal.browser.download.DownloadFileNameResolver
+import com.petal.browser.unit.BrowserUnit
+import com.petal.browser.unit.HelperUnit
+import com.petal.browser.unit.ImageActionHelper
+import com.petal.browser.view.PetalToast
+
+/**
+ * Kotlin Manager encapsulating long-press context menus for BrowserActivity.
+ * Fulfills Material 3 Expressive menu handlers for image, link, and video targets.
+ */
+object BrowserContextMenuManager {
+
+    /**
+     * Launches [targetUrl] in a second, independent Android window using freeform/
+     * adjacent multi-window mode (FLAG_ACTIVITY_NEW_TASK + MULTIPLE_TASK + LAUNCH_ADJACENT).
+     * BrowserActivity is declared singleTask in the manifest for its VIEW/BROWSABLE
+     * entry point, which on its own blocks a second instance; MULTIPLE_TASK is what
+     * overrides that and allows a genuinely separate task/window to be created here.
+     * Whether this actually renders as a floating/freeform window, a split-screen
+     * pane, or (on phones with no multi-window support) just focuses/reuses the
+     * existing window depends on the device and launcher - this requests freeform,
+     * it does not force it, since no such guarantee exists in the public API.
+     */
+    private fun launchInNewWindow(activity: BrowserActivity, targetUrl: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)).apply {
+                setClass(activity, BrowserActivity::class.java)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                    Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT
+                )
+            }
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            // Freeform/adjacent launch not supported on this device/launcher -
+            // fall back to a normal foreground tab rather than doing nothing.
+            activity.addAlbum(HelperUnit.domain(targetUrl), targetUrl, true)
+        }
+    }
+
+    @JvmStatic
+    fun showImageContextMenu(activity: BrowserActivity, imageURL: String) {
+        PetalLinkContextMenuBridge.show(
+            activity = activity,
+            linkTitle = HelperUnit.domain(imageURL),
+            linkUrl = imageURL,
+            faviconUrl = imageURL,
+            imageUrl = imageURL,
+            isImage = true,
+            isVideo = false,
+            handler = object : PetalLinkContextMenuHandler {
+                override fun onOpenInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(imageURL), imageURL, false)
+                }
+
+                override fun onOpenImageInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(imageURL), imageURL, false)
+                }
+
+                override fun onOpenInNewTabInGroup() {
+                    activity.addAlbum(HelperUnit.domain(imageURL), imageURL, false)
+                }
+
+                override fun onOpenInIncognitoTab() {
+                    activity.addAlbum(HelperUnit.domain(imageURL), imageURL, false, true)
+                }
+
+
+                override fun onPreviewPage() {
+                    PetalPagePreviewBridge.show(activity, imageURL)
+                }
+
+                override fun onCopyLinkAddress() {
+                    HelperUnit.copy(activity, imageURL)
+                    PetalToast.show(activity, "Image address copied")
+                }
+
+                override fun onCopyImage() {
+                    if (imageURL.isNotBlank()) {
+                        ImageActionHelper.copyImage(activity, imageURL)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onCopyImageAddress() {
+                    HelperUnit.copy(activity, imageURL)
+                    PetalToast.show(activity, "Image address copied")
+                }
+
+                override fun onCopyLinkText() {
+                    HelperUnit.copy(activity, HelperUnit.domain(imageURL))
+                    PetalToast.show(activity, "Domain copied")
+                }
+
+                override fun onDownloadLink() {
+                    try {
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, imageURL) { fileName, mimeType ->
+                            BrowserUnit.download(activity, imageURL, fileName, mimeType)
+                            PetalToast.show(activity, "Download started")
+                        }
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "Failed to start download")
+                    }
+                }
+
+                override fun onDownloadImage() {
+                    if (imageURL.isNotBlank()) {
+                        ImageActionHelper.downloadImage(activity, imageURL)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onAddToReadingList() {
+                    try {
+                        val action = RecordAction(activity)
+                        action.open(true)
+                        val record = Record(HelperUnit.domain(imageURL), imageURL, System.currentTimeMillis(), 0)
+                        record.isReadingList = true
+                        action.addBookmark(record)
+                        action.close()
+                        PetalToast.show(activity, "Added to reading list")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                override fun onScanImage() {
+                    if (imageURL.isNotBlank()) {
+                        PetalImageScannerBridge.show(activity, imageURL)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onSearchWithGoogleLens() {
+                    if (imageURL.isNotBlank()) {
+                        com.petal.browser.lens.PetalLensManager.searchImageWithGoogleLens(activity, imageURL)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onShareImage() {
+                    if (imageURL.isNotBlank()) {
+                        ImageActionHelper.shareImage(activity, imageURL)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onShareLink() {
+                    activity.shareLink(HelperUnit.domain(imageURL), imageURL)
+                }
+
+                override fun onDownloadVideo() {}
+
+                override fun onViewInPetalViewer() {
+                    if (imageURL.isNotBlank()) {
+                        activity.runOnUiThread {
+                            val view = com.petal.browser.compose.downloads.PetalImageViewerBridge.createWebViewerView(
+                                activity,
+                                imageURL,
+                                HelperUnit.domain(imageURL)
+                            ) {
+                                activity.runOnUiThread { activity.performBackNavigation() }
+                            }
+                            activity.presentComposeScreen(view)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun showLinkContextMenu(activity: BrowserActivity, urlResult: String, linkText: String? = null) {
+        val parsed = Uri.parse(urlResult)
+        val faviconUrl = if (parsed.scheme == "http" || parsed.scheme == "https") {
+            "${parsed.scheme}://${parsed.authority}/favicon.ico"
+        } else null
+        PetalLinkContextMenuBridge.show(
+            activity = activity,
+            linkTitle = linkText?.trim()?.takeIf { it.isNotEmpty() }?.take(80) ?: HelperUnit.domain(urlResult),
+            linkUrl = urlResult,
+            faviconUrl = faviconUrl,
+            imageUrl = null,
+            isImage = false,
+            isVideo = false,
+            handler = object : PetalLinkContextMenuHandler {
+                override fun onOpenInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(urlResult), urlResult, false)
+                }
+
+                override fun onOpenInNewTabInGroup() {
+                    val currentAlbum = activity.currentAlbumController
+                    val currentGeckoView = currentAlbum as? com.petal.browser.view.PetalGeckoView
+                    val currentTabSurface = currentAlbum as? com.petal.browser.browser.PetalTabViewController
+                    val currentTabId = currentTabSurface?.getTabId()
+                        ?: currentGeckoView?.getTabId()
+                        ?: currentAlbum?.hashCode()?.toString()
+                    val existingGroup = if (currentTabId != null) {
+                        com.petal.browser.compose.tabs.PetalTabGroupManager.findGroupByTabId(activity, currentTabId)
+                    } else null
+
+                    if (existingGroup != null) {
+                        // addAlbumInGroup creates the new tab, then registers its real tab
+                        // ID (from setWebView's return value, not currentAlbumController)
+                        // into the existing group's persisted membership list.
+                        activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, existingGroup.id, existingGroup.title)
+                    } else {
+                        // No group yet: create one seeded with the current tab, then open
+                        // the new tab and register its real ID into that same group. The
+                        // group is created with only the current tab as a member here -
+                        // addAlbumInGroup below adds the new tab once it actually exists,
+                        // rather than seeding the group with a placeholder ID for a tab
+                        // that doesn't exist yet.
+                        if (currentTabId != null) {
+                            val currentTab = com.petal.browser.compose.tabs.PetalTabItem(
+                                id = currentTabId,
+                                title = currentAlbum?.title ?: "Tab",
+                                url = currentAlbum?.url ?: "about:blank"
+                            )
+                            val newGroup = com.petal.browser.compose.tabs.PetalTabGroupManager.createGroupWithTabs(activity, currentTab, currentTab)
+                            currentTabSurface?.setTabGroupId(newGroup.id)
+                            currentTabSurface?.setTabGroupTitle(newGroup.title)
+                            currentGeckoView?.setTabGroupId(newGroup.id)
+                            currentGeckoView?.setTabGroupTitle(newGroup.title)
+                            activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, newGroup.id, newGroup.title)
+                        } else {
+                            // No identifiable current tab to group with - fall back to a
+                            // plain new tab rather than creating a group with no real members.
+                            activity.addAlbum(HelperUnit.domain(urlResult), urlResult, false)
+                        }
+                    }
+                }
+
+                override fun onOpenInIncognitoTab() {
+                    activity.addAlbum(HelperUnit.domain(urlResult), urlResult, false, true)
+                }
+
+
+                override fun onPreviewPage() {
+                    PetalPagePreviewBridge.show(activity, urlResult)
+                }
+
+                override fun onCopyLinkAddress() {
+                    HelperUnit.copy(activity, urlResult)
+                    PetalToast.show(activity, "Link copied")
+                }
+
+                override fun onCopyLinkText() {
+                    val text = linkText?.trim().orEmpty()
+                    if (text.isNotEmpty()) {
+                        HelperUnit.copy(activity, text)
+                        PetalToast.show(activity, "Link text copied")
+                    } else {
+                        PetalToast.show(activity, "This link has no text")
+                    }
+                }
+
+                override fun onDownloadLink() {
+                    try {
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, urlResult) { fileName, mimeType ->
+                            BrowserUnit.download(activity, urlResult, fileName, mimeType)
+                            PetalToast.show(activity, "Download started")
+                        }
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "Failed to start download")
+                    }
+                }
+
+                override fun onDownloadImage() {
+                    if (urlResult.isNotBlank()) {
+                        ImageActionHelper.downloadImage(activity, urlResult)
+                    }
+                }
+
+                override fun onAddToReadingList() {
+                    try {
+                        val action = RecordAction(activity)
+                        action.open(true)
+                        val record = Record(HelperUnit.domain(urlResult), urlResult, System.currentTimeMillis(), 0)
+                        record.isReadingList = true
+                        action.addBookmark(record)
+                        action.close()
+                        PetalToast.show(activity, "Added to reading list")
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                override fun onShareImage() {
+                    if (urlResult.isNotBlank()) {
+                        ImageActionHelper.shareImage(activity, urlResult)
+                    }
+                }
+
+                override fun onShareLink() {
+                    activity.shareLink(HelperUnit.domain(urlResult), urlResult)
+                }
+
+                override fun onScanImage() {
+                    if (urlResult.isNotBlank()) {
+                        PetalImageScannerBridge.show(activity, urlResult)
+                    }
+                }
+
+                override fun onSearchWithGoogleLens() {
+                    if (urlResult.isNotBlank()) {
+                        com.petal.browser.lens.PetalLensManager.searchImageWithGoogleLens(activity, urlResult)
+                    }
+                }
+
+                override fun onSendEmail(mailto: String) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO, Uri.parse(mailto))
+                        activity.startActivity(intent)
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "No email client found")
+                    }
+                }
+
+                override fun onDialPhoneNumber(tel: String) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, Uri.parse(tel))
+                        activity.startActivity(intent)
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "No phone app found")
+                    }
+                }
+
+                override fun onOpenMapLocation(geo: String) {
+                    try {
+                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(geo))
+                        activity.startActivity(intent)
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "No maps app found")
+                    }
+                }
+
+                override fun onOpenImageInNewTab() {}
+                override fun onCopyImage() {}
+                override fun onDownloadVideo() {}
+            }
+        )
+    }
+
+    @JvmStatic
+    fun showVideoContextMenu(activity: BrowserActivity, cleanVideoUrl: String) {
+        PetalLinkContextMenuBridge.show(
+            activity = activity,
+            linkTitle = HelperUnit.domain(cleanVideoUrl),
+            linkUrl = cleanVideoUrl,
+            faviconUrl = null,
+            imageUrl = null,
+            isImage = false,
+            isVideo = true,
+            handler = object : PetalLinkContextMenuHandler {
+                override fun onOpenInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(cleanVideoUrl), cleanVideoUrl, false)
+                }
+
+                override fun onDownloadVideo() {
+                    try {
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, cleanVideoUrl, fallbackMimeType = "video/mp4") { fileName, mimeType ->
+                            BrowserUnit.download(activity, cleanVideoUrl, fileName, mimeType)
+                            PetalToast.show(activity, "Video download started")
+                        }
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "Failed to start video download")
+                    }
+                }
+
+                override fun onCopyLinkAddress() {
+                    HelperUnit.copy(activity, cleanVideoUrl)
+                    PetalToast.show(activity, "Video link copied")
+                }
+
+                override fun onShareLink() {
+                    activity.shareLink(HelperUnit.domain(cleanVideoUrl), cleanVideoUrl)
+                }
+
+                override fun onOpenInNewTabInGroup() {}
+                override fun onOpenInIncognitoTab() {}
+                override fun onDownloadLink() {}
+                override fun onOpenImageInNewTab() {}
+                override fun onCopyImage() {}
+                override fun onDownloadImage() {}
+                override fun onAddToReadingList() {}
+                override fun onShareImage() {}
+                override fun onScanImage() {}
+                override fun onSearchWithGoogleLens() {}
+            }
+        )
+    }
+
+    @JvmStatic
+    fun showAudioContextMenu(activity: BrowserActivity, audioUrl: String) {
+        PetalLinkContextMenuBridge.show(
+            activity = activity,
+            linkTitle = HelperUnit.domain(audioUrl),
+            linkUrl = audioUrl,
+            faviconUrl = null,
+            isImage = false,
+            isVideo = false,
+            isAudio = true,
+            selectedText = null,
+            handler = object : PetalLinkContextMenuHandler {
+                override fun onOpenInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(audioUrl), audioUrl, false)
+                }
+
+                override fun onDownloadAudio() {
+                    try {
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, audioUrl) { fileName, mimeType ->
+                            BrowserUnit.download(activity, audioUrl, fileName, mimeType)
+                            PetalToast.show(activity, "Audio download started")
+                        }
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "Failed to start audio download")
+                    }
+                }
+
+                override fun onCopyLinkAddress() {
+                    HelperUnit.copy(activity, audioUrl)
+                    PetalToast.show(activity, "Audio link copied")
+                }
+
+                override fun onShareLink() {
+                    activity.shareLink(HelperUnit.domain(audioUrl), audioUrl)
+                }
+            }
+        )
+    }
+
+    @JvmStatic
+    fun showSelectionContextMenu(activity: BrowserActivity, selectedText: String) {
+        if (selectedText.isBlank()) return
+        PetalLinkContextMenuBridge.show(
+            activity = activity,
+            linkTitle = "Text Selection",
+            linkUrl = selectedText,
+            faviconUrl = null,
+            isImage = false,
+            isVideo = false,
+            isAudio = false,
+            selectedText = selectedText,
+            handler = object : PetalLinkContextMenuHandler {
+                override fun onSearchWebText(text: String) {
+                    val query = BrowserUnit.queryWrapper(activity, text)
+                    activity.addAlbum(text.take(24), query, false)
+                }
+
+                override fun onCopySelectedText(text: String) {
+                    HelperUnit.copy(activity, text)
+                    PetalToast.show(activity, "Text copied")
+                }
+
+                override fun onShareSelectedText(text: String) {
+                    activity.shareLink("Shared Text", text)
+                }
+            }
+        )
+    }
+
+    @JvmStatic
+    fun showImageLinkContextMenu(activity: BrowserActivity, linkUrl: String, imageUrl: String, linkText: String? = null) {
+        val parsed = Uri.parse(linkUrl)
+        val faviconUrl = if (parsed.scheme == "http" || parsed.scheme == "https") {
+            "${parsed.scheme}://${parsed.authority}/favicon.ico"
+        } else null
+
+        PetalLinkContextMenuBridge.show(
+            activity = activity,
+            linkTitle = linkText?.trim()?.takeIf { it.isNotEmpty() }?.take(80) ?: HelperUnit.domain(linkUrl),
+            linkUrl = linkUrl,
+            faviconUrl = faviconUrl,
+            imageUrl = imageUrl,
+            isImage = true,
+            isVideo = false,
+            isAudio = false,
+            selectedText = null,
+            handler = object : PetalLinkContextMenuHandler {
+                override fun onOpenInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(linkUrl), linkUrl, false)
+                }
+
+                override fun onOpenInNewTabInGroup() {
+                    val currentAlbum = activity.currentAlbumController
+                    val currentGeckoView = currentAlbum as? com.petal.browser.view.PetalGeckoView
+                    val currentTabSurface = currentAlbum as? com.petal.browser.browser.PetalTabViewController
+                    val currentTabId = currentTabSurface?.getTabId()
+                        ?: currentGeckoView?.getTabId()
+                        ?: currentAlbum?.hashCode()?.toString()
+                    val existingGroup = if (currentTabId != null) {
+                        com.petal.browser.compose.tabs.PetalTabGroupManager.findGroupByTabId(activity, currentTabId)
+                    } else null
+
+                    if (existingGroup != null) {
+                        activity.addAlbumInGroup(HelperUnit.domain(linkUrl), linkUrl, false, existingGroup.id, existingGroup.title)
+                    } else {
+                        if (currentTabId != null) {
+                            val currentTab = com.petal.browser.compose.tabs.PetalTabItem(
+                                id = currentTabId,
+                                title = currentAlbum?.title ?: "Tab",
+                                url = currentAlbum?.url ?: "about:blank"
+                            )
+                            val newGroup = com.petal.browser.compose.tabs.PetalTabGroupManager.createGroupWithTabs(activity, currentTab, currentTab)
+                            currentTabSurface?.setTabGroupId(newGroup.id)
+                            currentTabSurface?.setTabGroupTitle(newGroup.title)
+                            currentGeckoView?.setTabGroupId(newGroup.id)
+                            currentGeckoView?.setTabGroupTitle(newGroup.title)
+                            activity.addAlbumInGroup(HelperUnit.domain(linkUrl), linkUrl, false, newGroup.id, newGroup.title)
+                        } else {
+                            activity.addAlbum(HelperUnit.domain(linkUrl), linkUrl, false)
+                        }
+                    }
+                }
+
+                override fun onOpenInIncognitoTab() {
+                    activity.addAlbum(HelperUnit.domain(linkUrl), linkUrl, false, true)
+                }
+
+                override fun onPreviewPage() {
+                    PetalPagePreviewBridge.show(activity, linkUrl)
+                }
+
+                override fun onCopyLinkAddress() {
+                    HelperUnit.copy(activity, linkUrl)
+                    PetalToast.show(activity, "Link address copied")
+                }
+
+                override fun onDownloadLink() {
+                    try {
+                        DownloadFileNameResolver.resolve(activity.lifecycleScope, linkUrl) { fileName, mimeType ->
+                            BrowserUnit.download(activity, linkUrl, fileName, mimeType)
+                            PetalToast.show(activity, "Download started")
+                        }
+                    } catch (e: Exception) {
+                        PetalToast.show(activity, "Failed to start download")
+                    }
+                }
+
+                override fun onShareLink() {
+                    activity.shareLink(HelperUnit.domain(linkUrl), linkUrl)
+                }
+
+                override fun onViewInPetalViewer() {
+                    if (imageUrl.isNotBlank()) {
+                        activity.runOnUiThread {
+                            val view = com.petal.browser.compose.downloads.PetalImageViewerBridge.createWebViewerView(
+                                activity,
+                                imageUrl,
+                                HelperUnit.domain(imageUrl)
+                            ) {
+                                activity.runOnUiThread { activity.performBackNavigation() }
+                            }
+                            activity.presentComposeScreen(view)
+                        }
+                    }
+                }
+
+                override fun onOpenImageInNewTab() {
+                    activity.addAlbum(HelperUnit.domain(imageUrl), imageUrl, false)
+                }
+
+                override fun onCopyImage() {
+                    if (imageUrl.isNotBlank()) {
+                        ImageActionHelper.copyImage(activity, imageUrl)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onCopyImageAddress() {
+                    HelperUnit.copy(activity, imageUrl)
+                    PetalToast.show(activity, "Image address copied")
+                }
+
+                override fun onDownloadImage() {
+                    if (imageUrl.isNotBlank()) {
+                        ImageActionHelper.downloadImage(activity, imageUrl)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onShareImage() {
+                    if (imageUrl.isNotBlank()) {
+                        ImageActionHelper.shareImage(activity, imageUrl)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onSearchWithGoogleLens() {
+                    if (imageUrl.isNotBlank()) {
+                        com.petal.browser.lens.PetalLensManager.searchImageWithGoogleLens(activity, imageUrl)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+
+                override fun onScanImage() {
+                    if (imageUrl.isNotBlank()) {
+                        PetalImageScannerBridge.show(activity, imageUrl)
+                    } else {
+                        PetalToast.show(activity, "No valid image URL found")
+                    }
+                }
+            }
+        )
+    }
+
+    /**
+     * Unified entry point for GeckoSession.ContentDelegate.onContextMenu.
+     * Dynamically determines whether the targeted element is an image, link, image-in-link,
+     * video, audio, or fallback.
+     */
+    @JvmStatic
+    fun handleContextMenu(
+        activity: BrowserActivity,
+        elemType: Int,
+        linkUri: String?,
+        srcUri: String?,
+        linkText: String? = null
+    ) {
+        val hasLink = !linkUri.isNullOrBlank()
+        val hasSrc = !srcUri.isNullOrBlank()
+
+        when {
+            // Combined Image inside a Link (<a href="..."><img src="..."></a>)
+            hasLink && (hasSrc || elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_IMAGE) -> {
+                showImageLinkContextMenu(activity, linkUri!!, srcUri ?: linkUri, linkText)
+            }
+            // Explicit Image or non-empty image source
+            elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_IMAGE || (hasSrc && elemType != org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO && elemType != org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_AUDIO) -> {
+                showImageContextMenu(activity, srcUri ?: linkUri.orEmpty())
+            }
+            // Video element
+            elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_VIDEO -> {
+                showVideoContextMenu(activity, srcUri ?: linkUri.orEmpty())
+            }
+            // Audio element
+            elemType == org.mozilla.geckoview.GeckoSession.ContentDelegate.ContextElement.TYPE_AUDIO -> {
+                showAudioContextMenu(activity, srcUri ?: linkUri.orEmpty())
+            }
+            // Plain Link
+            hasLink -> {
+                showLinkContextMenu(activity, linkUri!!, linkText)
+            }
+            // Fallback if srcUri is present
+            hasSrc -> {
+                showImageContextMenu(activity, srcUri!!)
+            }
+        }
+    }
+}

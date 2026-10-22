@@ -1,0 +1,50 @@
+--- a/brave/android/java/org/chromium/chrome/browser/app/BraveActivity.java
++++ b/brave/android/java/org/chromium/chrome/browser/app/BraveActivity.java
+@@ -120,6 +120,35 @@ public class BraveActivity extends ChromeTabbedActivity {
+ 
++    // Petal Patch 0003: Inject Petal M3 Expressive + Liquid Glass Compose UI.
++    //
++    // After Brave's layout is inflated, hide Brave's toolbar and add Petal's
++    // ComposeView shell as an overlay on top of the Chromium content frame.
++    // PetalComposeShell.create() returns a ComposeView pre-wired to the
++    // PetalBraveActivityBridge ViewModel which reads tab state from Chromium's
++    // TabModelSelector and shield state from BraveShieldsNativeHelper.
++
++    private android.view.View mPetalShell;
++
++    @Override
++    public void onPostInflationStartup() {
++        super.onPostInflationStartup();
++        hideBraveToolbar();
++        injectPetalShell();
++    }
++
++    private void hideBraveToolbar() {
++        android.view.View toolbar = findViewById(R.id.toolbar);
++        if (toolbar != null) toolbar.setVisibility(android.view.View.GONE);
++        android.view.View bottomToolbar = findViewById(R.id.bottom_toolbar);
++        if (bottomToolbar != null) bottomToolbar.setVisibility(android.view.View.GONE);
++    }
++
++    private void injectPetalShell() {
++        android.view.ViewGroup root = (android.view.ViewGroup)
++            getWindow().getDecorView().findViewById(android.R.id.content);
++        mPetalShell = com.petal.browser.engine.PetalComposeShell.INSTANCE.create(this);
++        root.addView(mPetalShell, new android.widget.FrameLayout.LayoutParams(
++            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
++            android.view.ViewGroup.LayoutParams.MATCH_PARENT));
++    }
++
++    @Override
++    public void onStartWithNativeInitialized() {
++        super.onStartWithNativeInitialized();
++        // Attach glass backend after native is ready (Chromium surface exists)
++        android.view.View contentFrame = findViewById(R.id.coordinator);
++        if (contentFrame != null) {
++            com.petal.browser.ui.glass.ChromiumGlassBackend.attachTextureListener(contentFrame);
++        }
++        // Initialise Petal tab manager
++        com.petal.browser.engine.PetalTabManager.INSTANCE.init(this, getTabModelSelector());
++    }
++
+ }

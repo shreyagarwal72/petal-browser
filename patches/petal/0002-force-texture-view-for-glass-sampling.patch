@@ -1,0 +1,31 @@
+--- a/content/public/android/java/src/org/chromium/content/browser/ContentViewRenderView.java
++++ b/content/public/android/java/src/org/chromium/content/browser/ContentViewRenderView.java
+@@ -55,8 +55,14 @@ public class ContentViewRenderView extends FrameLayout {
+     private SurfaceView mSurfaceView;
++    // Petal Patch 0002: Use TextureView so pixel stream passes through view hierarchy.
++    // Required for Petal's AGSL Liquid Glass backdrop sampling.
++    private android.view.TextureView mTextureView;
++    private static final boolean USE_TEXTURE_VIEW_FOR_GLASS = true;
+ 
+     @Override
+     protected void onAttachedToWindow() {
+         super.onAttachedToWindow();
+-        // Original SurfaceView init
++        if (USE_TEXTURE_VIEW_FOR_GLASS) {
++            // Force TextureView backend for AGSL glass sampler compatibility
++            mTextureView = new android.view.TextureView(getContext());
++            mTextureView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
++            addView(mTextureView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
++            nativeSetSurfaceTextureForRootLayer(mNativeContentViewRenderView, mTextureView.getSurfaceTexture());
++        }
+     }
+ }
+--- a/ui/android/java/src/org/chromium/ui/base/WindowAndroid.java
++++ b/ui/android/java/src/org/chromium/ui/base/WindowAndroid.java
+@@ -88,6 +88,12 @@ public class WindowAndroid {
++    // Petal Patch 0002: Signal to ContentViewRenderView that TextureView is preferred.
++    public static boolean petalPreferTextureView() {
++        return true;
++    }
++
+ }
