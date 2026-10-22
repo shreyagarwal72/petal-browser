@@ -101,7 +101,7 @@ public class PetalMediaBridge {
 
     private final Context context;
     private WebView webView;
-    private com.petal.browser.view.PetalGeckoView geckoView;
+    private com.petal.browser.browser.AlbumController geckoView;
     private org.mozilla.geckoview.MediaSession activeGeckoMediaSession;
     private mozilla.components.concept.engine.mediasession.MediaSession.Controller activeEngineMediaController;
     private MediaStateListener listener;
@@ -134,7 +134,7 @@ public class PetalMediaBridge {
         attachWebView(webView);
     }
 
-    public PetalMediaBridge(Context context, com.petal.browser.view.PetalGeckoView geckoView, MediaStateListener listener) {
+    public PetalMediaBridge(Context context, com.petal.browser.browser.AlbumController geckoView, MediaStateListener listener) {
         this.context = context;
         this.listener = listener;
         attachGeckoView(geckoView);
@@ -147,7 +147,7 @@ public class PetalMediaBridge {
         }
     }
 
-    public void attachGeckoView(com.petal.browser.view.PetalGeckoView geckoView) {
+    public void attachGeckoView(com.petal.browser.browser.AlbumController geckoView) {
         this.geckoView = geckoView;
     }
 
@@ -170,8 +170,8 @@ public class PetalMediaBridge {
                 com.petal.browser.browser.AlbumController controller = ((com.petal.browser.activity.BrowserActivity) act).getCurrentAlbumController();
                 if (controller instanceof com.petal.browser.browser.PetalTabViewController) {
                     ((com.petal.browser.browser.PetalTabViewController) controller).evaluateJavascript(js, null);
-                } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
-                    ((com.petal.browser.view.PetalGeckoView) controller).evaluateJavascript(js, null);
+                } else if (controller instanceof com.petal.browser.browser.AlbumController) {
+                    ((com.petal.browser.browser.AlbumController) controller).evaluateJavascript(js, null);
                 }
             }
         }

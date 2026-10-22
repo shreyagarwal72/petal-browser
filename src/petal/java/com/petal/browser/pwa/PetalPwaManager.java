@@ -40,7 +40,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.petal.browser.R;
 import com.petal.browser.activity.BrowserActivity;
 import com.petal.browser.unit.HelperUnit;
-import com.petal.browser.view.PetalGeckoView;
+import com.petal.browser.browser.AlbumController;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -59,7 +59,7 @@ import java.util.regex.Pattern;
 
 /**
  * PetalPwaManager
- * Dynamic Progressive Web App (PWA) manager supporting PetalGeckoView (GeckoView engine),
+ * Dynamic Progressive Web App (PWA) manager supporting AlbumController (GeckoView engine),
  * providing manifest detection & parsing, high-fidelity app icon extraction matching
  * official Firefox for Android, offline webpage web archive saving, and standalone Web App launching.
  */
@@ -92,7 +92,7 @@ public class PetalPwaManager {
     private final Context context;
     private final com.petal.browser.browser.AlbumController albumController;
     private final WebView webView;
-    private final PetalGeckoView geckoView;
+    private final AlbumController geckoView;
     private final com.petal.browser.browser.PetalTabViewController tabViewController;
     private PwaInstallPromptListener promptListener;
     private PwaManifest currentManifest;
@@ -101,7 +101,7 @@ public class PetalPwaManager {
         this.context = context;
         this.albumController = albumController;
         this.webView = (albumController instanceof WebView) ? (WebView) albumController : null;
-        this.geckoView = (albumController instanceof PetalGeckoView) ? (PetalGeckoView) albumController : null;
+        this.geckoView = (albumController instanceof AlbumController) ? (AlbumController) albumController : null;
         this.tabViewController = (albumController instanceof com.petal.browser.browser.PetalTabViewController) ? (com.petal.browser.browser.PetalTabViewController) albumController : null;
         this.promptListener = listener;
 
@@ -524,8 +524,8 @@ public class PetalPwaManager {
 
         String pageUrl = targetController != null ? targetController.getUrl() : (webView != null ? webView.getUrl() : null);
         if (pageUrl == null || pageUrl.trim().isEmpty() || "about:blank".equalsIgnoreCase(pageUrl.trim())) {
-            if (targetController instanceof com.petal.browser.view.PetalGeckoView) {
-                pageUrl = ((com.petal.browser.view.PetalGeckoView) targetController).getAlbumUrl();
+            if (targetController instanceof com.petal.browser.browser.AlbumController) {
+                pageUrl = ((com.petal.browser.browser.AlbumController) targetController).getAlbumUrl();
             }
         }
         if (pageUrl == null || pageUrl.trim().isEmpty() || "about:blank".equalsIgnoreCase(pageUrl.trim())) {
@@ -611,8 +611,8 @@ public class PetalPwaManager {
                     }
                 }
 
-                if (rawBitmap == null && finalController instanceof com.petal.browser.view.PetalGeckoView) {
-                    rawBitmap = ((com.petal.browser.view.PetalGeckoView) finalController).getFavicon();
+                if (rawBitmap == null && finalController instanceof com.petal.browser.browser.AlbumController) {
+                    rawBitmap = ((com.petal.browser.browser.AlbumController) finalController).getFavicon();
                 } else if (rawBitmap == null && finalController instanceof com.petal.browser.browser.PetalTabViewController) {
                     rawBitmap = ((com.petal.browser.browser.PetalTabViewController) finalController).getFavicon();
                 }

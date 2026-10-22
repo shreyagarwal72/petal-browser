@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.browser.AlbumController
-import com.petal.browser.view.PetalGeckoView
+import com.petal.browser.browser.AlbumController
 import com.petal.browser.ui.glass.captureGlassWallpaper
 import androidx.compose.ui.res.stringResource
 import com.petal.browser.R
@@ -42,7 +42,7 @@ fun PetalSiteInfoBottomSheet(
     onResetSiteData: () -> Unit
 ) {
     val context = LocalContext.current
-    val geckoView = albumController as? PetalGeckoView
+    val geckoView = albumController as? AlbumController
     
     val currentUrl = albumController?.url ?: ""
     val domain = remember(currentUrl) { HelperUnit.domain(currentUrl) }
@@ -82,7 +82,7 @@ fun PetalSiteInfoBottomSheet(
 
     // SharedPreferences for site permission states
     val sp = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val profile = remember { PetalGeckoView.getProfile(context) }
+    val profile = remember { AlbumController.getProfile(context) }
 
     var isCameraAllowed by remember { mutableStateOf(sp.getBoolean(profile + "_camera", false)) }
     var isMicAllowed by remember { mutableStateOf(sp.getBoolean(profile + "_microphone", false)) }

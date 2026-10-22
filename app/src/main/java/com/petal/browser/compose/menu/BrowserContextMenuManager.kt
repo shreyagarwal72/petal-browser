@@ -207,7 +207,7 @@ object BrowserContextMenuManager {
 
                 override fun onOpenInNewTabInGroup() {
                     val currentAlbum = activity.currentAlbumController
-                    val currentGeckoView = currentAlbum as? com.petal.browser.view.PetalGeckoView
+                    val currentGeckoView = currentAlbum as? com.petal.browser.browser.AlbumController
                     val currentTabSurface = currentAlbum as? com.petal.browser.browser.PetalTabViewController
                     val currentTabId = currentTabSurface?.getTabId()
                         ?: currentGeckoView?.getTabId()
@@ -501,7 +501,7 @@ object BrowserContextMenuManager {
 
                 override fun onOpenInNewTabInGroup() {
                     val currentAlbum = activity.currentAlbumController
-                    val currentGeckoView = currentAlbum as? com.petal.browser.view.PetalGeckoView
+                    val currentGeckoView = currentAlbum as? com.petal.browser.browser.AlbumController
                     val currentTabSurface = currentAlbum as? com.petal.browser.browser.PetalTabViewController
                     val currentTabId = currentTabSurface?.getTabId()
                         ?: currentGeckoView?.getTabId()

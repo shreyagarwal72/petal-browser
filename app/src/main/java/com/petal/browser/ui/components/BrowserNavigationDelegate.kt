@@ -12,7 +12,7 @@ import com.petal.browser.activity.Settings_Delete
 import com.petal.browser.database.RecordAction
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.view.PetalToast
-import com.petal.browser.view.PetalGeckoView
+import com.petal.browser.browser.AlbumController
 
 /**
  * Kotlin delegate handling navigation, overview tab switching, and
@@ -23,7 +23,7 @@ object BrowserNavigationDelegate {
     @JvmStatic
     fun showOverflowMenu(activity: BrowserActivity) {
         val currentController = activity.currentAlbumController
-        val geckoView = currentController as? com.petal.browser.view.PetalGeckoView
+        val geckoView = currentController as? com.petal.browser.browser.AlbumController
         val tabSurface = currentController as? com.petal.browser.browser.PetalTabViewController
 
         val isHome = activity.isPetalHomeSurfaceShowing || activity.isCurrentTabHomeOrBlank || com.petal.browser.unit.BrowserUnit.isHomePage(geckoView?.url ?: currentController?.url)
@@ -40,7 +40,7 @@ object BrowserNavigationDelegate {
 
         val canGoBack = tabSurface?.canGoBack() ?: geckoView?.canGoBack() ?: false
         val canGoForward = tabSurface?.canGoForward() ?: geckoView?.canGoForward() ?: false
-        val profile = PetalGeckoView.getProfile(activity)
+        val profile = AlbumController.getProfile(activity)
         val prefs = activity.sp ?: PreferenceManager.getDefaultSharedPreferences(activity)
         val isDesktopSite = prefs.getBoolean("${profile}_desktop", false)
         val isAdBlock = prefs.getBoolean("sp_ad_block", prefs.getBoolean("${profile}_adBlock", true))
@@ -229,7 +229,7 @@ object BrowserNavigationDelegate {
                 }
 
                 override fun onOpenDevConsole() {
-                    val geckoView = currentController as? com.petal.browser.view.PetalGeckoView
+                    val geckoView = currentController as? com.petal.browser.browser.AlbumController
                     val composeView = androidx.compose.ui.platform.ComposeView(activity).apply {
                         setViewTreeLifecycleOwner(activity)
                         setViewTreeViewModelStoreOwner(activity)

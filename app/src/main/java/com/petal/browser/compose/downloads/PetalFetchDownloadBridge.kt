@@ -195,7 +195,7 @@ object PetalFetchDownloadBridge {
         // Last-Modified, Content-Range, Cache-Control, ...). They were previously copied
         // onto the outgoing REQUEST, which is wrong: validators/range headers can make a
         // server answer 304/416 or an empty body, leaving a 0 B download stuck. They are
-        // only useful for naming (already resolved in PetalGeckoView), so they are not
+        // only useful for naming (already resolved in AlbumController), so they are not
         // forwarded. Send what a download request actually needs instead.
         val userAgent = try {
             android.webkit.WebSettings.getDefaultUserAgent(context)

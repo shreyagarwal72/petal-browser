@@ -51,17 +51,17 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.petal.browser.activity.BrowserActivity
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import com.petal.browser.unit.HelperUnit
-import com.petal.browser.view.PetalGeckoView
+import com.petal.browser.browser.AlbumController
 import androidx.compose.ui.res.stringResource
 import com.petal.browser.R
 
 /**
  * Shows a page preview in a constrained card without navigating the user's
  * actual current tab. Deliberately does NOT use BrowserWebViewController's
- * createAndConfigureGeckoView() - that wires a PetalGeckoView into media/PiP/
+ * createAndConfigureGeckoView() - that wires a AlbumController into media/PiP/
  * tab-lifecycle plumbing meant for a real, tracked browser tab, which a
  * disposable preview should never become. This bridge creates a bare
- * PetalGeckoView, loads the URL, and calls its destroy() to tear the session
+ * AlbumController, loads the URL, and calls its destroy() to tear the session
  * down completely when the preview is dismissed - the preview is never added
  * to BrowserContainer and never becomes a real tab.
  */
@@ -119,11 +119,11 @@ private fun PetalPagePreviewSheet(
     val isGlass = com.petal.browser.ui.containment.isLiquidGlassEnabled("sp_liquid_glass_containments")
     val sheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
 
-    // Bare PetalGeckoView, not routed through BrowserWebViewController - never
+    // Bare AlbumController, not routed through BrowserWebViewController - never
     // added to BrowserContainer, never made the activity's currentAlbumController,
     // so it never becomes a real tab. destroy() in the DisposableEffect below
     // tears the GeckoSession down completely when this composable leaves.
-    val previewGeckoView = remember { PetalGeckoView(context) }
+    val previewGeckoView = remember { AlbumController(context) }
 
     DisposableEffect(url) {
         onDispose {

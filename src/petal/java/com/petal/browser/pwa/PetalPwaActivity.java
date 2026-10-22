@@ -27,7 +27,7 @@ import com.petal.browser.R;
 import com.petal.browser.activity.BrowserActivity;
 import com.petal.browser.unit.HelperUnit;
 import com.petal.browser.view.PetalToast;
-import com.petal.browser.view.PetalGeckoView;
+import com.petal.browser.browser.AlbumController;
 
 import java.io.File;
 
@@ -53,7 +53,7 @@ public class PetalPwaActivity extends AppCompatActivity {
     private View progressBarComposeView;
     private View fabBubbleView;
     private int fabBaseMarginPx = 0;
-    private PetalGeckoView geckoView;
+    private AlbumController geckoView;
     private String pwaUrl = "about:blank";
     private String pwaTitle = "Web App";
     private String themeColorHex = "#FFFFFF";
@@ -215,7 +215,7 @@ public class PetalPwaActivity extends AppCompatActivity {
     private void setupGeckoView() {
         if (contentFrame == null) return;
 
-        geckoView = new PetalGeckoView(this);
+        geckoView = new AlbumController(this);
         geckoView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT

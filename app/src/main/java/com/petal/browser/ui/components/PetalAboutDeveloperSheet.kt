@@ -197,7 +197,7 @@ fun PetalAboutDeveloperSheetContent(
             if (activity != null) {
                 onClose()
                 val ctrl = activity.currentAlbumController
-                if (ctrl is com.petal.browser.view.PetalGeckoView) {
+                if (ctrl is com.petal.browser.browser.AlbumController) {
                     ctrl.loadUrl(url)
                     activity.showAlbum(ctrl, url)
                 } else {

@@ -13,7 +13,7 @@ import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
 import com.petal.browser.controller.BrowserWebViewController
 import com.petal.browser.database.RecordAction
-import com.petal.browser.view.PetalGeckoView
+import com.petal.browser.browser.AlbumController
 import java.util.Arrays
 import java.util.concurrent.Executors
 
@@ -94,7 +94,7 @@ object PetalTabSessionManager {
                         controller.url.isNotBlank() &&
                         !controller.url.equals("about:blank", ignoreCase = true) ->
                             controller.url
-                        controller is PetalGeckoView &&
+                        controller is AlbumController &&
                         controller.persistentUrl.isNotBlank() &&
                         !controller.persistentUrl.equals("about:blank", ignoreCase = true) ->
                             controller.persistentUrl
@@ -106,19 +106,19 @@ object PetalTabSessionManager {
                     val rawTitle = controller.title ?: ""
                     val tabId = when (controller) {
                         is com.petal.browser.browser.PetalTabViewController -> controller.getTabId() ?: controller.hashCode().toString()
-                        is PetalGeckoView -> controller.getTabId()
+                        is AlbumController -> controller.getTabId()
                         is PlaceholderAlbumController -> controller.getTabId()
                         else -> controller.hashCode().toString()
                     }
                     val groupId = when (controller) {
                         is com.petal.browser.browser.PetalTabViewController -> controller.getTabGroupId()
-                        is PetalGeckoView -> controller.getTabGroupId()
+                        is AlbumController -> controller.getTabGroupId()
                         is PlaceholderAlbumController -> controller.getTabGroupId()
                         else -> null
                     }
                     val groupTitle = when (controller) {
                         is com.petal.browser.browser.PetalTabViewController -> controller.getTabGroupTitle()
-                        is PetalGeckoView -> controller.getTabGroupTitle()
+                        is AlbumController -> controller.getTabGroupTitle()
                         is PlaceholderAlbumController -> controller.getTabGroupTitle()
                         else -> null
                     }

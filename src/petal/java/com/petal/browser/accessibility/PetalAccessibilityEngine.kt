@@ -191,7 +191,7 @@ object PetalAccessibilityEngine {
         } else {
             "if (window.__petal_caret_mode) { document.designMode = 'off'; window.__petal_caret_mode = false; }"
         }
-        if (controller is com.petal.browser.view.PetalGeckoView) {
+        if (controller is com.petal.browser.browser.AlbumController) {
             controller.evaluateJavascript(js, null)
         } else if (controller is WebView) {
             controller.evaluateJavascript(js, null)
@@ -237,14 +237,14 @@ object PetalAccessibilityEngine {
 
             if (hScroll < -0.65f) {
                 // Swipe Left -> Go Back
-                if (controller is com.petal.browser.view.PetalGeckoView && controller.canGoBack()) {
+                if (controller is com.petal.browser.browser.AlbumController && controller.canGoBack()) {
                     lastSwipeTime = now
                     controller.goBack()
                     return true
                 }
             } else if (hScroll > 0.65f) {
                 // Swipe Right -> Go Forward
-                if (controller is com.petal.browser.view.PetalGeckoView && controller.canGoForward()) {
+                if (controller is com.petal.browser.browser.AlbumController && controller.canGoForward()) {
                     lastSwipeTime = now
                     controller.goForward()
                     return true

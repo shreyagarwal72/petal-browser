@@ -70,7 +70,7 @@ object PetalMediaSnifferOverlayBridge {
                     currentPageUrl = pageUrl
                 ) { request ->
                     val act = activity as? com.petal.browser.activity.BrowserActivity
-                    val geckoView = act?.currentAlbumController as? com.petal.browser.view.PetalGeckoView
+                    val geckoView = act?.currentAlbumController as? com.petal.browser.browser.AlbumController
                     geckoView?.captureVideoHandoffState { handoff ->
                         val intent = Intent(activity, MediaPlayerActivity::class.java).apply {
                             data = android.net.Uri.parse(request.url)
