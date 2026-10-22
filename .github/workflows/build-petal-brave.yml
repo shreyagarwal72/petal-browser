@@ -226,9 +226,7 @@ jobs:
       - name: 🔨 Build chrome_public_apk (arm64)
         working-directory: ${{ env.CHROMIUM_SRC }}
         run: |
-          ninja -C out/PetalArm64 chrome_public_apk \
-            -j$(nproc) \
-            --max-load=$(nproc)
+          ninja -C out/PetalArm64 chrome_public_apk -j$(nproc) -l$(nproc)
 
       # ── 16. Also build universal (arm64 + armeabi-v7a) ────────────────────────
       - name: ⚙️ GN gen (universal arm64+arm32)
@@ -269,9 +267,7 @@ jobs:
       - name: 🔨 Build universal APK
         working-directory: ${{ env.CHROMIUM_SRC }}
         run: |
-          ninja -C out/PetalUniversal chrome_public_apk \
-            -j$(nproc) \
-            --max-load=$(nproc)
+          ninja -C out/PetalUniversal chrome_public_apk -j$(nproc) -l$(nproc)
 
       # ── 17. Locate output APKs ────────────────────────────────────────────────
       - name: 📂 Locate APKs
