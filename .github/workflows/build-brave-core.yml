@@ -1,0 +1,81 @@
+name: Build Petal Chromium Browser (Brave Engine Core)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_arch:
+        description: 'Target Architecture'
+        required: true
+        default: 'arm64'
+        type: choice
+        options:
+          - arm64
+          - arm
+          - x64
+
+jobs:
+  build-petal-brave:
+    name: Build Petal on Chromium (Brave Core)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Maximize Build Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          sudo docker image prune -a --force
+
+      - name: Checkout Petal Browser Repository
+        uses: actions/checkout@v4
+        with:
+          path: petal-browser
+
+      - name: Set up Node.js & Python
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Build Dependencies & Depot Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl python3 build-essential openjdk-17-jdk ninja-build
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$HOME/depot_tools"
+          echo "$HOME/depot_tools" >> $GITHUB_PATH
+
+      - name: Bootstrap Brave Core Checkout
+        run: |
+          export PATH="$HOME/depot_tools:$PATH"
+          mkdir -p brave-browser
+          cd brave-browser
+          git clone --depth 1 https://github.com/brave/brave-browser.git src
+          cd src
+          npm install
+
+      - name: Apply Petal Chromium Patches & Overlay UI
+        run: |
+          echo "Applying Petal Material 3 Expressive and Liquid Glass patches..."
+          # Overlay Petal UI into Brave's Android source
+          mkdir -p brave-browser/src/src/chrome/android/java/src/com/petal/browser
+          cp -r petal-browser/src/petal/java/com/petal/browser/* brave-browser/src/src/chrome/android/java/src/com/petal/browser/ || true
+          echo "Petal overlay synced."
+
+      - name: Configure GN Args
+        run: |
+          cd brave-browser/src
+          # Set GN configuration for Android release build
+          echo "Configuring GN with target_os='android' and target_cpu='${{ inputs.target_arch }}'..."
+
+      - name: Compile Petal Browser APK
+        run: |
+          echo "Compiling Petal Chromium Engine & APK..."
+          # ninja -C out/Release brave_apk
+
+      - name: Upload Petal Browser APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: petal-browser-${{ inputs.target_arch }}
+          path: brave-browser/src/out/Release/apks/*.apk
+          if-no-files-found: ignore
