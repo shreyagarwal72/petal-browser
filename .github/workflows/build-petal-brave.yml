@@ -167,7 +167,7 @@ jobs:
       - name: 🔄 Sync Chromium for Android
         working-directory: ${{ env.BRAVE_CORE_DIR }}
         run: |
-          pnpm run init -- --target_os=android --target_arch=arm64 --no-history
+          pnpm run init --target_os=android --target_arch=arm64 --no-history
 
       # ── 12. Apply Petal patches + overlay sources ─────────────────────────────
       - name: 🩹 Apply Petal patches and overlay
