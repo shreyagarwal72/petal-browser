@@ -46,6 +46,27 @@ if [[ -d "$APP_RES_SRC" ]]; then
   cp -r "$APP_RES_SRC/." "$PETAL_RES_DST/"
 fi
 
+# ─── Ensure Chromium base branding icons are populated ──────────────────────
+# Brave organizes Android icons under src/brave/app/theme/brave/android/res_brave(_base).
+# Upstream Chromium targets (chrome_base_module_resources) expect res_chromium_base
+# and res_chromium to be populated. In a full pnpm run build flow, branding.js copies these;
+# here we ensure they are mirrored directly so GN/Ninja build targets find themed_app_icon.xml.
+BRAVE_THEME_ANDROID="$BRAVE_CORE_DIR/app/theme/brave/android"
+CHROMIUM_RES_BASE="$CHROMIUM_SRC/chrome/android/java/res_chromium_base"
+CHROMIUM_RES="$CHROMIUM_SRC/chrome/android/java/res_chromium"
+
+if [[ -d "$BRAVE_THEME_ANDROID/res_brave_base" ]]; then
+  echo "[2c/4] Populating res_chromium_base from Brave theme..."
+  mkdir -p "$CHROMIUM_RES_BASE"
+  cp -r "$BRAVE_THEME_ANDROID/res_brave_base/." "$CHROMIUM_RES_BASE/"
+fi
+
+if [[ -d "$BRAVE_THEME_ANDROID/res_brave" ]]; then
+  echo "[2d/4] Populating res_chromium from Brave theme..."
+  mkdir -p "$CHROMIUM_RES"
+  cp -r "$BRAVE_THEME_ANDROID/res_brave/." "$CHROMIUM_RES/"
+fi
+
 # ─── Copy patches into brave-core patches directory ───────────────────────────
 PATCHES_SRC="$REPO_ROOT/patches/petal"
 PATCHES_DST="$BRAVE_CORE_DIR/patches/petal"
