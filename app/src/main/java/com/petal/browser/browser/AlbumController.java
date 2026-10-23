@@ -1,16 +1,10 @@
 package com.petal.browser.browser;
 
 import android.view.View;
+import android.webkit.ValueCallback;
 
 /**
- * A browser tab. The view returned by {@link #getAlbumView()} is mounted in the content
- * frame once, the first time the tab is shown, and then kept attached for the tab's
- * lifetime; the host switches tabs by toggling its visibility.
- *
- * Implementations must therefore NOT attach or detach the album view from {@link #activate()}
- * or {@link #deactivate()}. Those callbacks only suspend/resume the tab's engine work
- * (for Gecko tabs, {@code GeckoSession.setActive(false/true)}); the host hides the view
- * (View.GONE) after {@link #deactivate()} and shows it (View.VISIBLE) around {@link #activate()}.
+ * A browser tab controller wrapping the active engine view.
  */
 public interface AlbumController {
     View getAlbumView();
@@ -20,4 +14,12 @@ public interface AlbumController {
     String getUrl();
     default void destroy() {}
     default boolean isIncognito() { return false; }
+
+    default boolean canGoBack() { return false; }
+    default boolean canGoForward() { return false; }
+    default void goBack() {}
+    default void goForward() {}
+    default void reload() {}
+    default void loadUrl(String url) {}
+    default void evaluateJavascript(String script, ValueCallback<String> callback) {}
 }

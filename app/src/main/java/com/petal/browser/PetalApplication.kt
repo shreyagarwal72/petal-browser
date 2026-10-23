@@ -76,20 +76,6 @@ class PetalApplication : Application() {
 
         try {
             com.petal.browser.logger.PetalAppLogger.init(this)
-            if (com.petal.browser.engine.gecko.PetalGeckoRuntime.isGeckoAvailable(this)) {
-                com.petal.browser.engine.gecko.PetalGeckoRuntime.getOrCreate(this)
-                // Initialize Android Components session persistence alongside the
-                // shared Gecko runtime. PetalEngineStore owns the BrowserStore and
-                // AutoSave lifecycle; touching it here makes state persistence
-                // available before the first tab is materialized, while retaining
-                // the existing Petal tab/session UI as the source of truth.
-                try {
-                    com.petal.browser.engine.gecko.PetalEngineStore.getSessionStorage(this)
-                } catch (t: Throwable) {
-                    Log.w(TAG, "BrowserStore session persistence unavailable; continuing with Petal tabs", t)
-                }
-                com.petal.browser.media.sniffer.PetalMediaGrabberInstaller.install(this)
-            }
             com.petal.browser.browser.PetalAdBlockEngine.ensureInitialized(this)
             // Initialize yt-dlp through the same synchronized engine used by
             // the Social Downloader. This prevents a first-use race between
@@ -121,9 +107,6 @@ class PetalApplication : Application() {
                 com.petal.browser.wallpaper.PetalWallpaperManager.init(this)
                 com.petal.browser.collections.PetalCollectionManager.init(this)
                 com.petal.browser.compose.downloads.PetalFetchDownloadBridge.ensureInitialized(this)
-                // Sweep ephemeral upload buffers & compact SQLite databases
-                com.petal.browser.engine.gecko.PetalStorageManager.cleanEphemeralStorage(this)
-                com.petal.browser.engine.gecko.PetalStorageManager.optimizeDatabases(this)
             } catch (t: Throwable) {
                 Log.w(TAG, "Early profile/wallpaper/download init failed", t)
             }
@@ -181,8 +164,7 @@ class PetalApplication : Application() {
         super.onTrimMemory(level)
         if (!isMainProcess()) return
         try {
-            com.petal.browser.engine.gecko.PetalGeckoRuntime.onTrimMemory(this, level)
-            com.petal.browser.engine.gecko.PetalEngineStore.onLowMemory(this, level)
+            com.petal.browser.unit.TabThumbnailCache.clearMemory()
         } catch (_: Throwable) {}
     }
 
@@ -190,8 +172,6 @@ class PetalApplication : Application() {
         super.onLowMemory()
         if (!isMainProcess()) return
         try {
-            com.petal.browser.engine.gecko.PetalGeckoRuntime.onLowMemory(this)
-            com.petal.browser.engine.gecko.PetalEngineStore.onLowMemory(this, android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
             com.petal.browser.unit.TabThumbnailCache.clearMemory()
         } catch (_: Throwable) {}
     }

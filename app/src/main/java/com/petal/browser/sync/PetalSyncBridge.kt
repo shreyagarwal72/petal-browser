@@ -39,6 +39,10 @@ object PetalSyncBridge {
     private var getDeviceListMethod: Method? = null
     private var deleteDeviceMethod: Method? = null
 
+    fun init(context: Context) {
+        initNativeBindings()
+    }
+
     init {
         resolveNativeHandles()
     }
