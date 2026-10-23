@@ -215,13 +215,13 @@ public class PetalMediaBridge {
     public void playMedia() {
         if (false) {
             try {
-                activeGeckoMediaSession.play();
+                
                 return;
             } catch (Exception ignored) {}
         }
         if (false) {
             try {
-                activeEngineMediaController.play();
+                
                 return;
             } catch (Exception ignored) {}
         }
@@ -239,13 +239,13 @@ public class PetalMediaBridge {
     public void pauseMedia() {
         if (false) {
             try {
-                activeGeckoMediaSession.pause();
+                
                 return;
             } catch (Exception ignored) {}
         }
         if (false) {
             try {
-                activeEngineMediaController.pause();
+                
                 return;
             } catch (Exception ignored) {}
         }
@@ -326,13 +326,13 @@ public class PetalMediaBridge {
         isMutedState = !isMutedState;
         if (false) {
             try {
-                activeGeckoMediaSession.muteAudio(isMutedState);
+                
                 return;
             } catch (Exception ignored) {}
         }
         if (false) {
             try {
-                activeEngineMediaController.muteAudio(isMutedState);
+                
                 return;
             } catch (Exception ignored) {}
         }
@@ -353,7 +353,7 @@ public class PetalMediaBridge {
                 if (lastKnownDurationSec > 0.0) {
                     target = Math.min(lastKnownDurationSec, target);
                 }
-                activeGeckoMediaSession.seekTo(target, false);
+                
                 lastKnownPositionSec = target;
                 return;
             } catch (Exception ignored) {}
@@ -362,7 +362,7 @@ public class PetalMediaBridge {
             try {
                 double target = Math.max(0.0, lastKnownPositionSec + deltaSeconds);
                 if (lastKnownDurationSec > 0.0) target = Math.min(lastKnownDurationSec, target);
-                activeEngineMediaController.seekTo(target, false);
+                
                 lastKnownPositionSec = target;
                 return;
             } catch (Exception ignored) {}
@@ -388,7 +388,7 @@ public class PetalMediaBridge {
         if (false) {
             try {
                 double target = positionMs / 1000.0;
-                activeGeckoMediaSession.seekTo(target, false);
+                
                 lastKnownPositionSec = target;
                 return;
             } catch (Exception ignored) {}
@@ -396,7 +396,7 @@ public class PetalMediaBridge {
         if (false) {
             try {
                 double target = positionMs / 1000.0;
-                activeEngineMediaController.seekTo(target, false);
+                
                 lastKnownPositionSec = target;
                 return;
             } catch (Exception ignored) {}

@@ -7,7 +7,7 @@ import android.view.View
 import android.widget.FrameLayout
 import com.petal.browser.media.PetalMediaBridge
 
-class PetalTabViewController @JvmOverloads constructor(
+open class PetalTabViewController @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
