@@ -24,7 +24,8 @@ open class PetalTabViewController @JvmOverloads constructor(
         val url: String = "",
         val title: String = "",
         val progress: Int = 100,
-        val isSecure: Boolean = false
+        val isSecure: Boolean = false,
+        val loading: Boolean = false
     )
 
     var onBrowserStateChanged: ((BrowserState) -> Unit)? = null

@@ -237,9 +237,12 @@ public class PetalDownloadListener implements DownloadListener {
                 contentDisposition,
                 mimeType,
                 contentLength,
-                confirmedFileName -> {
-                    BrowserUnit.download(context, downloadUrl, confirmedFileName, mimeType);
-                    return kotlin.Unit.INSTANCE;
+                new kotlin.jvm.functions.Function1<String, kotlin.Unit>() {
+                    @Override
+                    public kotlin.Unit invoke(String confirmedFileName) {
+                        BrowserUnit.download(context, downloadUrl, confirmedFileName, mimeType);
+                        return kotlin.Unit.INSTANCE;
+                    }
                 }
             );
         }

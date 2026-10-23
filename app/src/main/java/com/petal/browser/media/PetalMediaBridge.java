@@ -448,7 +448,7 @@ public class PetalMediaBridge {
             if (context instanceof Activity) {
                 Activity act = (Activity) context;
                 act.runOnUiThread(() -> {
-                    enterPipIfSupported(act, webView != null ? webView : geckoView);
+                    enterPipIfSupported(act, webView != null ? webView : (geckoView != null ? geckoView.getAlbumView() : null));
                 });
             }
         }
