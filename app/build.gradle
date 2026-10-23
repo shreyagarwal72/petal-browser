@@ -91,10 +91,14 @@ android {
             minifyEnabled true
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+            if (releaseStoreFile && file(releaseStoreFile).exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig null
+            }
         }
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig null
         }
     }
     lint {
