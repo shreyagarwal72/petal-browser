@@ -157,7 +157,7 @@ class PetalCustomTabActivity : ComponentActivity() {
                                         customTabId = tabId
                                         surface.bindTab(null)
                                         surface.attachLifecycle(this@PetalCustomTabActivity)
-                                        surface.onBrowserStateChanged = { state ->
+                                        surface.setOnBrowserStateChanged { state ->
                                             currentUrlState = state.url
                                             currentTitleState = state.title
                                             progressState = state.progress

@@ -32,12 +32,16 @@ open class PetalTabViewController @JvmOverloads constructor(
         fun onStateChanged(state: BrowserState)
     }
 
-    var onBrowserStateChanged: OnBrowserStateChangeListener? = null
+    private var stateChangeListener: OnBrowserStateChangeListener? = null
+
+    fun getOnBrowserStateChanged(): OnBrowserStateChangeListener? = stateChangeListener
+
     fun setOnBrowserStateChanged(listener: OnBrowserStateChangeListener?) {
-        this.onBrowserStateChanged = listener
+        this.stateChangeListener = listener
     }
+
     fun setOnBrowserStateChanged(listener: (BrowserState) -> Unit) {
-        this.onBrowserStateChanged = OnBrowserStateChangeListener { listener(it) }
+        this.stateChangeListener = OnBrowserStateChangeListener { listener(it) }
     }
 
     override fun getAlbumView(): View = this
@@ -116,6 +120,6 @@ open class PetalTabViewController @JvmOverloads constructor(
     override fun destroy() {}
 
     private fun notifyState() {
-        onBrowserStateChanged?.onStateChanged(currentState)
+        stateChangeListener?.onStateChanged(currentState)
     }
 }
