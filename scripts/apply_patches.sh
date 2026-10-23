@@ -160,6 +160,28 @@ else:
 "
 fi
 
+CHROMIUM_AEAD_CC="$CHROMIUM_SRC/crypto/aead.cc"
+if [[ -f "$CHROMIUM_AEAD_CC" ]]; then
+  echo "[2i/4] Injecting BRAVE_NONCE_LENGTH fallback definition into $CHROMIUM_AEAD_CC..."
+  python3 -c "
+p = '$CHROMIUM_AEAD_CC'
+with open(p, 'r') as f:
+    c = f.read()
+if 'BRAVE_NONCE_LENGTH' in c and '#define BRAVE_NONCE_LENGTH' not in c:
+    macro_def = '''
+#ifndef BRAVE_NONCE_LENGTH
+#define BRAVE_NONCE_LENGTH
+#endif
+'''
+    c = macro_def + '\n' + c
+    with open(p, 'w') as f:
+        f.write(c)
+    print('Successfully injected BRAVE_NONCE_LENGTH fallback into crypto/aead.cc')
+else:
+    print('BRAVE_NONCE_LENGTH already defined or not referenced in crypto/aead.cc')
+"
+fi
+
 # ─── Copy patches into brave-core patches directory ───────────────────────────
 PATCHES_SRC="$REPO_ROOT/patches/petal"
 PATCHES_DST="$BRAVE_CORE_DIR/patches/petal"
