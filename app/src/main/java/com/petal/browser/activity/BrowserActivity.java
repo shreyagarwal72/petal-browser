@@ -163,9 +163,7 @@ import com.petal.browser.view.MenuItem;
 import com.petal.browser.view.PetalToast;
 import com.petal.browser.view.AdapterRecord;
 import com.petal.browser.view.SwipeTouchListener;
-import dagger.hilt.android.AndroidEntryPoint;
 
-@AndroidEntryPoint
 public class BrowserActivity extends AppCompatActivity implements BrowserController {
 
     // Menus
