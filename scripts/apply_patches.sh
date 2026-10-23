@@ -86,12 +86,12 @@ if [[ -d "$BRAVE_DOWNLOAD_RES" ]]; then
   cp -r "$BRAVE_DOWNLOAD_RES/." "$CHROMIUM_DOWNLOAD_RES/"
 fi
 
-# ─── Fix print_rust_log_ffi.cc ShouldPrintRustLog definition ─────────────────
-# When Chromium compiles src/base/logging/rust_logger/print_rust_log_ffi.cc,
-# it does not include brave-core's chromium_src override.
-# Because Brave's patch added a call to ShouldPrintRustLog(severity),
-# we must ensure ShouldPrintRustLog is defined directly in
-# $CHROMIUM_SRC/base/logging/rust_logger/print_rust_log_ffi.cc.
+# ─── Fix plaster-modified base files ─────────────────────────────────────────
+# In upstream brave-core, plaster YAML rewriters in rewrite/base/ insert calls to
+# Brave helper functions (like ShouldPrintRustLog, IsMemoryAllocatorDumpNameInBraveAllowlist).
+# The definitions of these helpers live in brave/chromium_src overrides, but the upstream
+# files are compiled directly as part of //base:base.
+# We inject the helper definitions directly into the corresponding Chromium source files.
 CHROMIUM_RUST_LOG_CC="$CHROMIUM_SRC/base/logging/rust_logger/print_rust_log_ffi.cc"
 if [[ -f "$CHROMIUM_RUST_LOG_CC" ]]; then
   echo "[2g/4] Injecting ShouldPrintRustLog definition into $CHROMIUM_RUST_LOG_CC..."
@@ -115,14 +115,44 @@ bool ShouldPrintRustLog(int32_t& severity) {
 }
 }  // namespace
 '''
-    # Insert right inside namespace logging::internal { or before void print_rust_log
     if 'namespace logging::internal {' in c:
         c = c.replace('namespace logging::internal {', 'namespace logging::internal {\n' + helper)
     elif 'void print_rust_log(' in c:
         c = helper + '\n' + c
     with open(p, 'w') as f:
         f.write(c)
-    print('Successfully injected ShouldPrintRustLog definition into print_rust_log_ffi.cc')
+    print('Successfully injected ShouldPrintRustLog into print_rust_log_ffi.cc')
+" || true
+fi
+
+CHROMIUM_ALLOWLIST_CC="$CHROMIUM_SRC/base/trace_event/memory_infra_background_allowlist.cc"
+if [[ -f "$CHROMIUM_ALLOWLIST_CC" ]]; then
+  echo "[2h/4] Injecting IsMemoryAllocatorDumpNameInBraveAllowlist definition into $CHROMIUM_ALLOWLIST_CC..."
+  python3 -c "
+p = '$CHROMIUM_ALLOWLIST_CC'
+with open(p, 'r') as f:
+    c = f.read()
+if 'IsMemoryAllocatorDumpNameInBraveAllowlist' not in c:
+    helper = '''
+namespace {
+bool IsMemoryAllocatorDumpNameInBraveAllowlist(const std::string& name) {
+  if (name.starts_with(\"extensions/value_store/Extensions.Database.Open.BraveWallet/\")) {
+    return true;
+  }
+  if (name.starts_with(\"extensions/value_store/Extensions.Database.Open.AdBlock Custom Resources/\")) {
+    return true;
+  }
+  return false;
+}
+}  // namespace
+'''
+    if 'bool IsMemoryAllocatorDumpNameInAllowlist(' in c:
+        c = c.replace('bool IsMemoryAllocatorDumpNameInAllowlist(', helper + '\nbool IsMemoryAllocatorDumpNameInAllowlist(')
+    elif 'namespace base::trace_event {' in c:
+        c = c.replace('namespace base::trace_event {', 'namespace base::trace_event {\n' + helper)
+    with open(p, 'w') as f:
+        f.write(c)
+    print('Successfully injected IsMemoryAllocatorDumpNameInBraveAllowlist into memory_infra_background_allowlist.cc')
 " || true
 fi
 
