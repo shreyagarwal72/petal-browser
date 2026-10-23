@@ -44,25 +44,24 @@ object PetalAddressBarBridge {
     }
 
     @JvmStatic
-    @JvmOverloads
     fun bindAddressBar(
         composeView: ComposeView,
         activity: ComponentActivity,
         url: String,
         title: String,
-        isIncognito: Boolean = false,
-        isLoading: Boolean = false,
-        canGoBack: Boolean = true,
+        isIncognito: Boolean,
+        isLoading: Boolean,
+        canGoBack: Boolean,
         onBackClick: Runnable,
         onShareClick: Runnable,
         onAddressClick: Runnable,
-        onAiResearchClick: Runnable? = null,
-        favicon: android.graphics.Bitmap? = null,
-        progress: Float = 0f,
-        onSwipeNextTab: Runnable? = null,
-        onSwipePrevTab: Runnable? = null,
-        onPasteAndGo: java.util.function.Consumer<String>? = null,
-        onHardRefresh: Runnable? = null
+        onAiResearchClick: Runnable?,
+        favicon: android.graphics.Bitmap?,
+        progress: Float,
+        onSwipeNextTab: Runnable?,
+        onSwipePrevTab: Runnable?,
+        onPasteAndGo: java.util.function.Consumer<String>?,
+        onHardRefresh: Runnable?
     ) {
         bindAddressBar(
             composeView,
