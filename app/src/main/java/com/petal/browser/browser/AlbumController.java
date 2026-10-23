@@ -26,4 +26,10 @@ public interface AlbumController {
     default void setDesktopMode(boolean enabled) {}
     default void initPreferences() {}
     default Object getProfile() { return null; }
+
+    default String getPersistentUrl() { return getUrl(); }
+    default String getTabId() { return ""; }
+    default String getTabGroupId() { return null; }
+    default String getTabGroupTitle() { return null; }
+
 }

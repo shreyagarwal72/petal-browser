@@ -37,6 +37,36 @@ import java.lang.reflect.Method
 class PetalChromiumDownloadService : Service() {
 
     companion object {
+        // Download actions & extras for Petal UI & LiveAlertManager
+        const val ACTION_DOWNLOAD_START  = "com.petal.browser.download.START"
+        const val ACTION_DOWNLOAD_PAUSE  = "com.petal.browser.download.PAUSE"
+        const val ACTION_DOWNLOAD_RESUME = "com.petal.browser.download.RESUME"
+        const val ACTION_DOWNLOAD_CANCEL = "com.petal.browser.download.CANCEL"
+
+        const val EXTRA_DOWNLOAD_URL = "extra_download_url"
+        const val EXTRA_FILE_NAME    = "extra_file_name"
+        const val EXTRA_MIME_TYPE    = "extra_mime_type"
+
+        @JvmStatic
+        fun start(context: Context) {
+            try {
+                val intent = Intent(context, PetalChromiumDownloadService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "start: ${e.message}")
+            }
+        }
+
+        @JvmStatic
+        fun stopIfNoActiveDownloads(context: Context) {}
+
+        @JvmStatic
+        fun updatePersistentNotification(context: Context) {}
+
         private const val TAG = "PetalChromiumDlSvc"
         private const val NOTIFICATION_CHANNEL_ID = "petal_downloads"
         private const val NOTIFICATION_CHANNEL_NAME = "Petal Downloads"
@@ -110,9 +140,9 @@ class PetalChromiumDownloadService : Service() {
 
     private fun buildIdleNotification(): Notification =
         NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_download_notification)
-            .setContentTitle(getString(R.string.download_service_idle_title))
-            .setContentText(getString(R.string.download_service_idle_text))
+            .setSmallIcon(R.drawable.ic_download)
+            .setContentTitle("Petal Downloads")
+            .setContentText("Ready")
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setShowWhen(false)
@@ -142,8 +172,8 @@ class PetalChromiumDownloadService : Service() {
 
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(
-                if (isComplete) R.drawable.ic_download_done
-                else R.drawable.ic_download_notification
+                if (isComplete) R.drawable.ic_download
+                else R.drawable.ic_download
             )
             .setContentTitle(title)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -162,8 +192,8 @@ class PetalChromiumDownloadService : Service() {
         if (!isComplete && !isPaused) {
             builder.addAction(
                 NotificationCompat.Action(
-                    R.drawable.ic_pause,
-                    getString(R.string.download_pause),
+                    android.R.drawable.ic_media_pause,
+                    "Pause",
                     buildActionPendingIntent(ACTION_PAUSE, downloadId)
                 )
             )
@@ -171,8 +201,8 @@ class PetalChromiumDownloadService : Service() {
         if (!isComplete && isPaused) {
             builder.addAction(
                 NotificationCompat.Action(
-                    R.drawable.ic_play,
-                    getString(R.string.download_resume),
+                    android.R.drawable.ic_media_play,
+                    "Resume",
                     buildActionPendingIntent(ACTION_RESUME, downloadId)
                 )
             )
@@ -180,8 +210,8 @@ class PetalChromiumDownloadService : Service() {
         if (!isComplete) {
             builder.addAction(
                 NotificationCompat.Action(
-                    R.drawable.ic_close,
-                    getString(R.string.download_cancel),
+                    android.R.drawable.ic_menu_close_clear_cancel,
+                    "Cancel",
                     buildActionPendingIntent(ACTION_CANCEL, downloadId)
                 )
             )

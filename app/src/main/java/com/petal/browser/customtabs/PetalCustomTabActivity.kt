@@ -153,10 +153,9 @@ class PetalCustomTabActivity : ComponentActivity() {
                                     }
 
                                     val tabId = "tab_custom_${System.currentTimeMillis()}"
-                                    )
                                     val surface = PetalTabViewController(ctx).also { surface ->
                                         customTabId = tabId
-                                        surface.bindTab(sessionPair.first)
+                                        surface.bindTab(null)
                                         surface.attachLifecycle(this@PetalCustomTabActivity)
                                         surface.onBrowserStateChanged = { state ->
                                             currentUrlState = state.url

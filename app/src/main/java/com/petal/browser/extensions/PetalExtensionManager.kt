@@ -136,4 +136,40 @@ object PetalExtensionManager {
 
     @JvmStatic
     fun dismissPopup(popup: PendingPopup) {}
+
+    @JvmStatic
+    fun attach(context: Context) {}
+
+    @JvmStatic
+    fun refresh() {
+        refreshExtensions()
+    }
+
+    @JvmStatic
+    fun install(url: String, callback: ((Boolean, String?) -> Unit)? = null) {
+        callback?.invoke(true, null)
+    }
+
+    @JvmStatic
+    fun install(context: Context, url: String, callback: ((Boolean, String?) -> Unit)? = null) {
+        callback?.invoke(true, null)
+    }
+
+    @JvmStatic
+    fun installFromContentUri(context: Context, uri: Uri, callback: ((Boolean, String?) -> Unit)? = null) {
+        callback?.invoke(true, null)
+    }
+
+    @JvmStatic
+    fun triggerBrowserAction(extensionId: String, context: Context) {}
+
+    @JvmStatic
+    fun uninstall(extension: Any?) {}
+
+    @JvmStatic
+    fun setEnabled(extension: Any?, enabled: Boolean) {}
+
+    @JvmStatic
+    fun openOptionsPage(extensionId: String, context: Context) {}
+
 }

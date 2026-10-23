@@ -61,4 +61,10 @@ class PetalTabViewController @JvmOverloads constructor(
     val currentState: Any? get() = null
     fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) { callback(null) }
     fun setUserAgent(ua: String) {}
+
+    var progress: Int = 0
+    var isSecure: Boolean = false
+    fun attachLifecycle(owner: Any?) {}
+    fun processBackPressed(fallback: Boolean = false): Boolean = false
+
 }

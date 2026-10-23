@@ -233,7 +233,7 @@ fun PetalBrowserStoreScreen(
                                         isBusy = isExtensionBusy,
                                         onInstall = { addon ->
                                             PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.HEAVY_CLICK, 0.8f)
-                                            PetalExtensionManager.install(addon.downloadUrl) { success, _ ->
+                                            PetalExtensionManager.install(addon.downloadUrl) { success: Boolean, _: String? ->
                                                 coroutineScope.launch {
                                                     snackbarHostState.showSnackbar(
                                                         if (success) "Added ${addon.name} to Petal" else "Failed to install ${addon.name}"
