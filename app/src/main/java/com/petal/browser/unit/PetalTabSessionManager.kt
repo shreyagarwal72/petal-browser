@@ -266,18 +266,11 @@ object PetalTabSessionManager {
 
                 if (isForeground) {
                     val tabId = record.persistentTabId.ifBlank { "tab_restored_${System.currentTimeMillis()}_$i" }
-                    val sessionPair = com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
-                        context = activity,
-                        tabId = tabId,
-                        url = record.url.ifBlank { "about:blank" },
-                        title = record.title.ifBlank { activity.getString(R.string.app_name) },
-                        isIncognito = false,
-                        select = true
                     )
 
                     val geckoView = com.petal.browser.browser.PetalTabViewController(activity)
-                    geckoView.bindTab(sessionPair.first)
-                    geckoView.attachLifecycle(activity)
+                    
+                    
                     activity.observePetalTabSurface(geckoView)
                     if (!record.tabGroupId.isNullOrBlank()) {
                         geckoView.setTabGroupId(record.tabGroupId)
@@ -357,18 +350,11 @@ object PetalTabSessionManager {
         }
 
         val tabId = "tab_silently_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().substring(0, 8)}"
-        val sessionPair = com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
-            context = activity,
-            tabId = tabId,
-            url = safeUrl,
-            title = safeTitle,
-            isIncognito = isIncognito,
-            select = !keepOverviewOpen
         )
 
         val geckoView = com.petal.browser.browser.PetalTabViewController(activity)
-        geckoView.bindTab(sessionPair.first)
-        geckoView.attachLifecycle(activity)
+        
+        
         activity.observePetalTabSurface(geckoView)
         if (!groupId.isNullOrBlank()) {
             geckoView.setTabGroupId(groupId)

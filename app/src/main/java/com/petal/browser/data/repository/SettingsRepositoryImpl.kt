@@ -726,7 +726,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setCustomDohUrl(url: String) {
         sp.edit().putString("sp_custom_doh_url", url).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.syncPreferences(sp)
     }
 
     override suspend fun setTouchHaptics(enabled: Boolean) {

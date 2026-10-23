@@ -64,7 +64,6 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.petal.browser.engine.gecko.PetalGeckoRuntime
 import com.petal.browser.extensions.PetalBuiltInExtensionManager
 import com.petal.browser.extensions.PetalExtensionManager
 import com.petal.browser.ui.components.ExpressiveHeader

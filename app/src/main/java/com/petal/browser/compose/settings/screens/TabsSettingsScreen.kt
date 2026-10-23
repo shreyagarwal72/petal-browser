@@ -182,10 +182,10 @@ fun TabsSettingsScreen(
                     )
 
                     var memorySaverMode by remember {
-                        mutableStateOf(sp.getString(com.petal.browser.engine.gecko.PetalTabSuspender.PREF_MEMORY_SAVER_MODE, "balanced") ?: "balanced")
+                        mutableStateOf(sp.getString("sp_petal_memory_saver_mode", "balanced") ?: "balanced")
                     }
                     var suspendTimeout by remember {
-                        mutableStateOf(sp.getString(com.petal.browser.engine.gecko.PetalTabSuspender.PREF_TAB_SUSPEND_TIMEOUT, "15") ?: "15")
+                        mutableStateOf(sp.getString("sp_petal_tab_suspend_timeout", "15") ?: "15")
                     }
 
                     com.petal.browser.ui.containment.PetalGroup(rowCount = 2) { index, position ->
@@ -200,7 +200,7 @@ fun TabsSettingsScreen(
                                     onCheckedChange = { isEnabled ->
                                         val newMode = if (isEnabled) "balanced" else "off"
                                         memorySaverMode = newMode
-                                        sp.edit().putString(com.petal.browser.engine.gecko.PetalTabSuspender.PREF_MEMORY_SAVER_MODE, newMode).apply()
+                                        sp.edit().putString("sp_petal_memory_saver_mode", newMode).apply()
                                     }
                                 )
                             }
@@ -219,7 +219,7 @@ fun TabsSettingsScreen(
                                                 else -> "15"
                                             }
                                             suspendTimeout = next
-                                            sp.edit().putString(com.petal.browser.engine.gecko.PetalTabSuspender.PREF_TAB_SUSPEND_TIMEOUT, next).apply()
+                                            sp.edit().putString("sp_petal_tab_suspend_timeout", next).apply()
                                         }
                                     }
                                 )

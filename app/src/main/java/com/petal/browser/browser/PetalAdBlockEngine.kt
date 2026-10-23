@@ -137,7 +137,7 @@ object PetalAdBlockEngine {
             .putString("sp_adblock_protection_mode", mode.id)
             .apply()
         try {
-            com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+            com.petal.browser.bridge.NativePrefBridge.syncPreferences(sp)
         } catch (_: Throwable) {}
     }
 

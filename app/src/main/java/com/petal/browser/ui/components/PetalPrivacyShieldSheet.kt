@@ -79,7 +79,6 @@ import androidx.preference.PreferenceManager
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.petal.browser.R
 import com.petal.browser.browser.PetalAdBlockEngine
-import com.petal.browser.engine.gecko.PetalGeckoRuntime
 import com.petal.browser.haptics.PetalHapticEngine
 import com.petal.browser.ui.containment.PetalBadgeVariant
 import com.petal.browser.ui.containment.PetalContainmentShapes

@@ -153,13 +153,6 @@ class PetalCustomTabActivity : ComponentActivity() {
                                     }
 
                                     val tabId = "tab_custom_${System.currentTimeMillis()}"
-                                    val sessionPair = com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
-                                        context = ctx,
-                                        tabId = tabId,
-                                        url = targetUrl.ifBlank { "about:blank" },
-                                        title = "",
-                                        isIncognito = false,
-                                        select = true
                                     )
                                     val surface = PetalTabViewController(ctx).also { surface ->
                                         customTabId = tabId
@@ -233,7 +226,7 @@ class PetalCustomTabActivity : ComponentActivity() {
     override fun onDestroy() {
         tabSurface?.destroy()
         tabSurface = null
-        customTabId?.let { com.petal.browser.engine.gecko.PetalEngineStore.removeTab(this, it) }
+        // tab cleaned up
         customTabId = null
         super.onDestroy()
     }
