@@ -3,6 +3,7 @@ package com.petal.browser.browser
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.AttributeSet
+import android.view.View
 import android.widget.FrameLayout
 import com.petal.browser.media.PetalMediaBridge
 
@@ -17,7 +18,7 @@ class PetalTabViewController @JvmOverloads constructor(
     private var tabId: String = ""
     private var tabGroupId: String? = null
     private var tabGroupTitle: String? = null
-    private val mediaBridge = PetalMediaBridge()
+    private val mediaBridge = PetalMediaBridge(context)
 
     data class BrowserState(
         val url: String = "",
@@ -28,6 +29,7 @@ class PetalTabViewController @JvmOverloads constructor(
 
     var onBrowserStateChanged: ((BrowserState) -> Unit)? = null
 
+    override fun getAlbumView(): View = this
     override fun getUrl(): String? = currentUrl
     fun setUrl(url: String?) {
         currentUrl = url
@@ -44,9 +46,9 @@ class PetalTabViewController @JvmOverloads constructor(
     override fun getTabId(): String = tabId
     fun setTabId(id: String) { tabId = id }
     override fun getTabGroupId(): String? = tabGroupId
-    fun setTabGroupId(id: String?) { tabGroupId = id }
+    override fun setTabGroupId(id: String?) { tabGroupId = id }
     override fun getTabGroupTitle(): String? = tabGroupTitle
-    fun setTabGroupTitle(title: String?) { tabGroupTitle = title }
+    override fun setTabGroupTitle(title: String?) { tabGroupTitle = title }
 
     fun getFavicon(): Bitmap? = null
     fun getCachedPreviewBitmap(): Bitmap? = null
@@ -91,16 +93,16 @@ class PetalTabViewController @JvmOverloads constructor(
         return fallback
     }
 
-    fun canGoBack(): Boolean = false
-    fun goBack() {}
-    fun reload() {}
-    fun loadUrl(url: String) {
+    override fun canGoBack(): Boolean = false
+    override fun goBack() {}
+    override fun reload() {}
+    override fun loadUrl(url: String) {
         currentUrl = url
         notifyState()
     }
-    fun activate() {}
-    fun deactivate() {}
-    fun destroy() {}
+    override fun activate() {}
+    override fun deactivate() {}
+    override fun destroy() {}
 
     private fun notifyState() {
         onBrowserStateChanged?.invoke(currentState)

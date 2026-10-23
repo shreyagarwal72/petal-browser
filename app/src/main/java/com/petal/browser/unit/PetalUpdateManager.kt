@@ -1,6 +1,7 @@
 package com.petal.browser.unit
 
 import android.content.Context
+import android.content.Intent
 import android.os.Environment
 import android.util.Log
 import androidx.preference.PreferenceManager

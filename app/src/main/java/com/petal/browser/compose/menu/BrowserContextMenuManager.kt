@@ -207,11 +207,7 @@ object BrowserContextMenuManager {
 
                 override fun onOpenInNewTabInGroup() {
                     val currentAlbum = activity.currentAlbumController
-                    val currentGeckoView = currentAlbum as? com.petal.browser.browser.AlbumController
-                    val currentTabSurface = currentAlbum as? com.petal.browser.browser.PetalTabViewController
-                    val currentTabId = currentTabSurface?.getTabId()
-                        ?: currentGeckoView?.getTabId()
-                        ?: currentAlbum?.hashCode()?.toString()
+                    val currentTabId = currentAlbum?.tabId?.ifBlank { currentAlbum.hashCode().toString() }
                     val existingGroup = if (currentTabId != null) {
                         com.petal.browser.compose.tabs.PetalTabGroupManager.findGroupByTabId(activity, currentTabId)
                     } else null
@@ -501,11 +497,7 @@ object BrowserContextMenuManager {
 
                 override fun onOpenInNewTabInGroup() {
                     val currentAlbum = activity.currentAlbumController
-                    val currentGeckoView = currentAlbum as? com.petal.browser.browser.AlbumController
-                    val currentTabSurface = currentAlbum as? com.petal.browser.browser.PetalTabViewController
-                    val currentTabId = currentTabSurface?.getTabId()
-                        ?: currentGeckoView?.getTabId()
-                        ?: currentAlbum?.hashCode()?.toString()
+                    val currentTabId = currentAlbum?.tabId?.ifBlank { currentAlbum.hashCode().toString() }
                     val existingGroup = if (currentTabId != null) {
                         com.petal.browser.compose.tabs.PetalTabGroupManager.findGroupByTabId(activity, currentTabId)
                     } else null

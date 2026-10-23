@@ -242,12 +242,9 @@ object PetalTabSwitcherBridge {
                                 }
                             if (targetAlbum != null) {
                                 tabItems.removeAll { it.id == tabItem.id }
-                                if (targetAlbum is com.petal.browser.browser.AlbumController) {
-                                    com.petal.browser.unit.TabThumbnailCache.remove(targetAlbum.getTabId())
-                                } else if (targetAlbum is com.petal.browser.browser.PetalTabViewController) {
-                                    targetAlbum.getTabId()?.let(com.petal.browser.unit.TabThumbnailCache::remove)
-                                } else if (targetAlbum is PlaceholderAlbumController) {
-                                    com.petal.browser.unit.TabThumbnailCache.remove(targetAlbum.getTabId())
+                                val targetId = targetAlbum.getTabId()
+                                if (!targetId.isNullOrBlank()) {
+                                    com.petal.browser.unit.TabThumbnailCache.remove(targetId)
                                 }
 
                                 com.petal.browser.unit.TabThumbnailCache.remove(tabItem.id)

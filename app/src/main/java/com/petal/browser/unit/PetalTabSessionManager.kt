@@ -11,7 +11,6 @@ import com.petal.browser.activity.BrowserActivity
 import com.petal.browser.browser.AlbumController
 import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
-import com.petal.browser.controller.BrowserWebViewController
 import com.petal.browser.database.RecordAction
 import java.util.Arrays
 import java.util.concurrent.Executors
@@ -84,43 +83,19 @@ object PetalTabSessionManager {
                     if (isIncognito) continue
 
                     val rawUrl = controller.url ?: ""
-                    // Prefer persistentUrl for GeckoView tabs: currentUrl can be reset to
-                    // "about:blank" while a page is loading (GeckoView compositor reset).
-                    // persistentUrl holds the last real URL that was explicitly navigated to,
-                    // so we never save "about:blank" when the tab actually has real content.
-                    val effectiveUrl = when {
-                        controller is com.petal.browser.browser.PetalTabViewController &&
-                        controller.url.isNotBlank() &&
-                        !controller.url.equals("about:blank", ignoreCase = true) ->
-                            controller.url
-                        controller is AlbumController &&
-                        controller.url.isNotBlank() &&
-                        !controller.url.equals("about:blank", ignoreCase = true) ->
-                            controller.url
-                        rawUrl.isNotBlank() && !rawUrl.equals("about:blank", ignoreCase = true) ->
-                            rawUrl
-                        else -> rawUrl
+                    val persistent = controller.persistentUrl ?: rawUrl
+                    val effectiveUrl = if (persistent.isNotBlank() && !persistent.equals("about:blank", ignoreCase = true)) {
+                        persistent
+                    } else if (rawUrl.isNotBlank() && !rawUrl.equals("about:blank", ignoreCase = true)) {
+                        rawUrl
+                    } else {
+                        rawUrl
                     }
 
                     val rawTitle = controller.title ?: ""
-                    val tabId = when (controller) {
-                        is com.petal.browser.browser.PetalTabViewController -> controller.getTabId() ?: controller.hashCode().toString()
-                        is AlbumController -> controller.getTabId()
-                        is PlaceholderAlbumController -> controller.getTabId()
-                        else -> controller.hashCode().toString()
-                    }
-                    val groupId = when (controller) {
-                        is com.petal.browser.browser.PetalTabViewController -> controller.getTabGroupId()
-                        is AlbumController -> controller.getTabGroupId()
-                        is PlaceholderAlbumController -> controller.getTabGroupId()
-                        else -> null
-                    }
-                    val groupTitle = when (controller) {
-                        is com.petal.browser.browser.PetalTabViewController -> controller.getTabGroupTitle()
-                        is AlbumController -> controller.getTabGroupTitle()
-                        is PlaceholderAlbumController -> controller.getTabGroupTitle()
-                        else -> null
-                    }
+                    val tabId = controller.tabId.ifBlank { controller.hashCode().toString() }
+                    val groupId = controller.tabGroupId
+                    val groupTitle = controller.tabGroupTitle
                     val isActiveTab = (controller == active)
 
                     val record = TabSessionRecord(

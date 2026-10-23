@@ -124,6 +124,16 @@ public class PetalMediaBridge {
         return listener;
     }
 
+    public PetalMediaBridge() {
+        this.context = null;
+        this.listener = null;
+    }
+
+    public PetalMediaBridge(Context context) {
+        this.context = context;
+        this.listener = null;
+    }
+
     public PetalMediaBridge(Context context, MediaStateListener listener) {
         this(context, (WebView) null, listener);
     }
