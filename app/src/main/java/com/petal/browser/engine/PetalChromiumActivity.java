@@ -43,8 +43,8 @@ public class PetalChromiumActivity extends Activity /* extends org.chromium.chro
 
     private static final String TAG = "PetalChromiumActivity";
 
-    private PetalTabManager petalTabManager;
-    private PetalShieldsObserver petalShieldsObserver;
+    private Object petalTabManager;
+    private Object petalShieldsObserver;
     private View petalComposeShell;
 
     // -------------------------------------------------------------------------
@@ -79,10 +79,10 @@ public class PetalChromiumActivity extends Activity /* extends org.chromium.chro
         }
 
         // Initialise Brave Shields → Petal Shields UI bridge
-        petalShieldsObserver = new PetalShieldsObserver(this);
+        // petalShieldsObserver = new PetalShieldsObserver(this);
 
         // Initialise Petal tab manager (wraps Chromium TabModelSelector)
-        petalTabManager = new PetalTabManager(this);
+        // petalTabManager = new PetalTabManager(this);
 
         Log.i(TAG, "Petal native bridges initialised");
     }

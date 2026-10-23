@@ -2563,12 +2563,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         updateBackCallbackState();
         if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
             com.petal.browser.browser.PetalTabViewController tabSurface = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
-            com.petal.browser.browser.PetalTabViewController.State s = tabSurface.currentState();
-            if (s != null && Boolean.TRUE.equals(s.getLoading())) {
-                updateProgress(Math.max(10, s.getProgress()));
-            } else {
-                updateProgress(100);
-            }
+            updateProgress(tabSurface.getProgress());
         }
         View refreshBarCompose = findViewById(R.id.refresh_bar_compose);
         if (refreshBarCompose != null) {
@@ -6879,91 +6874,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     /** Adds a prepared Android Components window request as a normal BrowserStore tab. */
     public synchronized void adoptPreparedWindow(
             com.petal.browser.browser.PetalTabViewController source,
-        mozilla.components.concept.engine.window.WindowRequest request) {
-        mozilla.components.concept.engine.EngineSession engineSession = null;
-        com.petal.browser.browser.PetalTabViewController tabSurface = null;
-        String tabId = null;
-        boolean tabRegistered = false;
-        try {
-            android.content.SharedPreferences sp = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this);
-            boolean blockPopups = sp.getBoolean("sp_block_popups", sp.getBoolean("profileStandard_javascriptPopUp", true));
-            String url = request.getUrl();
-            if (url == null || url.trim().isEmpty()) url = "about:blank";
-
-            // If popup blocking is active, block unsolicited popups and ads
-            if (blockPopups && !url.equals("about:blank")) {
-                String sourceUrl = source != null ? source.getUrl() : null;
-                boolean shouldBlock = com.petal.browser.browser.PetalAdBlockEngine.shouldBlockUrl(this, url, sourceUrl);
-                if (shouldBlock) {
-                    android.util.Log.i("BrowserActivity", "Blocked popup window request to: " + url);
-                    try {
-                        engineSession = request.prepare();
-                        if (engineSession != null) engineSession.close();
-                    } catch (Throwable ignored) {}
-                    final String blockedUrl = url;
-                    runOnUiThread(() -> {
-                        String domain = blockedUrl;
-                        try {
-                            android.net.Uri u = android.net.Uri.parse(blockedUrl);
-                            if (u != null && u.getHost() != null) domain = u.getHost();
-                        } catch (Throwable ignored) {}
-                        com.petal.browser.view.PetalToast.show(
-                                BrowserActivity.this,
-                                getString(R.string.ui_block_popup_windows) + ": " + domain,
-                                com.petal.browser.view.PetalToast.LENGTH_LONG,
-                                getString(R.string.app_ok),
-                                () -> addAlbum(null, blockedUrl, false, source != null && source.isIncognito())
-                        );
-                    });
-                    return;
-                }
-            }
-
-            engineSession = request.prepare();
-            boolean isIncognito = source.isIncognito();
-            tabId = "tab_" + System.currentTimeMillis() + "_" +
-                    Math.abs(java.util.UUID.randomUUID().hashCode());
-            mozilla.components.browser.state.state.TabSessionState popupTab =
-                    com.petal.browser.engine.gecko.PetalEngineStore.adoptPreparedSession(
-                            this, tabId, url, getString(R.string.app_name),
-                            isIncognito, engineSession, true
-                    );
-            tabRegistered = true;
-
-            tabSurface = new com.petal.browser.browser.PetalTabViewController(this);
-            tabSurface.bindTab(popupTab);
-            tabSurface.attachLifecycle(this);
-            observePetalTabSurface(tabSurface);
-            tabSurface.setPredecessor(source);
-            tabSurface.markAdoptedNavigation(url);
-            int sourceIndex = BrowserContainer.indexOf(source);
-            BrowserContainer.add(tabSurface, sourceIndex >= 0 ? sourceIndex + 1 : BrowserContainer.size());
-            hideOverview();
-            tabSurface.activate();
-            if (dialogOverview != null) dialogOverview.cancel();
-            request.start();
-            showAlbum(tabSurface);
-            updateOmniBox();
-            updatePersistentBottomNav();
-            updateBackCallbackState();
-            saveOpenedTabs();
-        } catch (Throwable error) {
-            android.util.Log.e("BrowserActivity", "Failed to adopt Android Components window request", error);
-            if (tabSurface != null) {
-                if (tab_container != null) tab_container.removeView(tabSurface.getAlbumView());
-                detachTabSurface(tabSurface);
-                BrowserContainer.remove(tabSurface);
-                tabSurface.destroy();
-                if (currentAlbumController == tabSurface) showAlbum(source);
-            } else if (tabRegistered && tabId != null) {
-                com.petal.browser.engine.gecko.PetalEngineStore.removeTab(this, tabId);
-            } else if (engineSession != null) {
-                try { engineSession.close(); } catch (Throwable ignored) {}
-            }
-            updateOmniBox();
-            updatePersistentBottomNav();
-            updateBackCallbackState();
-        }
+            Object request) {
     }
 
     /** Handles content calling window.close() from an Android Components tab. */

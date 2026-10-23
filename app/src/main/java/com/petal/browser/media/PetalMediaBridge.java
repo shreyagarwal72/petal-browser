@@ -213,13 +213,13 @@ public class PetalMediaBridge {
     }
 
     public void playMedia() {
-        if (activeGeckoMediaSession != null) {
+        if (false) {
             try {
                 activeGeckoMediaSession.play();
                 return;
             } catch (Exception ignored) {}
         }
-        if (activeEngineMediaController != null) {
+        if (false) {
             try {
                 activeEngineMediaController.play();
                 return;
@@ -237,13 +237,13 @@ public class PetalMediaBridge {
     }
 
     public void pauseMedia() {
-        if (activeGeckoMediaSession != null) {
+        if (false) {
             try {
                 activeGeckoMediaSession.pause();
                 return;
             } catch (Exception ignored) {}
         }
-        if (activeEngineMediaController != null) {
+        if (false) {
             try {
                 activeEngineMediaController.pause();
                 return;
@@ -324,13 +324,13 @@ public class PetalMediaBridge {
 
     public void toggleMute() {
         isMutedState = !isMutedState;
-        if (activeGeckoMediaSession != null) {
+        if (false) {
             try {
                 activeGeckoMediaSession.muteAudio(isMutedState);
                 return;
             } catch (Exception ignored) {}
         }
-        if (activeEngineMediaController != null) {
+        if (false) {
             try {
                 activeEngineMediaController.muteAudio(isMutedState);
                 return;
@@ -347,7 +347,7 @@ public class PetalMediaBridge {
     }
 
     public void skip(int deltaSeconds) {
-        if (activeGeckoMediaSession != null) {
+        if (false) {
             try {
                 double target = Math.max(0.0, lastKnownPositionSec + deltaSeconds);
                 if (lastKnownDurationSec > 0.0) {
@@ -358,7 +358,7 @@ public class PetalMediaBridge {
                 return;
             } catch (Exception ignored) {}
         }
-        if (activeEngineMediaController != null) {
+        if (false) {
             try {
                 double target = Math.max(0.0, lastKnownPositionSec + deltaSeconds);
                 if (lastKnownDurationSec > 0.0) target = Math.min(lastKnownDurationSec, target);
@@ -385,7 +385,7 @@ public class PetalMediaBridge {
     }
 
     public void seekMediaTo(long positionMs) {
-        if (activeGeckoMediaSession != null) {
+        if (false) {
             try {
                 double target = positionMs / 1000.0;
                 activeGeckoMediaSession.seekTo(target, false);
@@ -393,7 +393,7 @@ public class PetalMediaBridge {
                 return;
             } catch (Exception ignored) {}
         }
-        if (activeEngineMediaController != null) {
+        if (false) {
             try {
                 double target = positionMs / 1000.0;
                 activeEngineMediaController.seekTo(target, false);
