@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -89,7 +89,7 @@ jobs:
           ls -lh petal-browser-arm64-signed.apk
 
       - name: 📦 Upload APK Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: petal-browser-brave-arm64
           path: petal-browser-arm64-signed.apk
