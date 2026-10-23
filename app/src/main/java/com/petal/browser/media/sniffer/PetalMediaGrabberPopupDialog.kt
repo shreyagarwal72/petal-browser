@@ -510,12 +510,11 @@ fun PetalMediaGrabberPopupDialog(
                                                         PetalFetchDownloadBridge.enqueueMediaDownload(
                                                             context = context,
                                                             url = selFmt.formatId,
-                                                            fileName = info.title.ifBlank { "Petal media" },
+                                                            suggestedFileName = info.title.ifBlank { "Petal media" },
                                                             mimeType = mimeType,
                                                             userAgent = android.webkit.WebSettings.getDefaultUserAgent(context),
-                                                            cookie = cookies,
-                                                            headers = mapOf("Referer" to currentPageUrl),
-                                                            onFailed = { socialState = GrabberSocialState.Failed("Download failed to queue.") }
+                                                            cookies = cookies,
+                                                            referrer = currentPageUrl
                                                         )
                                                     } else {
                                                         PetalSocialDownloadService.enqueue(

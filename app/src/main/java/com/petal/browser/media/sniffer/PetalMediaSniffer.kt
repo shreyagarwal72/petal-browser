@@ -163,7 +163,7 @@ object PetalMediaSniffer {
                 userAgent = userAgent,
                 cookies = cookie
             )
-            onEnqueued(id)
+            onEnqueued?.invoke(id)
         } catch (_: RuntimeException) {
             // Download initiation must never crash GeckoView/browser UI.
             onFailed?.invoke()

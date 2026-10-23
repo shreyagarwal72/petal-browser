@@ -52,7 +52,7 @@ class PetalTabViewController @JvmOverloads constructor(
 
     override fun getFavicon(): Bitmap? = null
     fun getCachedPreviewBitmap(): Bitmap? = null
-    fun getMediaBridge(): PetalMediaBridge = mediaBridge
+    override fun getMediaBridge(): PetalMediaBridge = mediaBridge
     fun isAdoptedPopup(): Boolean = false
     fun captureFullPageBitmap(callback: (Bitmap?) -> Unit) { callback(null) }
     override fun setDesktopMode(enabled: Boolean) {}

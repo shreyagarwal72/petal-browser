@@ -211,7 +211,7 @@ object PetalPrivacyShieldSheet {
                                                 if (current is com.petal.browser.browser.PetalTabViewController) {
                                                     current.reload()
                                                 } else if (current is com.petal.browser.browser.AlbumController) {
-                                                    current.initPreferences(pageUrl)
+                                                    current.initPreferences()
                                                     current.reload()
                                                 }
                                             }

@@ -1,6 +1,5 @@
 /*
 
-import com.petal.browser.ui.containment.PetalSettingsSection
  * MediaSettingsScreen.kt
  * ─────────────────────────────────────────────────────────────────────────
  * Material 3 Expressive Media & Sniffer Settings Screen for Petal Browser.
@@ -11,6 +10,7 @@ import com.petal.browser.ui.containment.PetalSettingsSection
  */
 
 package com.petal.browser.compose.settings.screens
+import com.petal.browser.ui.containment.PetalSettingsSection
 import com.petal.browser.ui.components.scrollMotionBlur
 
 import android.content.Context
