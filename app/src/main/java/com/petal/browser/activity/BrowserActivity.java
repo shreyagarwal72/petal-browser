@@ -242,7 +242,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     }
 
     public void observePetalTabSurface(com.petal.browser.browser.PetalTabViewController surface) {
-        surface.setOnBrowserStateChanged(state -> {
+        surface.setOnBrowserStateChanged((com.petal.browser.browser.PetalTabViewController.BrowserState state) -> {
             runOnUiThread(() -> {
                 if (currentAlbumController != surface) return;
                 String stateUrl = state.getUrl();
@@ -260,7 +260,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     updateProgress(100);
                 }
             });
-            return kotlin.Unit.INSTANCE;
         });
     }
 
@@ -5423,7 +5422,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 BrowserActivity.this,
                 () -> {
                     showAlbum(currentAlbumController);
-                    return kotlin.Unit.INSTANCE;
                 },
                 shortcut -> {
                     // Do not reuse the currently attached GeckoSession while the
@@ -5433,7 +5431,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     if (shortcut != null && shortcut.getUrl() != null && !shortcut.getUrl().trim().isEmpty()) {
                         addAlbum(shortcut.getLabel(), shortcut.getUrl().trim(), true);
                     }
-                    return kotlin.Unit.INSTANCE;
                 }
             );
             presentComposeScreen(accountSyncView);

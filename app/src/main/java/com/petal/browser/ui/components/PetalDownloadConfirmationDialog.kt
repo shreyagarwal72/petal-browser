@@ -487,6 +487,25 @@ object PetalDownloadDialogBridge {
         contentDisposition: String?,
         mimeType: String?,
         contentLength: Long,
+        onConfirmDownload: java.util.function.Consumer<String>
+    ) {
+        showDownloadConfirmation(
+            context,
+            url,
+            contentDisposition,
+            mimeType,
+            contentLength,
+            { fileName -> onConfirmDownload.accept(fileName) }
+        )
+    }
+
+    @JvmStatic
+    fun showDownloadConfirmation(
+        context: Context,
+        url: String,
+        contentDisposition: String?,
+        mimeType: String?,
+        contentLength: Long,
         onConfirmDownload: (String) -> Unit
     ) {
         val guessedFileName = com.petal.browser.unit.HelperUnit.resolveFileName(url, contentDisposition, mimeType)

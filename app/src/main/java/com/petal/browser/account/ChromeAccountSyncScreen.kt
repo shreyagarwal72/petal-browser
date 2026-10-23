@@ -167,8 +167,8 @@ fun getPresetMaterialIcon(presetId: String): androidx.compose.ui.graphics.vector
 @Composable
 fun PetalUserProfileScreen(
     backgroundSnapshot: androidx.compose.ui.graphics.ImageBitmap? = null,
-    onBack: () -> Unit,
-    onOpenOAuth: (PetalShortcut) -> Unit = {},
+    onBack: Runnable,
+    onOpenOAuth: java.util.function.Consumer<com.petal.browser.compose.home.PetalShortcut> = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -219,8 +219,8 @@ fun PetalUserProfileScreen(
                     isLoading = isLoading,
                     isExpressiveFeatureTiles = isExpressiveFeatureTiles,
                     snackbarHostState = snackbarHostState,
-                    onBack = onBack,
-                    onOpenOAuth = onOpenOAuth,
+                    onBack = { onBack.run() },
+                    onOpenOAuth = { onOpenOAuth.accept(it) },
                     onOpenAppLockConfig = { showAppLockConfigPage = true },
                     modifier = modifier
                 )
@@ -256,8 +256,8 @@ private fun RenderUserProfileContent(
     isLoading: Boolean,
     isExpressiveFeatureTiles: Boolean,
     snackbarHostState: SnackbarHostState,
-    onBack: () -> Unit,
-    onOpenOAuth: (PetalShortcut) -> Unit,
+    onBack: Runnable,
+    onOpenOAuth: java.util.function.Consumer<com.petal.browser.compose.home.PetalShortcut>,
     onOpenAppLockConfig: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -326,7 +326,7 @@ private fun RenderUserProfileContent(
             com.petal.browser.ui.components.ExpressiveHeader(
                 title = "User Accounts & Profile",
                 subtitle = "Manage account & preferences",
-                onBack = onBack,
+                onBack = { onBack.run() },
                 maxTitleLines = 1,
                 maxSubtitleLines = 1
             )
@@ -909,8 +909,8 @@ object PetalAccountSyncBridge {
     @JvmStatic
     fun createAccountSyncView(
         activity: ComponentActivity,
-        onBack: () -> Unit,
-        onOpenOAuth: (PetalShortcut) -> Unit
+        onBack: Runnable,
+        onOpenOAuth: java.util.function.Consumer<com.petal.browser.compose.home.PetalShortcut>
     ): ComposeView {
         val rootView = activity.findViewById<android.view.View>(android.R.id.content) ?: activity.window.decorView
         com.petal.browser.predictive.PetalContentSnapshot.capture(rootView)
