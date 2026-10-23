@@ -166,24 +166,27 @@ if [[ -f "$CHROMIUM_AEAD_CC" ]]; then
   python3 -c "
 p = '$CHROMIUM_AEAD_CC'
 with open(p, 'r') as f:
-    c = f.read()
+    content = f.read()
 
-# Replace any bare 'BRAVE_NONCE_LENGTH' statement with a valid statement or 12;
-import re
-# Ensure fallback macro definition is at top
-if '#define BRAVE_NONCE_LENGTH' not in c:
-    macro_def = '''
-#ifndef BRAVE_NONCE_LENGTH
-#define BRAVE_NONCE_LENGTH 12
-#endif
-'''
-    c = macro_def + '\n' + c
+lines = content.split('\n')
+fixed_lines = []
+has_macro = any('#define BRAVE_NONCE_LENGTH' in l for l in lines)
 
-# If BRAVE_NONCE_LENGTH is standing alone on a line without a semicolon, add the semicolon
-c = re.sub(r'(\bBRAVE_NONCE_LENGTH\b)(?!\s*[;,\(\)\+\-\*\/\=\>\<\&\|\:\?])', r'\1;', c)
+for line in lines:
+    stripped = line.strip()
+    if stripped == 'BRAVE_NONCE_LENGTH':
+        indent = line[:len(line) - len(line.lstrip())]
+        fixed_lines.append(indent + 'BRAVE_NONCE_LENGTH;')
+    else:
+        fixed_lines.append(line)
+
+fixed_content = '\n'.join(fixed_lines)
+if not has_macro:
+    macro_block = '#ifndef BRAVE_NONCE_LENGTH\n#define BRAVE_NONCE_LENGTH 12\n#endif\n\n'
+    fixed_content = macro_block + fixed_content
 
 with open(p, 'w') as f:
-    f.write(c)
+    f.write(fixed_content)
 print('Successfully verified and fixed BRAVE_NONCE_LENGTH in crypto/aead.cc')
 "
 fi
