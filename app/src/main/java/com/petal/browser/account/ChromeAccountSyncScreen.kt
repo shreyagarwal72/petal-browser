@@ -167,8 +167,8 @@ fun getPresetMaterialIcon(presetId: String): androidx.compose.ui.graphics.vector
 @Composable
 fun PetalUserProfileScreen(
     backgroundSnapshot: androidx.compose.ui.graphics.ImageBitmap? = null,
-    onBack: Runnable,
-    onOpenOAuth: java.util.function.Consumer<com.petal.browser.compose.home.PetalShortcut> = {},
+    onBack: () -> Unit,
+    onOpenOAuth: (com.petal.browser.compose.home.PetalShortcut) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -219,8 +219,8 @@ fun PetalUserProfileScreen(
                     isLoading = isLoading,
                     isExpressiveFeatureTiles = isExpressiveFeatureTiles,
                     snackbarHostState = snackbarHostState,
-                    onBack = { onBack.run() },
-                    onOpenOAuth = { onOpenOAuth.accept(it) },
+                    onBack = onBack,
+                    onOpenOAuth = onOpenOAuth,
                     onOpenAppLockConfig = { showAppLockConfigPage = true },
                     modifier = modifier
                 )
@@ -256,8 +256,8 @@ private fun RenderUserProfileContent(
     isLoading: Boolean,
     isExpressiveFeatureTiles: Boolean,
     snackbarHostState: SnackbarHostState,
-    onBack: Runnable,
-    onOpenOAuth: java.util.function.Consumer<com.petal.browser.compose.home.PetalShortcut>,
+    onBack: () -> Unit,
+    onOpenOAuth: (com.petal.browser.compose.home.PetalShortcut) -> Unit,
     onOpenAppLockConfig: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -326,7 +326,7 @@ private fun RenderUserProfileContent(
             com.petal.browser.ui.components.ExpressiveHeader(
                 title = "User Accounts & Profile",
                 subtitle = "Manage account & preferences",
-                onBack = { onBack.run() },
+                onBack = onBack,
                 maxTitleLines = 1,
                 maxSubtitleLines = 1
             )
@@ -974,7 +974,7 @@ object PetalAccountSyncBridge {
                     fontRoundness = fontRoundnessVal
                 ) {
                     com.petal.browser.sync.PetalSyncScreen(
-                        onBack = onBack
+                        onBack = { onBack.run() }
                     )
                 }
             }
