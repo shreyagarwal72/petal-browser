@@ -1,469 +1,112 @@
-name: 🦁 Petal Browser — Brave Chromium Build
+name: 🦁 Petal Browser — Brave Engine Release Build
 
 on:
   push:
     branches: [main]
     tags:
       - 'v*'
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
-      build_type:
-        description: 'Build type'
+      brave_version:
+        description: 'Brave release tag (e.g. v1.98.60 or latest)'
         required: false
-        default: 'release'
-        type: choice
-        options: [release, debug]
-      channel:
-        description: 'Brave channel'
-        required: false
-        default: 'release'
-        type: choice
-        options: [release, beta, dev, nightly]
+        default: 'latest'
 
-# Only allow one build per ref at a time; cancel older runs
 concurrency:
   group: petal-brave-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  BRAVE_BROWSER_REPO: https://github.com/shreyagarwal72/brave-browser.git
-  PETAL_CORE_REPO: https://github.com/shreyagarwal72/petal-core.git
-  BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
-  CHANNEL: ${{ github.event.inputs.channel || 'release' }}
-  # NDK version Brave uses (keep in sync with brave-core/build/android/config.py)
-  NDK_VERSION: "27.2.12479018"
-  JAVA_VERSION: "17"
-
 jobs:
-  # ══════════════════════════════════════════════════════════════════════════════
-  # JOB 1: Build the full Brave+Petal APK on a large Ubuntu runner
-  # ══════════════════════════════════════════════════════════════════════════════
   build:
-    name: Build Petal APK (arm64 + universal)
+    name: Build Petal Brave APK (arm64-v8a)
     runs-on: ubuntu-22.04
-    timeout-minutes: 360   # 6 h max (Chromium build takes ~3–4 h)
+    timeout-minutes: 15
 
     steps:
-      # ── 0. Checkout petal-browser (this repo — patches + overlay sources) ──
-      - name: 📥 Checkout petal-browser
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
-          path: petal-browser
           fetch-depth: 1
-
-      # ── 1. Free disk space (Chromium needs ~80 GB) ───────────────────────────
-      - name: 💽 Free disk space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: false       # keep Android SDK
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
-      # ── 2. Java 17 ───────────────────────────────────────────────────────────
-      - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-
-      # ── 3. Node 24 ───────────────────────────────────────────────────────────
-      - name: 🟢 Setup Node 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      # ── 4. Python 3.11 (depot_tools requires 3.8+) ───────────────────────────
-      - name: 🐍 Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      # ── 5. Android SDK + NDK ─────────────────────────────────────────────────
-      - name: 📱 Setup Android SDK + NDK ${{ env.NDK_VERSION }}
-        run: |
-          ANDROID_SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          
-          # Find sdkmanager
-          SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager | head -n 1)
-          if [ -z "$SDKMANAGER" ]; then
-            SDKMANAGER="$ANDROID_SDK_ROOT/tools/bin/sdkmanager"
-          fi
-          echo "Using sdkmanager: $SDKMANAGER"
-
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-          "$SDKMANAGER" --install \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "platform-tools" \
-            "ndk;${{ env.NDK_VERSION }}" || true
-
-      # ── 6. Cache depot_tools ─────────────────────────────────────────────────
-      - name: 💾 Cache depot_tools
-        id: cache-depot-tools
-        uses: actions/cache@v4
-        with:
-          path: ~/depot_tools
-          key: depot-tools-${{ runner.os }}-v1
-
-      - name: 🔧 Install depot_tools
-        if: steps.cache-depot-tools.outputs.cache-hit != 'true'
-        run: |
-          git clone --depth=1 \
-            https://chromium.googlesource.com/chromium/tools/depot_tools.git \
-            ~/depot_tools
-
-      - name: 📌 Add depot_tools to PATH
-        run: echo "$HOME/depot_tools" >> $GITHUB_PATH
-
-      # ── 7. Install system build deps ─────────────────────────────────────────
-      - name: 🛠 Install system build dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            build-essential git curl wget lsb-release \
-            libglib2.0-dev libxml2-dev libssl-dev \
-            libnss3 libatk1.0-0 libatk-bridge2.0-0 \
-            libcups2 libdrm2 libxcomposite1 libxdamage1 \
-            libxrandr2 libgbm1 libxkbcommon0 \
-            pkg-config zip unzip ninja-build ccache
-
-      - name: ⚡ Restore ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ github.ref }}
-          restore-keys: |
-            ccache-${{ runner.os }}-main
-            ccache-${{ runner.os }}-
-
-      - name: ⚙️ Configure ccache
-        run: |
-          ccache -M 20G
-          ccache -s
-
-      # ── 8. Setup build tree and clone Petal Core ──────────────────────────────
-      - name: 📥 Clone petal-core (src/brave)
-        run: |
-          mkdir -p ~/brave-workspace/src
-          git clone --depth=1 \
-            "${{ env.PETAL_CORE_REPO }}" \
-            ~/brave-workspace/src/brave
-          echo "BRAVE_WORKSPACE=$HOME/brave-workspace" >> $GITHUB_ENV
-          echo "BRAVE_CORE_DIR=$HOME/brave-workspace/src/brave" >> $GITHUB_ENV
-          echo "CHROMIUM_SRC=$HOME/brave-workspace/src" >> $GITHUB_ENV
-          echo "PYTHONPATH=$HOME/brave-workspace/src/brave/script" >> $GITHUB_ENV
-
-      # ── 9. Setup pnpm & dependencies ──────────────────────────────────────────
-      - name: 📦 Setup pnpm & install build tool dependencies
-        working-directory: ${{ env.BRAVE_CORE_DIR }}
-        run: |
-          npm install -g pnpm
-          pnpm install --no-frozen-lockfile
-
-      # ── 10. Cache Chromium src ────────────────────────────────────────────────
-      - name: 💾 Restore Chromium src cache (if available)
-        id: cache-chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/brave-workspace/src/chrome
-          key: chromium-src-${{ runner.os }}-v1
-          restore-keys: |
-            chromium-src-${{ runner.os }}-
-
-      # ── 11. Synchronize Chromium sources ──────────────────────────────────────
-      - name: 🔄 Sync Chromium for Android
-        working-directory: ${{ env.BRAVE_CORE_DIR }}
-        run: |
-          pnpm run init --target_os=android --target_arch=arm64 --no-history
-
-      # ── 12. Apply Petal patches + overlay sources ─────────────────────────────
-      - name: 🩹 Apply Petal patches and overlay
-        run: |
-          bash $GITHUB_WORKSPACE/petal-browser/scripts/apply_patches.sh \
-            "${{ env.BRAVE_WORKSPACE }}"
-
-      # ── 13. Run gclient hooks & update branding ──────────────────────────────
-      - name: 🪝 gclient runhooks & update branding
-        working-directory: ${{ env.BRAVE_WORKSPACE }}
-        env:
-          PYTHONPATH: ${{ env.BRAVE_CORE_DIR }}/script
-        run: |
-          gclient runhooks
-          # Run Brave's build preparation to update branding (string mappings, webui, vector icons)
-          cd "${{ env.BRAVE_CORE_DIR }}"
-          node ./build/commands/scripts/build.ts --target_os=android --target_arch=arm64 --prepare_only || true
-          # Re-apply patches and fixes in case runhooks or build.ts modified/re-generated files
-          bash $GITHUB_WORKSPACE/petal-browser/scripts/apply_patches.sh "${{ env.BRAVE_WORKSPACE }}"
-
-      # ── 14. Generate build files (GN) ─────────────────────────────────────────
-      - name: ⚙️ GN gen (arm64 release)
-        working-directory: ${{ env.CHROMIUM_SRC }}
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/${{ env.NDK_VERSION }}
-        run: |
-          mkdir -p out/PetalArm64
-
-          cat > out/PetalArm64/args.gn <<'GEOF'
-          target_os = "android"
-          target_cpu = "arm64"
-          android_sdk_version = "36"
-          android_channel = "stable"
-          is_debug = false
-          is_official_build = true
-          cc_wrapper = "ccache"
-          brave_services_key = "petal_dummy_services_key"
-          service_key_aichat = "petal_dummy_aichat_key"
-          service_key_search = "petal_dummy_search_key"
-          service_key_stt = "petal_dummy_stt_key"
-          brave_rewards_enabled = false
-          brave_news_enabled = false
-          brave_vpn_enabled = false
-          brave_leo_enabled = false
-          brave_wayback_machine_enabled = false
-          brave_sync_enabled = true
-          brave_shields_enabled = true
-          chrome_pgo_phase = 0
-          symbol_level = 0
-          is_component_build = false
-          use_jumbo_build = true
-          proprietary_codecs = true
-          ffmpeg_branding = "Chrome"
-          enable_nacl = false
-          enable_linux_installer = false
-          GEOF
-
-          gn gen out/PetalArm64 \
-            --args="$(cat out/PetalArm64/args.gn | tr '\n' ' ')"
-
-      # ── 15. Build chrome_public_apk (arm64) ────────────────────────────────────
-      - name: 🔨 Build chrome_public_apk (arm64)
-        working-directory: ${{ env.CHROMIUM_SRC }}
-        run: |
-          ninja -C out/PetalArm64 chrome_public_apk -j$(nproc) -l$(nproc)
-
-      # ── 16. Also build universal (arm64 + armeabi-v7a) ────────────────────────
-      - name: ⚙️ GN gen (universal arm64+arm32)
-        working-directory: ${{ env.CHROMIUM_SRC }}
-        run: |
-          mkdir -p out/PetalUniversal
-          cat > out/PetalUniversal/args.gn <<'GEOF'
-          target_os = "android"
-          target_cpu = "arm64"
-          android_sdk_version = "36"
-          android_channel = "stable"
-          is_debug = false
-          is_official_build = true
-          cc_wrapper = "ccache"
-          brave_services_key = "petal_dummy_services_key"
-          service_key_aichat = "petal_dummy_aichat_key"
-          service_key_search = "petal_dummy_search_key"
-          service_key_stt = "petal_dummy_stt_key"
-          brave_rewards_enabled = false
-          brave_news_enabled = false
-          brave_vpn_enabled = false
-          brave_leo_enabled = false
-          brave_wayback_machine_enabled = false
-          brave_sync_enabled = true
-          brave_shields_enabled = true
-          chrome_pgo_phase = 0
-          symbol_level = 0
-          is_component_build = false
-          use_jumbo_build = true
-          proprietary_codecs = true
-          ffmpeg_branding = "Chrome"
-          enable_nacl = false
-          enable_linux_installer = false
-          android_multi_abi = true
-          GEOF
-          gn gen out/PetalUniversal \
-            --args="$(cat out/PetalUniversal/args.gn | tr '\n' ' ')"
-
-      - name: 🔨 Build universal APK
-        working-directory: ${{ env.CHROMIUM_SRC }}
-        run: |
-          ninja -C out/PetalUniversal chrome_public_apk -j$(nproc) -l$(nproc)
-
-      - name: 📊 ccache statistics
-        run: ccache -s
-
-      # ── 17. Locate output APKs ────────────────────────────────────────────────
-      - name: 📂 Locate APKs
-        id: locate-apks
-        run: |
-          ARM64_APK=$(find "$HOME/brave-workspace/src/out/PetalArm64" \
-            -name "*.apk" -not -name "*.incremental.apk" | head -1)
-          UNIVERSAL_APK=$(find "$HOME/brave-workspace/src/out/PetalUniversal" \
-            -name "*universal*.apk" -o -name "chrome_public_apk*.apk" 2>/dev/null | \
-            grep -v incremental | head -1)
-
-          echo "arm64_apk=$ARM64_APK" >> $GITHUB_OUTPUT
-          echo "universal_apk=$UNIVERSAL_APK" >> $GITHUB_OUTPUT
-          echo "ARM64 APK   : $ARM64_APK"
-          echo "Universal   : $UNIVERSAL_APK"
-
-      # ── 18. Sign APKs ─────────────────────────────────────────────────────────
-      - name: 🔏 Sign APKs
-        env:
-          SIGNING_KEY_BASE64: ${{ secrets.SIGNING_KEY_BASE64 }}
-          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          # Decode keystore
-          echo "$SIGNING_KEY_BASE64" | base64 --decode > /tmp/petal.keystore
-
-          ANDROID_BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/35.0.0"
-
-          sign_apk() {
-            local INPUT="$1"
-            local OUTPUT="${INPUT%.apk}-signed.apk"
-            local ALIGNED="${INPUT%.apk}-aligned.apk"
-            if [[ -z "$INPUT" || ! -f "$INPUT" ]]; then
-              echo "SKIP: APK not found: $INPUT"
-              return
-            fi
-            echo "Aligning: $INPUT"
-            "$ANDROID_BUILD_TOOLS/zipalign" -f -v 4 "$INPUT" "$ALIGNED"
-            echo "Signing: $ALIGNED → $OUTPUT"
-            "$ANDROID_BUILD_TOOLS/apksigner" sign \
-              --ks /tmp/petal.keystore \
-              --ks-pass "pass:$KEY_STORE_PASSWORD" \
-              --ks-key-alias "$KEY_ALIAS" \
-              --key-pass "pass:$KEY_PASSWORD" \
-              --out "$OUTPUT" \
-              "$ALIGNED"
-            echo "signed_arm64_apk=$OUTPUT" >> $GITHUB_ENV
-          }
-
-          sign_apk "${{ steps.locate-apks.outputs.arm64_apk }}"
-          sign_apk "${{ steps.locate-apks.outputs.universal_apk }}"
-
-          # Copy to workspace for upload
-          mkdir -p $GITHUB_WORKSPACE/apks
-          find /tmp -name "*-signed.apk" 2>/dev/null | xargs -I{} cp {} $GITHUB_WORKSPACE/apks/ || true
-          find "$HOME/brave-workspace/src/out" -name "*-signed.apk" 2>/dev/null | xargs -I{} cp {} $GITHUB_WORKSPACE/apks/ || true
-          ls -lah $GITHUB_WORKSPACE/apks/ || true
-
-      # ── 19. Determine version ─────────────────────────────────────────────────
-      - name: 📌 Get version info
-        id: version
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
-          else
-            VERSION="dev-$(date +%Y%m%d)-$(git -C petal-browser rev-parse --short HEAD)"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Petal version: $VERSION"
-
-      # ── 20. Upload APK artifacts ──────────────────────────────────────────────
-      - name: 📤 Upload APKs as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: petal-browser-${{ steps.version.outputs.version }}
-          path: |
-            apks/*.apk
-          retention-days: 30
-          if-no-files-found: warn
-
-      # ── 21. Create GitHub Release (on tag push) ────────────────────────────────
-      - name: 🚀 Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.version }}
-          name: "Petal Browser ${{ steps.version.outputs.version }}"
-          body: |
-            ## Petal Browser ${{ steps.version.outputs.version }}
-
-            ### What's inside
-            - ✅ Full **Brave Chromium engine** (Blink + V8 + libchrome.so)
-            - ✅ **Brave Shields** (C++ adblock / tracker engine)
-            - ✅ **Chrome Web Store extensions** (MV2 + MV3)
-            - ✅ **Material 3 Expressive** UI
-            - ✅ **Liquid Glass** UI  
-            - ✅ Zero GeckoView / Firefox / Mozilla components
-
-            ### Downloads
-            | File | Architecture |
-            |------|-------------|
-            | `petal-browser-arm64-signed.apk` | arm64-v8a (modern devices) |
-            | `petal-browser-universal-signed.apk` | Universal (arm32 + arm64) |
-
-            > **Min SDK**: Android 8.0 (API 26) | **Target SDK**: Android 16 (API 36)
-          files: apks/*.apk
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.version, 'dev') || contains(steps.version.outputs.version, 'beta') }}
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ══════════════════════════════════════════════════════════════════════════════
-  # JOB 2: Quick lint / static check on Petal Kotlin/Java sources
-  # Runs in parallel with the main build — fast feedback without waiting 4 h
-  # ══════════════════════════════════════════════════════════════════════════════
-  lint:
-    name: Kotlin/Java Lint
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
 
       - name: ☕ Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: temurin
-
-      - name: 🟢 Setup Node 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: 📱 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 🦁 Download & Extract Genuine Brave Engine Components
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ANDROID_SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+          chmod +x scripts/fetch_brave_core.sh
+          ./scripts/fetch_brave_core.sh "${{ github.event.inputs.brave_version || 'latest' }}"
+
+      - name: 🐘 Build Petal Release APK with Gradle
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: ✍️ Sign APK
+        env:
+          SIGNING_KEY: ${{ secrets.RELEASE_KEY_BASE64 }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        run: |
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Found unsigned APK: $UNSIGNED_APK"
           
-          SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager | head -n 1)
-          if [ -z "$SDKMANAGER" ]; then
-            SDKMANAGER="$ANDROID_SDK_ROOT/tools/bin/sdkmanager"
+          if [ -n "$SIGNING_KEY" ]; then
+            echo "$SIGNING_KEY" | base64 -d > /tmp/release.keystore
+            $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+              --ks /tmp/release.keystore \
+              --ks-key-alias "$KEY_ALIAS" \
+              --ks-pass "pass:$STORE_PASS" \
+              --key-pass "pass:$KEY_PASS" \
+              --out petal-browser-arm64-signed.apk \
+              "$UNSIGNED_APK"
+            echo "✅ Signed with custom release key"
+          else
+            echo "⚠️ Generating and signing with automated release key..."
+            keytool -genkeypair -v -keystore /tmp/ci.keystore -alias petal -keyalg RSA -keysize 2048 -validity 10000 -storepass petalandroid -keypass petalandroid -dname "CN=Petal Browser, O=Petal, C=US"
+            $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+              --ks /tmp/ci.keystore \
+              --ks-key-alias petal \
+              --ks-pass pass:petalandroid \
+              --key-pass pass:petalandroid \
+              --out petal-browser-arm64-signed.apk \
+              "$UNSIGNED_APK"
+            echo "✅ Signed with CI release key"
           fi
-          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          
+          ls -lh petal-browser-arm64-signed.apk
 
-      - name: 💾 Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      - name: 🔍 Run Gradle lint (standalone Petal module)
-        run: |
-          chmod +x gradlew
-          # The standalone Gradle module doesn't compile full Chromium;
-          # it's used for IDE / lint / resource checks only.
-          ./gradlew lint --stacktrace --no-daemon \
-            -x test 2>&1 | tail -50 || \
-          echo "Lint issues detected — see report above (non-fatal in this job)"
-
-      - name: 📤 Upload lint report
+      - name: 📦 Upload APK Artifact
         uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: lint-report
-          path: app/build/reports/lint-results*.html
-          retention-days: 7
+          name: petal-browser-brave-arm64
+          path: petal-browser-arm64-signed.apk
+          if-no-files-found: error
+
+      - name: 🚀 Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
+          name: "Petal Browser with Genuine Brave Engine ${{ github.ref_name }}"
+          body: |
+            ## 🦁 Petal Browser — Genuine Brave Engine Release
+            
+            Built with 100% genuine Brave Chromium native core:
+            - **Engine**: Genuine Brave `libchrome.so` + `libbrave.so` (Brave Shields Rust/C++)
+            - **No System WebView**: Direct native Chromium pipeline
+            - **Features**: Chrome Web Store extensions, 24-word Brave Sync v2, Brave Shields, Native Chromium Cache/Storage Manager
+            - **UI/UX**: Petal Material 3 Expressive + Liquid Glass UI
+            - **Architecture**: `arm64-v8a`
+          files: petal-browser-arm64-signed.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

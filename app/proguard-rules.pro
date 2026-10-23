@@ -32,6 +32,19 @@
 -keep class org.mozilla.geckoview.** { *; }
 -keep class org.mozilla.gecko.** { *; }
 
+# ---- Brave & Chromium Core Engine -----------------------------------------------------------
+-keep class org.chromium.** { *; }
+-keep interface org.chromium.** { *; }
+-dontwarn org.chromium.**
+
+-keep class org.brave.** { *; }
+-keep interface org.brave.** { *; }
+-dontwarn org.brave.**
+
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
 # ---- yt-dlp (youtubedl-android) -------------------------------------------------------------
 # Maps yt-dlp's JSON output onto its model classes with Jackson.
 -keep class com.yausername.** { *; }
