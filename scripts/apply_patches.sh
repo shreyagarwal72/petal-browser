@@ -191,6 +191,39 @@ print('Successfully verified and fixed BRAVE_NONCE_LENGTH in crypto/aead.cc')
 "
 fi
 
+# ─── Fix transport_security_state_generator input_file_parsers.cc ─────────────
+# Plaster rewrites net/tools/transport_security_state_generator/input_file_parsers.cc
+# to call KeepOnlyForceHttpsEntries, kBraveHstsJson, and kBravePinsJson.
+# These definitions live in brave/chromium_src/net/tools/transport_security_state_generator/input_file_parsers.cc.
+# When the host toolchain (clang_x64) builds transport_security_state_generator directly,
+# it compiles upstream Chromium's input_file_parsers.cc without brave's chromium_src overlay.
+# We inject the Brave definitions directly into the upstream file if referenced.
+CHROMIUM_PARSER_CC="$CHROMIUM_SRC/net/tools/transport_security_state_generator/input_file_parsers.cc"
+BRAVE_PARSER_CC="$BRAVE_CORE_DIR/chromium_src/net/tools/transport_security_state_generator/input_file_parsers.cc"
+if [[ -f "$CHROMIUM_PARSER_CC" && -f "$BRAVE_PARSER_CC" ]]; then
+  echo "[2j/4] Injecting Brave HSTS/Pinset definitions into $CHROMIUM_PARSER_CC..."
+  python3 -c "
+c_path = '$CHROMIUM_PARSER_CC'
+b_path = '$BRAVE_PARSER_CC'
+with open(c_path, 'r') as f:
+    c_content = f.read()
+if 'KeepOnlyForceHttpsEntries' in c_content and 'constexpr std::string_view kBraveHstsJson' not in c_content:
+    with open(b_path, 'r') as f:
+        b_content = f.read()
+    marker = '#include <net/tools/transport_security_state_generator/input_file_parsers.cc>'
+    if marker in b_content:
+        b_defs = b_content.split(marker)[0].strip()
+        c_content = b_defs + '\n\n' + c_content
+        with open(c_path, 'w') as f:
+            f.write(c_content)
+        print('Successfully injected Brave HSTS/Pinset definitions into upstream input_file_parsers.cc')
+    else:
+        print('Marker not found in brave input_file_parsers.cc')
+else:
+    print('Upstream input_file_parsers.cc already has definitions or does not reference KeepOnlyForceHttpsEntries')
+"
+fi
+
 # ─── Copy patches into brave-core patches directory ───────────────────────────
 PATCHES_SRC="$REPO_ROOT/patches/petal"
 PATCHES_DST="$BRAVE_CORE_DIR/patches/petal"
