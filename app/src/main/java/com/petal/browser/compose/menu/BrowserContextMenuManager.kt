@@ -1,10 +1,3 @@
-
-object DownloadFileNameResolver {
-    fun resolve(context: android.content.Context, url: String, contentDisposition: String?, mimeType: String?): String {
-        return android.webkit.URLUtil.guessFileName(url, contentDisposition, mimeType)
-    }
-}
-
 package com.petal.browser.compose.menu
 
 import android.content.Intent
@@ -681,5 +674,12 @@ object BrowserContextMenuManager {
                 showImageContextMenu(activity, srcUri!!)
             }
         }
+    }
+}
+
+
+object DownloadFileNameResolver {
+    fun resolve(context: android.content.Context, url: String, contentDisposition: String?, mimeType: String?): String {
+        return android.webkit.URLUtil.guessFileName(url, contentDisposition, mimeType)
     }
 }
