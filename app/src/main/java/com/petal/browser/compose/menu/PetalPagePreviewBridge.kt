@@ -123,7 +123,7 @@ private fun PetalPagePreviewSheet(
     // added to BrowserContainer, never made the activity's currentAlbumController,
     // so it never becomes a real tab. destroy() in the DisposableEffect below
     // tears the GeckoSession down completely when this composable leaves.
-    val previewGeckoView = remember { AlbumController(context) }
+    val previewGeckoView = remember { com.petal.browser.browser.PetalTabViewController(context) }
 
     DisposableEffect(url) {
         onDispose {
