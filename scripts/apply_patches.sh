@@ -86,18 +86,44 @@ if [[ -d "$BRAVE_DOWNLOAD_RES" ]]; then
   cp -r "$BRAVE_DOWNLOAD_RES/." "$CHROMIUM_DOWNLOAD_RES/"
 fi
 
-# ─── Fix print_rust_log_ffi.cc namespace / override compatibility ────────────
-# Upstream brave-core's chromium_src/base/logging/rust_logger/print_rust_log_ffi.cc
-# wraps ShouldPrintRustLog in namespace logging::internal { namespace { ... } }.
-# However, base/logging/rust_logger/print_rust_log_ffi.cc is outside the anonymous
-# namespace, causing Clang to fail with: error: use of undeclared identifier 'ShouldPrintRustLog'.
-# Declaring ShouldPrintRustLog in logging::internal fixes the visibility for the included cc file.
-RUST_LOG_OVERRIDE="$BRAVE_CORE_DIR/chromium_src/base/logging/rust_logger/print_rust_log_ffi.cc"
-if [[ -f "$RUST_LOG_OVERRIDE" ]]; then
-  echo "[2g/4] Ensuring ShouldPrintRustLog has visible linkage in $RUST_LOG_OVERRIDE..."
-  sed -i 's/namespace {/namespace {\nbool ShouldPrintRustLog(int32_t\& severity);/g' "$RUST_LOG_OVERRIDE" || true
-  # Also declare in logging::internal right before the anonymous namespace
-  sed -i 's/namespace logging::internal {/namespace logging::internal {\nbool ShouldPrintRustLog(int32_t\& severity);/g' "$RUST_LOG_OVERRIDE" || true
+# ─── Fix print_rust_log_ffi.cc ShouldPrintRustLog definition ─────────────────
+# When Chromium compiles src/base/logging/rust_logger/print_rust_log_ffi.cc,
+# it does not include brave-core's chromium_src override.
+# Because Brave's patch added a call to ShouldPrintRustLog(severity),
+# we must ensure ShouldPrintRustLog is defined directly in
+# $CHROMIUM_SRC/base/logging/rust_logger/print_rust_log_ffi.cc.
+CHROMIUM_RUST_LOG_CC="$CHROMIUM_SRC/base/logging/rust_logger/print_rust_log_ffi.cc"
+if [[ -f "$CHROMIUM_RUST_LOG_CC" ]]; then
+  echo "[2g/4] Injecting ShouldPrintRustLog definition into $CHROMIUM_RUST_LOG_CC..."
+  python3 -c "
+p = '$CHROMIUM_RUST_LOG_CC'
+with open(p, 'r') as f:
+    c = f.read()
+if 'bool ShouldPrintRustLog' not in c:
+    helper = '''
+namespace {
+bool ShouldPrintRustLog(int32_t& severity) {
+  switch (severity) {
+    case LOGGING_INFO:
+    case LOGGING_WARNING:
+      severity = LOGGING_VERBOSE;
+      break;
+    default:
+      return true;
+  }
+  return VLOG_IS_ON(-severity);
+}
+}  // namespace
+'''
+    # Insert right inside namespace logging::internal { or before void print_rust_log
+    if 'namespace logging::internal {' in c:
+        c = c.replace('namespace logging::internal {', 'namespace logging::internal {\n' + helper)
+    elif 'void print_rust_log(' in c:
+        c = helper + '\n' + c
+    with open(p, 'w') as f:
+        f.write(c)
+    print('Successfully injected ShouldPrintRustLog definition into print_rust_log_ffi.cc')
+" || true
 fi
 
 # ─── Copy patches into brave-core patches directory ───────────────────────────
