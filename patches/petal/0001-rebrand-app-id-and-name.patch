@@ -21,19 +21,4 @@
  <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 -    package="com.brave.browser">
 +    package="com.petal.browser">
- 
---- a/brave/android/java/org/chromium/chrome/browser/app/BraveActivity.java
-+++ b/brave/android/java/org/chromium/chrome/browser/app/BraveActivity.java
-@@ -100,6 +100,15 @@ public class BraveActivity extends ChromeTabbedActivity {
- 
-+    // Petal Patch 0001: Instantiate PetalBraveActivity as the concrete subclass.
-+    // BraveActivity delegates UI chrome to PetalBraveActivity via postInflation hook.
-+    @Override
-+    public void onPostInflationStartup() {
-+        super.onPostInflationStartup();
-+        com.petal.browser.engine.PetalBraveActivity petalShell =
-+            new com.petal.browser.engine.PetalBraveActivity();
-+        petalShell.onPostInflationStartup(this);
-+    }
-+
- }
+

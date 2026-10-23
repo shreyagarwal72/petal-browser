@@ -170,13 +170,13 @@ with open(p, 'r') as f:
 if 'BRAVE_NONCE_LENGTH' in c and '#define BRAVE_NONCE_LENGTH' not in c:
     macro_def = '''
 #ifndef BRAVE_NONCE_LENGTH
-#define BRAVE_NONCE_LENGTH
+#define BRAVE_NONCE_LENGTH 12
 #endif
 '''
     c = macro_def + '\n' + c
     with open(p, 'w') as f:
         f.write(c)
-    print('Successfully injected BRAVE_NONCE_LENGTH fallback into crypto/aead.cc')
+    print('Successfully injected BRAVE_NONCE_LENGTH (12) fallback into crypto/aead.cc')
 else:
     print('BRAVE_NONCE_LENGTH already defined or not referenced in crypto/aead.cc')
 "

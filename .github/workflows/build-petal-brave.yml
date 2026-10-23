@@ -133,7 +133,21 @@ jobs:
             libnss3 libatk1.0-0 libatk-bridge2.0-0 \
             libcups2 libdrm2 libxcomposite1 libxdamage1 \
             libxrandr2 libgbm1 libxkbcommon0 \
-            pkg-config zip unzip ninja-build
+            pkg-config zip unzip ninja-build ccache
+
+      - name: ⚡ Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-${{ github.ref }}
+          restore-keys: |
+            ccache-${{ runner.os }}-main
+            ccache-${{ runner.os }}-
+
+      - name: ⚙️ Configure ccache
+        run: |
+          ccache -M 20G
+          ccache -s
 
       # ── 8. Setup build tree and clone Petal Core ──────────────────────────────
       - name: 📥 Clone petal-core (src/brave)
@@ -202,6 +216,7 @@ jobs:
           android_channel = "stable"
           is_debug = false
           is_official_build = true
+          cc_wrapper = "ccache"
           brave_services_key = "petal_dummy_services_key"
           service_key_aichat = "petal_dummy_aichat_key"
           service_key_search = "petal_dummy_search_key"
@@ -244,6 +259,7 @@ jobs:
           android_channel = "stable"
           is_debug = false
           is_official_build = true
+          cc_wrapper = "ccache"
           brave_services_key = "petal_dummy_services_key"
           service_key_aichat = "petal_dummy_aichat_key"
           service_key_search = "petal_dummy_search_key"
@@ -272,6 +288,9 @@ jobs:
         working-directory: ${{ env.CHROMIUM_SRC }}
         run: |
           ninja -C out/PetalUniversal chrome_public_apk -j$(nproc) -l$(nproc)
+
+      - name: 📊 ccache statistics
+        run: ccache -s
 
       # ── 17. Locate output APKs ────────────────────────────────────────────────
       - name: 📂 Locate APKs
