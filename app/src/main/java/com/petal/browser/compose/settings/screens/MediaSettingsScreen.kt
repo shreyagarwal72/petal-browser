@@ -37,7 +37,6 @@ import androidx.preference.PreferenceManager
 import com.petal.browser.haptics.PetalHapticEngine
 import com.petal.browser.ui.components.ExpressiveHeader
 import com.petal.browser.ui.components.M3ExpressiveVariableBackground
-import com.petal.browser.ui.containment.PetalSettingsSection
 import androidx.compose.ui.res.stringResource
 import com.petal.browser.R
 

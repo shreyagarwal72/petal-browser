@@ -231,11 +231,9 @@ object BrowserContextMenuManager {
                                 url = currentAlbum?.url ?: "about:blank"
                             )
                             val newGroup = com.petal.browser.compose.tabs.PetalTabGroupManager.createGroupWithTabs(activity, currentTab, currentTab)
-                            currentTabSurface?.setTabGroupId(newGroup.id)
-                            currentTabSurface?.setTabGroupTitle(newGroup.title)
-                            currentGeckoView?.setTabGroupId(newGroup.id)
-                            currentGeckoView?.setTabGroupTitle(newGroup.title)
-                            activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, newGroup.id, newGroup.title)
+                            currentAlbum?.setTabGroupId(newGroup.id)
+                            currentAlbum?.setTabGroupTitle(newGroup.title)
+                                                                                    activity.addAlbumInGroup(HelperUnit.domain(urlResult), urlResult, false, newGroup.id, newGroup.title)
                         } else {
                             // No identifiable current tab to group with - fall back to a
                             // plain new tab rather than creating a group with no real members.
@@ -512,11 +510,9 @@ object BrowserContextMenuManager {
                                 url = currentAlbum?.url ?: "about:blank"
                             )
                             val newGroup = com.petal.browser.compose.tabs.PetalTabGroupManager.createGroupWithTabs(activity, currentTab, currentTab)
-                            currentTabSurface?.setTabGroupId(newGroup.id)
-                            currentTabSurface?.setTabGroupTitle(newGroup.title)
-                            currentGeckoView?.setTabGroupId(newGroup.id)
-                            currentGeckoView?.setTabGroupTitle(newGroup.title)
-                            activity.addAlbumInGroup(HelperUnit.domain(linkUrl), linkUrl, false, newGroup.id, newGroup.title)
+                            currentAlbum?.setTabGroupId(newGroup.id)
+                            currentAlbum?.setTabGroupTitle(newGroup.title)
+                                                                                    activity.addAlbumInGroup(HelperUnit.domain(linkUrl), linkUrl, false, newGroup.id, newGroup.title)
                         } else {
                             activity.addAlbum(HelperUnit.domain(linkUrl), linkUrl, false)
                         }

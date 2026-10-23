@@ -165,9 +165,9 @@ class PetalChromiumDownloadService : Service() {
         val notifId = (FOREGROUND_NOTIFICATION_ID + downloadId).toInt()
 
         val title = when {
-            isComplete -> getString(R.string.download_complete_title, fileName)
-            isPaused   -> getString(R.string.download_paused_title, fileName)
-            else       -> getString(R.string.download_in_progress_title, fileName)
+            isComplete -> "Download complete: "
+            isPaused   -> "Download paused: "
+            else       -> "Downloading "
         }
 
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)

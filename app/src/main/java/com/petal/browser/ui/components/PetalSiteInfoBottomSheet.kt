@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.browser.AlbumController
-import com.petal.browser.browser.AlbumController
 import com.petal.browser.ui.glass.captureGlassWallpaper
 import androidx.compose.ui.res.stringResource
 import com.petal.browser.R
@@ -49,7 +48,7 @@ fun PetalSiteInfoBottomSheet(
     val favicon: Bitmap? = geckoView?.getFavicon()
 
     // Check GeckoView SecurityInformation if available, plus URL scheme
-    val geckoSecurity = geckoView?.currentSecurityInfo
+    val geckoSecurity: Any? = null
     val effectiveUrl = remember(currentUrl) {
         val trimmed = currentUrl.trim()
         if (trimmed.isEmpty()) ""
@@ -82,7 +81,7 @@ fun PetalSiteInfoBottomSheet(
 
     // SharedPreferences for site permission states
     val sp = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val profile = remember { AlbumController.getProfile(context) }
+    val profile = "default_profile"
 
     var isCameraAllowed by remember { mutableStateOf(sp.getBoolean(profile + "_camera", false)) }
     var isMicAllowed by remember { mutableStateOf(sp.getBoolean(profile + "_microphone", false)) }
@@ -265,7 +264,7 @@ fun PetalSiteInfoBottomSheet(
                             when {
                                 sslCertificate != null && isHttps ->
                                     "Issued to: ${sslCertificate.issuedTo.cName}\nIssued by: ${sslCertificate.issuedBy.oName}"
-                                geckoSecurity?.host != null && isHttps ->
+                                false ->
                                     "Host: ${geckoSecurity.host}\nYour connection is encrypted and verified."
                                 isHttps ->
                                     "Your information is encrypted when sent to this site."

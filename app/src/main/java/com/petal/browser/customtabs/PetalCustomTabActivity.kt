@@ -260,7 +260,7 @@ class PetalCustomTabActivity : ComponentActivity() {
     }
 
     private fun updateCurrentUrlAndTitle() {
-        val state = tabSurface?.currentState() ?: return
+        val state = tabSurface?.currentState ?: return
         val url = state.url
         if (url.isNotBlank()) {
             currentUrlState = url

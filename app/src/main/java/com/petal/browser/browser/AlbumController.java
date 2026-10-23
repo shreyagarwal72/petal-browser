@@ -33,4 +33,7 @@ public interface AlbumController {
     default String getTabGroupTitle() { return null; }
     default void setTabGroupId(String id) {}
     default void setTabGroupTitle(String title) {}
+    default android.graphics.Bitmap getFavicon() { return null; }
+    default Object getCurrentSecurityInfo() { return null; }
+    default void reloadWithoutInit() { reload(); }
 }
