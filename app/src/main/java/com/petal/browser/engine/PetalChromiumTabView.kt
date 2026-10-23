@@ -20,7 +20,7 @@ class PetalChromiumTabView(
     private val chromiumTab: Any?,
     private val contentView: View,
     private val incognitoMode: Boolean,
-    val tabId: String
+    private val id: String
 ) : View(contentView.context), AlbumController {
 
     private val tag = "PetalChromiumTabView"
@@ -39,7 +39,7 @@ class PetalChromiumTabView(
     override fun activate() {}
     override fun deactivate() {}
     override fun destroy() {
-        PetalTabThumbnailCache.removeThumbnail(tabId)
+        PetalTabThumbnailCache.removeThumbnail(id)
     }
 
     fun loadUrl(url: String, headers: Map<String, String>? = null) {
@@ -80,14 +80,14 @@ class PetalChromiumTabView(
             val canvas = android.graphics.Canvas(bitmap)
             canvas.scale(0.5f, 0.5f)
             contentView.draw(canvas)
-            PetalTabThumbnailCache.putThumbnail(tabId, bitmap)
+            PetalTabThumbnailCache.putThumbnail(id, bitmap)
             callback?.invoke(bitmap)
         } catch (e: Throwable) {
             callback?.invoke(null)
         }
     }
 
-    fun getThumbnail(): Bitmap? = PetalTabThumbnailCache.getThumbnail(tabId)
+    fun getThumbnail(): Bitmap? = PetalTabThumbnailCache.getThumbnail(id)
 
     fun attachGlassBackend() {
         ChromiumGlassBackend.attachTextureListener(contentView)
@@ -99,6 +99,6 @@ class PetalChromiumTabView(
     fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) {
         captureThumbnail { callback(it) }
     }
-    override fun getTabId(): String = tabId
+        override fun getTabId(): String = id
     override fun getPersistentUrl(): String = currentUrl
 }
