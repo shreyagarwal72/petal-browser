@@ -309,7 +309,7 @@ fun PetalExtensionsScreen(
                                 onUninstall = { ext ->
                                     val extName = ext.name
                                     val fallbackInstallUrl = ext.amoListingUrl ?: ext.homepageUrl
-                                    PetalExtensionManager.uninstall(ext.raw)
+                                    PetalExtensionManager.uninstall(ext)
                                     coroutineScope.launch {
                                         val result = snackbarHostState.showSnackbar(
                                             message = "Uninstalled \"$extName\"",
@@ -382,11 +382,11 @@ fun PetalExtensionsScreen(
             ExtensionDetailSheet(
                 extension = ext,
                 onDismiss = { detailExtensionId = null },
-                onTogglePrivate = { allowed -> PetalExtensionManager.setAllowedInPrivateBrowsing(ext.raw, allowed) },
+                onTogglePrivate = { allowed -> PetalExtensionManager.setAllowedInPrivateBrowsing(ext, allowed) },
                 onUninstall = {
                     val extName = ext.name
                     val fallbackInstallUrl = ext.amoListingUrl ?: ext.homepageUrl
-                    PetalExtensionManager.uninstall(ext.raw)
+                    PetalExtensionManager.uninstall(ext)
                     detailExtensionId = null
                     coroutineScope.launch {
                         val result = snackbarHostState.showSnackbar(
@@ -435,7 +435,7 @@ fun PetalExtensionsScreen(
         PetalExtensionPopupScreen(
             popup = popup,
             onDismiss = {
-                PetalExtensionManager.dismissPopup()
+                PetalExtensionManager.dismissPopup(PetalExtensionManager.PendingPopup())
             }
         )
     }
@@ -1274,11 +1274,11 @@ private fun DetailLinkRow(icon: ImageVector, title: String, url: String, onOpenL
 
 @Composable
 private fun InstallPermissionDialog(prompt: PetalExtensionManager.PendingPrompt) {
-    val meta = prompt.extension.metaData
+    val metaName = "Extension"
     com.petal.browser.ui.containment.PetalMaterialAlertDialog(
         onDismissRequest = { prompt.respond(false) },
         icon = { Icon(Icons.Rounded.Extension, contentDescription = null) },
-        title = { Text(if (prompt.isUpdate) "Update ${meta.name ?: prompt.extension.id}?" else "Add ${meta.name ?: prompt.extension.id}?") },
+        title = { Text(if (prompt.isUpdate) "Update ${metaName}?" else "Add ${metaName}?") },
         text = {
             Column {
                 Text(
@@ -1319,12 +1319,12 @@ fun PetalExtensionPopupScreen(
         var popupScale by remember { mutableStateOf(1f) }
 
         var pendingTextPrompt by remember {
-            mutableStateOf<GeckoSession.PromptDelegate.TextPrompt?>(null)
+            mutableStateOf<Any.PromptDelegate.TextPrompt?>(null)
         }
         var textPromptInput by remember { mutableStateOf("") }
         var textPromptIsPassword by remember { mutableStateOf(false) }
         var textPromptResult by remember {
-            mutableStateOf<GeckoResult<GeckoSession.PromptDelegate.PromptResponse>?>(null)
+            mutableStateOf<Any<Any.PromptDelegate.PromptResponse>?>(null)
         }
 
         Scaffold(
@@ -1504,7 +1504,7 @@ fun PetalExtensionPopupScreen(
             ) {
                 AndroidView(
                     factory = { ctx ->
-                        GeckoView(ctx).apply {
+                        android.view.View(ctx).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -1517,30 +1517,30 @@ fun PetalExtensionPopupScreen(
                                 popup.session.setActive(true)
                             } catch (_: Throwable) {}
 
-                            popup.session.contentDelegate = object : GeckoSession.ContentDelegate {
-                                override fun onCloseRequest(session: GeckoSession) {
+                            popup.session.contentDelegate = object : Any.ContentDelegate {
+                                override fun onCloseRequest(session: Any) {
                                     (ctx as? ComponentActivity)?.runOnUiThread { onDismiss() }
                                 }
                             }
 
-                            popup.session.promptDelegate = object : GeckoSession.PromptDelegate {
+                            popup.session.promptDelegate = object : Any.PromptDelegate {
                                 override fun onAlertPrompt(
-                                    session: GeckoSession,
-                                    prompt: GeckoSession.PromptDelegate.AlertPrompt
-                                ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? =
-                                    GeckoResult.fromValue(prompt.dismiss())
+                                    session: Any,
+                                    prompt: Any.PromptDelegate.AlertPrompt
+                                ): Any<Any.PromptDelegate.PromptResponse>? =
+                                    Any.fromValue(prompt.dismiss())
 
                                 override fun onButtonPrompt(
-                                    session: GeckoSession,
-                                    prompt: GeckoSession.PromptDelegate.ButtonPrompt
-                                ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? =
-                                    GeckoResult.fromValue(prompt.confirm(GeckoSession.PromptDelegate.ButtonPrompt.Type.POSITIVE))
+                                    session: Any,
+                                    prompt: Any.PromptDelegate.ButtonPrompt
+                                ): Any<Any.PromptDelegate.PromptResponse>? =
+                                    Any.fromValue(prompt.confirm(Any.PromptDelegate.ButtonPrompt.Type.POSITIVE))
 
                                 override fun onTextPrompt(
-                                    session: GeckoSession,
-                                    prompt: GeckoSession.PromptDelegate.TextPrompt
-                                ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? {
-                                    val result = GeckoResult<GeckoSession.PromptDelegate.PromptResponse>()
+                                    session: Any,
+                                    prompt: Any.PromptDelegate.TextPrompt
+                                ): Any<Any.PromptDelegate.PromptResponse>? {
+                                    val result = Any<Any.PromptDelegate.PromptResponse>()
                                     val lowerMsg = (prompt.message ?: "").lowercase()
                                     val isPass = lowerMsg.contains("password") ||
                                         lowerMsg.contains("pin") ||
@@ -1558,18 +1558,18 @@ fun PetalExtensionPopupScreen(
                                 }
 
                                 override fun onSharePrompt(
-                                    session: GeckoSession,
-                                    prompt: GeckoSession.PromptDelegate.SharePrompt
-                                ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse>? =
-                                    GeckoResult.fromValue(prompt.confirm(GeckoSession.PromptDelegate.SharePrompt.Result.SUCCESS))
+                                    session: Any,
+                                    prompt: Any.PromptDelegate.SharePrompt
+                                ): Any<Any.PromptDelegate.PromptResponse>? =
+                                    Any.fromValue(prompt.confirm(Any.PromptDelegate.SharePrompt.Result.SUCCESS))
                             }
 
-                            popup.session.navigationDelegate = object : GeckoSession.NavigationDelegate {
+                            popup.session.navigationDelegate = object : Any.NavigationDelegate {
                                 override fun onLoadRequest(
-                                    session: GeckoSession,
-                                    request: GeckoSession.NavigationDelegate.LoadRequest
-                                ): GeckoResult<AllowOrDeny>? {
-                                    val uri = request.uri ?: return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                                    session: Any,
+                                    request: Any.NavigationDelegate.LoadRequest
+                                ): Any<AllowOrDeny>? {
+                                    val uri = request.uri ?: return Any.fromValue(AllowOrDeny.ALLOW)
                                     if (uri.startsWith("moz-extension://", true) ||
                                         uri.startsWith("resource://", true) ||
                                         uri.startsWith("about:", true) ||
@@ -1577,7 +1577,7 @@ fun PetalExtensionPopupScreen(
                                         uri.startsWith("data:", true) ||
                                         uri.startsWith("javascript:", true)
                                     ) {
-                                        return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                                        return Any.fromValue(AllowOrDeny.ALLOW)
                                     }
                                     if (uri.startsWith("http://", true) || uri.startsWith("https://", true)) {
                                         hostActivity?.let { act ->
@@ -1593,15 +1593,15 @@ fun PetalExtensionPopupScreen(
                                                 }
                                             }
                                         }
-                                        return GeckoResult.fromValue(AllowOrDeny.DENY)
+                                        return Any.fromValue(AllowOrDeny.DENY)
                                     }
-                                    return GeckoResult.fromValue(AllowOrDeny.ALLOW)
+                                    return Any.fromValue(AllowOrDeny.ALLOW)
                                 }
 
                                 override fun onNewSession(
-                                    session: GeckoSession,
+                                    session: Any,
                                     uri: String
-                                ): GeckoResult<GeckoSession>? {
+                                ): Any<Any>? {
                                     if (uri.isNotEmpty()) {
                                         hostActivity?.let { act ->
                                             act.runOnUiThread {

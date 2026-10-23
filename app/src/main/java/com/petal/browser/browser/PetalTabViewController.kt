@@ -42,11 +42,11 @@ class PetalTabViewController @JvmOverloads constructor(
     override fun evaluateJavascript(script: String, callback: ValueCallback<String>?) { callback?.onReceiveValue(null) }
 
     override fun stopLoading() {}
-    fun getTabId(): String = tabId
+    override fun getTabId(): String = tabId
     fun setTabId(id: String) { tabId = id }
-    fun getTabGroupId(): String? = tabGroupId
+    override fun getTabGroupId(): String? = tabGroupId
     fun setTabGroupId(id: String?) { tabGroupId = id }
-    fun getTabGroupTitle(): String? = tabGroupTitle
+    override fun getTabGroupTitle(): String? = tabGroupTitle
     fun setTabGroupTitle(title: String?) { tabGroupTitle = title }
     fun getFavicon(): Bitmap? = null
     fun getCachedPreviewBitmap(): Bitmap? = null
