@@ -46,7 +46,15 @@ object PetalIncognitoSessionManager {
     }
 
     @JvmStatic
-    fun isIncognitoActive(): Boolean = com.petal.browser.browser.BrowserContainer.getIncognitoCount() > 0
+    fun isIncognitoActive(): Boolean {
+        val nativeCount = com.petal.browser.engine.PetalChromiumTabModelBridge.incognitoTabCount.value
+        if (nativeCount > 0) return true
+        return try {
+            com.petal.browser.browser.BrowserContainer.getIncognitoCount() > 0
+        } catch (e: Throwable) {
+            false
+        }
+    }
 
     @JvmStatic
     fun updateIncognitoState(activity: Activity) {

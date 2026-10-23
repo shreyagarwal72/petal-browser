@@ -98,13 +98,6 @@ android {
     }
     namespace 'com.petal.browser'
 
-    sourceSets {
-        main {
-            java.srcDirs += ['../src/petal/java']
-            res.srcDirs += ['../src/petal/res']
-        }
-    }
-
     // youtubedl-android (Chaquopy/Python) unzips libpython.zip.so from disk at runtime via
     // ZipFile/RandomAccessFile. When AGP packages native libs compressed and uncompressed for
     // mmap loading (the default since AGP 4.2 targeting API 23+), .so files are stored

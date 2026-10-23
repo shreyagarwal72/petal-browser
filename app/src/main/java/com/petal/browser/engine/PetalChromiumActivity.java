@@ -43,6 +43,7 @@ public class PetalChromiumActivity extends Activity /* extends org.chromium.chro
 
     private static final String TAG = "PetalChromiumActivity";
 
+    private PetalTabManager petalTabManager;
     private PetalShieldsObserver petalShieldsObserver;
     private View petalComposeShell;
 
@@ -81,15 +82,7 @@ public class PetalChromiumActivity extends Activity /* extends org.chromium.chro
         petalShieldsObserver = new PetalShieldsObserver(this);
 
         // Initialise Petal tab manager (wraps Chromium TabModelSelector)
-        // PetalTabManager is a singleton object initialized when TabModelSelector is ready
-        try {
-            Object selector = getClass().getMethod("getTabModelSelector").invoke(this);
-            if (selector != null) {
-                PetalTabManager.init(this, selector);
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "TabModelSelector defer: " + e.getMessage());
-        }
+        petalTabManager = new PetalTabManager(this);
 
         Log.i(TAG, "Petal native bridges initialised");
     }

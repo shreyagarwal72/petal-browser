@@ -20,8 +20,8 @@ import java.util.concurrent.Executors
 
 /**
  * PetalCacheManager: High-grade website & application cache manager implementing
- * the official Mozilla Firefox (GeckoView StorageController) and Chromium (WebView / WebStorage)
- * caching standards.
+ * the official Brave/Chromium (BrowsingDataBridge, Profile, and WebStorage)
+ * caching and storage standards.
  */
 object PetalCacheManager {
 
