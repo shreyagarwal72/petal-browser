@@ -162,23 +162,29 @@ fi
 
 CHROMIUM_AEAD_CC="$CHROMIUM_SRC/crypto/aead.cc"
 if [[ -f "$CHROMIUM_AEAD_CC" ]]; then
-  echo "[2i/4] Injecting BRAVE_NONCE_LENGTH fallback definition into $CHROMIUM_AEAD_CC..."
+  echo "[2i/4] Fixing BRAVE_NONCE_LENGTH in $CHROMIUM_AEAD_CC..."
   python3 -c "
 p = '$CHROMIUM_AEAD_CC'
 with open(p, 'r') as f:
     c = f.read()
-if 'BRAVE_NONCE_LENGTH' in c and '#define BRAVE_NONCE_LENGTH' not in c:
+
+# Replace any bare 'BRAVE_NONCE_LENGTH' statement with a valid statement or 12;
+import re
+# Ensure fallback macro definition is at top
+if '#define BRAVE_NONCE_LENGTH' not in c:
     macro_def = '''
 #ifndef BRAVE_NONCE_LENGTH
 #define BRAVE_NONCE_LENGTH 12
 #endif
 '''
     c = macro_def + '\n' + c
-    with open(p, 'w') as f:
-        f.write(c)
-    print('Successfully injected BRAVE_NONCE_LENGTH (12) fallback into crypto/aead.cc')
-else:
-    print('BRAVE_NONCE_LENGTH already defined or not referenced in crypto/aead.cc')
+
+# If BRAVE_NONCE_LENGTH is standing alone on a line without a semicolon, add the semicolon
+c = re.sub(r'(\bBRAVE_NONCE_LENGTH\b)(?!\s*[;,\(\)\+\-\*\/\=\>\<\&\|\:\?])', r'\1;', c)
+
+with open(p, 'w') as f:
+    f.write(c)
+print('Successfully verified and fixed BRAVE_NONCE_LENGTH in crypto/aead.cc')
 "
 fi
 

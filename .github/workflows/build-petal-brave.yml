@@ -200,6 +200,8 @@ jobs:
           # Run Brave's build preparation to update branding (string mappings, webui, vector icons)
           cd "${{ env.BRAVE_CORE_DIR }}"
           node ./build/commands/scripts/build.ts --target_os=android --target_arch=arm64 --prepare_only || true
+          # Re-apply patches and fixes in case runhooks or build.ts modified/re-generated files
+          bash $GITHUB_WORKSPACE/petal-browser/scripts/apply_patches.sh "${{ env.BRAVE_WORKSPACE }}"
 
       # ── 14. Generate build files (GN) ─────────────────────────────────────────
       - name: ⚙️ GN gen (arm64 release)
