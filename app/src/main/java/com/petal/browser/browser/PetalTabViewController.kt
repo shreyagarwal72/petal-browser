@@ -108,6 +108,12 @@ open class PetalTabViewController @JvmOverloads constructor(
         return fallback
     }
 
+    private var predecessor: AlbumController? = null
+    fun getPredecessor(): AlbumController? = predecessor
+    fun setPredecessor(controller: AlbumController?) { predecessor = controller }
+
+    fun reloadBypassCache() { reload() }
+
     override fun canGoBack(): Boolean = false
     override fun goBack() {}
     override fun reload() {}

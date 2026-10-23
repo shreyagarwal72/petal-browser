@@ -42,5 +42,8 @@ object PetalBuiltInExtensionManager {
     fun isEnabled(context: Context, id: String): Boolean = false
 
     @JvmStatic
+    fun installAll(context: Context) {}
+
+    @JvmStatic
     fun setEnabled(context: Context, id: String, enabled: Boolean) {}
 }

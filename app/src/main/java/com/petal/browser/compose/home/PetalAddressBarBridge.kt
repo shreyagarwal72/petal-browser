@@ -61,6 +61,48 @@ object PetalAddressBarBridge {
         progress: Float = 0f,
         onSwipeNextTab: Runnable? = null,
         onSwipePrevTab: Runnable? = null,
+        onPasteAndGo: java.util.function.Consumer<String>? = null,
+        onHardRefresh: Runnable? = null
+    ) {
+        bindAddressBar(
+            composeView,
+            activity,
+            url,
+            title,
+            isIncognito,
+            isLoading,
+            canGoBack,
+            onBackClick,
+            onShareClick,
+            onAddressClick,
+            onAiResearchClick,
+            favicon,
+            progress,
+            onSwipeNextTab,
+            onSwipePrevTab,
+            if (onPasteAndGo != null) { { text: String -> onPasteAndGo.accept(text) } } else null,
+            onHardRefresh
+        )
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun bindAddressBar(
+        composeView: ComposeView,
+        activity: ComponentActivity,
+        url: String,
+        title: String,
+        isIncognito: Boolean = false,
+        isLoading: Boolean = false,
+        canGoBack: Boolean = true,
+        onBackClick: Runnable,
+        onShareClick: Runnable,
+        onAddressClick: Runnable,
+        onAiResearchClick: Runnable? = null,
+        favicon: android.graphics.Bitmap? = null,
+        progress: Float = 0f,
+        onSwipeNextTab: Runnable? = null,
+        onSwipePrevTab: Runnable? = null,
         onPasteAndGo: ((String) -> Unit)? = null,
         onHardRefresh: Runnable? = null
     ) {

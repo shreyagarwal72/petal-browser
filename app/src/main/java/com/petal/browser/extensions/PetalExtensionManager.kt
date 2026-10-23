@@ -137,6 +137,20 @@ object PetalExtensionManager {
     @JvmStatic
     fun dismissPopup(popup: PendingPopup) {}
 
+    fun interface PopupRequestListener {
+        fun onPopupRequest(popup: PendingPopup)
+    }
+
+    private var popupRequestListener: PopupRequestListener? = null
+
+    @JvmStatic
+    fun setPopupRequestListener(listener: PopupRequestListener?) {
+        popupRequestListener = listener
+    }
+
+    @JvmStatic
+    fun dismissPopup(popup: PendingPopup? = null) {}
+
     @JvmStatic
     fun attach(context: Context) {}
 

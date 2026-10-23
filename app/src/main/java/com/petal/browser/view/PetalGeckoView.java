@@ -17,6 +17,19 @@ public class PetalGeckoView extends PetalTabViewController {
 
     public interface OnScrollChangeListener {
         void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY);
+        default void onScrollDown() {}
+        default void onScrollUp() {}
+    }
+
+    public void setBrowserController(Object controller) {}
+    public void resumeTimers() {}
+    public void pauseTimers() {}
+    public boolean canClearSelection() { return false; }
+    public void clearWebSelection() {}
+    public void evaluateJavascript(String script, ValueCallback<String> resultCallback) {
+        if (resultCallback != null) {
+            resultCallback.onReceiveValue("");
+        }
     }
 
     public PetalGeckoView(Context context) {

@@ -68,3 +68,35 @@ fun PetalExtensionsScreen(
         }
     }
 }
+
+object PetalExtensionsBridge {
+    @JvmStatic
+    fun createExtensionsView(
+        activity: androidx.activity.ComponentActivity,
+        onDismiss: () -> Unit
+    ): android.view.View {
+        return androidx.compose.ui.platform.ComposeView(activity).apply {
+            setContent {
+                PetalExtensionsScreen(onDismiss = onDismiss)
+            }
+        }
+    }
+
+    @JvmStatic
+    fun createPopupView(
+        activity: androidx.activity.ComponentActivity,
+        popup: PetalExtensionManager.PendingPopup,
+        onDismiss: () -> Unit
+    ): android.view.View {
+        return androidx.compose.ui.platform.ComposeView(activity).apply {
+            setContent {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Extension Popup: ${popup.extensionName}")
+                }
+            }
+        }
+    }
+}

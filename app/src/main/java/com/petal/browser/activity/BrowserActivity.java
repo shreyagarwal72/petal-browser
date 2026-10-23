@@ -331,22 +331,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
      * window has genuine input focus. See {@link #runOrDeferPendingWidgetAction()}.
      */
     public com.petal.browser.media.PetalMediaBridge getActiveMediaBridge() {
-        try {
-            String playingTabId = com.petal.browser.engine.gecko.PetalEngineStore.getStore(this)
-                    .getState().getTabs().stream()
-                    .filter(tab -> tab.getMediaSessionState() != null
-                            && tab.getMediaSessionState().getController() != null)
-                    .map(mozilla.components.browser.state.state.TabSessionState::getId)
-                    .findFirst().orElse(null);
-            if (playingTabId != null) {
-                for (AlbumController controller : BrowserContainer.list()) {
-                    if (controller instanceof com.petal.browser.browser.PetalTabViewController
-                            && playingTabId.equals(((com.petal.browser.browser.PetalTabViewController) controller).getTabId())) {
-                        return ((com.petal.browser.browser.PetalTabViewController) controller).getMediaBridge();
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
         if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
             return ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).getMediaBridge();
         }
@@ -992,10 +976,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         // Tab Session Restoration & Rehydration
         boolean tabsRestored = com.petal.browser.unit.PetalTabSessionManager.restoreSession(this);
         // Keep Android Components' restore lifecycle in sync with Petal's richer
-        // tab/session restoration. Individual Gecko sessions are registered in
-        // BrowserStore as tabs are materialized; this action closes the restore
-        // phase for middleware and SessionStorage observers.
-        com.petal.browser.engine.gecko.PetalEngineStore.markRestoreComplete(this);
+        // tab/session restoration complete
 
         // If still no open tab, open default page
         if (!tabsRestored && BrowserContainer.size() < 1) {
@@ -1146,10 +1127,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             ((com.petal.browser.view.PetalGeckoView) currentAlbumController).onResume();
         }
-        try {
-            com.petal.browser.engine.gecko.PetalEngineStore.onAppResume(this);
-            com.petal.browser.engine.gecko.PetalTabSuspender.checkAndSuspendInactiveTabs(this, currentAlbumController);
-        } catch (Throwable ignored) {}
         if (sp.getBoolean("sp_camera", false)) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
@@ -1232,24 +1209,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             }
         } catch (Throwable t) {
             Log.d(TAG, "Error in onTrimMemory: " + t.getMessage());
-        }
-        // Firefox-grade tab suspension under memory pressure:
-        // Levels RUNNING_LOW (10), RUNNING_CRITICAL (15), and COMPLETE (80)
-        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
-            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE) {
-            try {
-                // Critical memory pressure: preserve only the foreground tab, suspend all others
-                com.petal.browser.engine.gecko.PetalTabSuspender.trimBackgroundTabs(this, currentAlbumController, 0);
-            } catch (Exception e) {
-                Log.e(TAG, "Error trimming background tabs on critical memory", e);
-            }
-        } else if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
-            try {
-                // Moderate memory pressure: preserve foreground tab + top 2 active tabs
-                com.petal.browser.engine.gecko.PetalTabSuspender.trimBackgroundTabs(this, currentAlbumController, 2);
-            } catch (Exception e) {
-                Log.e(TAG, "Error trimming background tabs on low memory", e);
-            }
         }
     }
 
@@ -2139,19 +2098,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     ? placeholder.getTabId()
                     : "tab_" + System.currentTimeMillis() + "_" + Math.abs(java.util.UUID.randomUUID().hashCode());
 
-            kotlin.Pair<mozilla.components.browser.state.state.TabSessionState, mozilla.components.concept.engine.EngineSession> sessionPair =
-                com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
-                    this,
-                    effectiveId,
-                    targetUrl != null ? targetUrl : "about:blank",
-                    savedTitle != null ? savedTitle : getString(R.string.app_name),
-                    placeholder.isIncognito(),
-                    true
-                );
-
             com.petal.browser.browser.PetalTabViewController materialized =
                     new com.petal.browser.browser.PetalTabViewController(this);
-            materialized.bindTab(sessionPair.getFirst());
+            materialized.setTabId(effectiveId);
             materialized.attachLifecycle(this);
             observePetalTabSurface(materialized);
             if (placeholder.getTabGroupId() != null && !placeholder.getTabGroupId().isEmpty()) {
@@ -2185,12 +2134,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         currentAlbumController = controller;
         if (contentFrame != null) {
             contentFrame.setEnabled(true);
-        }
-        if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
-            String tabId = ((com.petal.browser.browser.PetalTabViewController) currentAlbumController).getTabId();
-            if (tabId != null) com.petal.browser.engine.gecko.PetalEngineStore.selectTab(this, tabId);
-        } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
-            com.petal.browser.engine.gecko.PetalEngineStore.selectTab(this, ((com.petal.browser.view.PetalGeckoView) currentAlbumController).getTabId());
         }
         
         currentAlbumController.activate();
@@ -3242,7 +3185,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 surface.destroy();
             } else if (controller instanceof com.petal.browser.view.PetalGeckoView) {
                 tabIdToRemove = ((com.petal.browser.view.PetalGeckoView) controller).getTabId();
-                com.petal.browser.engine.gecko.PetalEngineStore.removeTab(this, tabIdToRemove);
+                ((com.petal.browser.view.PetalGeckoView) controller).destroy();
             } else if (controller instanceof com.petal.browser.browser.PlaceholderAlbumController) {
                 tabIdToRemove = ((com.petal.browser.browser.PlaceholderAlbumController) controller).getTabId();
             }
@@ -3966,14 +3909,13 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
             com.petal.browser.browser.PetalTabViewController surface = getActivePetalTabSurface();
-            com.petal.browser.browser.PetalTabViewController.State state = surface != null ? surface.currentState() : null;
-            if (state != null) {
-                currentUrl = state.getUrl();
-                currentTitle = state.getTitle();
-                isIncognito = state.isPrivate();
-                canGoBack = state.getCanGoBack();
-                isLoading = state.getLoading();
-                currentProgressFraction = state.getProgress() / 100f;
+            if (surface != null) {
+                currentUrl = surface.getUrl();
+                currentTitle = surface.getTitle();
+                isIncognito = surface.isIncognito();
+                canGoBack = surface.canGoBack();
+                isLoading = surface.getProgress() < 100;
+                currentProgressFraction = surface.getProgress() / 100f;
             }
         } else if (currentAlbumController instanceof com.petal.browser.view.PetalGeckoView) {
             com.petal.browser.view.PetalGeckoView gv = (com.petal.browser.view.PetalGeckoView) currentAlbumController;
@@ -4057,12 +3999,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         showAlbum(prev);
                     }
                 },
-                pastedText -> {
+                (String pastedText) -> {
                     // Paste & Go
                     if (pastedText != null && !pastedText.trim().isEmpty()) {
                         handleFinalSearch(pastedText.trim());
                     }
-                    return kotlin.Unit.INSTANCE;
                 },
                 () -> {
                     // Hard Refresh (bypass cache)
@@ -4150,7 +4091,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             "})();",
             value -> {
                 aiResearchTimeoutHandler.removeCallbacks(aiResearchTimeoutRunnable);
-                if (!isAiResearchExtracting) return kotlin.Unit.INSTANCE; // already timed out, ignore late callback
+                if (!isAiResearchExtracting) return; // already timed out, ignore late callback
                 isAiResearchExtracting = false;
 
                 String cleanText = value != null ? value : "";
@@ -5342,8 +5283,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                     runOnUiThread(() -> {
                         PetalToast.show(BrowserActivity.this, "Saved website to view offline!");
-                        com.petal.browser.engine.gecko.PetalEngineStore.addOfflineArchive(
-                                BrowserActivity.this, url, archiveFile.getAbsolutePath(), rawTitle);
                         com.petal.browser.compose.downloads.PetalLiveAlertManager.trackOfflinePage(
                                 BrowserActivity.this, rawTitle, url, archiveFile.getAbsolutePath());
                     });
@@ -6790,20 +6729,9 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             com.petal.browser.privacy.PetalTorManager.INSTANCE.startTorSession(this);
         }
 
-        // Create the session and TabSessionState inside Mozilla Android Components BrowserStore
-        kotlin.Pair<mozilla.components.browser.state.state.TabSessionState, mozilla.components.concept.engine.EngineSession> sessionPair =
-            com.petal.browser.engine.gecko.PetalEngineStore.createTabSession(
-                this,
-                generatedTabId,
-                initialUrl,
-                effectiveTitle,
-                isIncognito,
-                foreground
-            );
-
         com.petal.browser.browser.PetalTabViewController tabSurface =
             new com.petal.browser.browser.PetalTabViewController(this);
-        tabSurface.bindTab(sessionPair.getFirst());
+        tabSurface.setTabId(generatedTabId);
         tabSurface.attachLifecycle(this);
         observePetalTabSurface(tabSurface);
         if (currentAlbumController != null) {
@@ -6990,22 +6918,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if ((url == null || url.isEmpty() || "about:blank".equalsIgnoreCase(url)) && activeGeckoView != null) {
             url = activeGeckoView.getUrl();
         }
-        if ((url == null || url.isEmpty() || "about:blank".equalsIgnoreCase(url))) {
-            try {
-                mozilla.components.browser.state.store.BrowserStore store = com.petal.browser.engine.gecko.PetalEngineStore.getStore(this);
-                if (store != null && store.getState() != null) {
-                    String selectedId = store.getState().getSelectedTabId();
-                    if (selectedId != null) {
-                        for (mozilla.components.browser.state.state.TabSessionState t : store.getState().getTabs()) {
-                            if (selectedId.equals(t.getId()) && t.getContent() != null && t.getContent().getUrl() != null) {
-                                url = t.getContent().getUrl();
-                                break;
-                            }
-                        }
-                    }
-                }
-            } catch (Throwable ignored) {}
-        }
         return url;
     }
 
@@ -7180,7 +7092,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 activeController.updatePreviewCache(true);
             }
             saveOpenedTabs();
-            com.petal.browser.engine.gecko.PetalEngineStore.onAppPause(this);
         } catch (Exception e) {
             Log.e(TAG, "Error saving tab session in onPause", e);
         }
