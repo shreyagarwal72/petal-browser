@@ -66,39 +66,53 @@ jobs:
 
       - name: ✍️ Sign APK
         env:
-          SIGNING_KEY: ${{ secrets.RELEASE_KEY_BASE64 }}
-          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.RELEASE_KEY_BASE64 || secrets.SIGNING_KEY }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || secrets.ALIAS }}
+          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+          STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD || secrets.KEY_STORE_PASSWORD }}
         run: |
           UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           echo "Found unsigned APK: $UNSIGNED_APK"
-          
+
+          ANDROID_SDK_BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
+          echo "Using Android Build-Tools: $ANDROID_SDK_BUILD_TOOLS"
+
+          ALIGNED_APK="/tmp/aligned.apk"
+          $ANDROID_SDK_BUILD_TOOLS/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK" || cp "$UNSIGNED_APK" "$ALIGNED_APK"
+
           if [ -n "$SIGNING_KEY" ]; then
+            echo "✅ Using secret SIGNING_KEY..."
             echo "$SIGNING_KEY" | base64 -d > /tmp/release.keystore
-            $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
-              --ks /tmp/release.keystore \
-              --ks-key-alias "$KEY_ALIAS" \
-              --ks-pass "pass:$STORE_PASS" \
-              --key-pass "pass:$KEY_PASS" \
-              --out petal-browser-arm64-signed.apk \
-              "$UNSIGNED_APK"
-            echo "✅ Signed with custom release key"
+            STORE_P="${STORE_PASS:-android}"
+            KEY_P="${KEY_PASS:-android}"
+            ALIAS_N="${KEY_ALIAS:-releasekey}"
+          elif [ -f "app/release.keystore" ]; then
+            echo "✅ Using canonical committed Petal release.keystore..."
+            cp app/release.keystore /tmp/release.keystore
+            STORE_P="android"
+            KEY_P="android"
+            ALIAS_N="releasekey"
           else
             echo "⚠️ Generating and signing with automated release key..."
-            keytool -genkeypair -v -keystore /tmp/ci.keystore -alias petal -keyalg RSA -keysize 2048 -validity 10000 -storepass petalandroid -keypass petalandroid -dname "CN=Petal Browser, O=Petal, C=US"
-            $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
-              --ks /tmp/ci.keystore \
-              --ks-key-alias petal \
-              --ks-pass pass:petalandroid \
-              --key-pass pass:petalandroid \
-              --out petal-browser-arm64-signed.apk \
-              "$UNSIGNED_APK"
-            echo "✅ Signed with CI release key"
+            keytool -genkeypair -v -keystore /tmp/release.keystore -alias releasekey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Petal Browser, O=Petal, C=US"
+            STORE_P="android"
+            KEY_P="android"
+            ALIAS_N="releasekey"
           fi
-          
-          ls -lh petal-browser-arm64-signed.apk
 
+          $ANDROID_SDK_BUILD_TOOLS/apksigner sign \
+            --ks /tmp/release.keystore \
+            --ks-key-alias "$ALIAS_N" \
+            --ks-pass "pass:$STORE_P" \
+            --key-pass "pass:$KEY_P" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out petal-browser-arm64-signed.apk \
+            "$ALIGNED_APK"
+
+          $ANDROID_SDK_BUILD_TOOLS/apksigner verify --verbose petal-browser-arm64-signed.apk
+          ls -lh petal-browser-arm64-signed.apk
       - name: 📦 Upload APK Artifact
         uses: actions/upload-artifact@v7
         with:
