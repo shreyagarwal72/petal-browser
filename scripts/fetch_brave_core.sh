@@ -17,11 +17,11 @@ BRAVE_VERSION="${1:-latest}"
 
 echo "🦁 [1/5] Identifying Brave release..."
 if [ "$BRAVE_VERSION" = "latest" ]; then
-    # Fetch latest stable release tag
-    BRAVE_TAG=$(gh release list --repo "$BRAVE_REPO" --exclude-pre-releases --limit 1 | awk '{print $3}')
+    # Fetch latest release tag using JSON output
+    BRAVE_TAG=$(gh release list --repo "$BRAVE_REPO" --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
     if [ -z "$BRAVE_TAG" ]; then
         echo "⚠️ Fallback to hardcoded stable version..."
-        BRAVE_TAG="v1.98.60"
+        BRAVE_TAG="v1.100.23"
     fi
 else
     BRAVE_TAG="$BRAVE_VERSION"
