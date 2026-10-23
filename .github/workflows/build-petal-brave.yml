@@ -176,12 +176,16 @@ jobs:
           bash $GITHUB_WORKSPACE/petal-browser/scripts/apply_patches.sh \
             "${{ env.BRAVE_WORKSPACE }}"
 
-      # ── 13. Run gclient hooks ─────────────────────────────────────────────────
-      - name: 🪝 gclient runhooks
+      # ── 13. Run gclient hooks & update branding ──────────────────────────────
+      - name: 🪝 gclient runhooks & update branding
         working-directory: ${{ env.BRAVE_WORKSPACE }}
         env:
           PYTHONPATH: ${{ env.BRAVE_CORE_DIR }}/script
-        run: gclient runhooks
+        run: |
+          gclient runhooks
+          # Run Brave's build preparation to update branding (string mappings, webui, vector icons)
+          cd "${{ env.BRAVE_CORE_DIR }}"
+          node ./build/commands/scripts/build.ts --target_os=android --target_arch=arm64 --prepare_only || true
 
       # ── 14. Generate build files (GN) ─────────────────────────────────────────
       - name: ⚙️ GN gen (arm64 release)
