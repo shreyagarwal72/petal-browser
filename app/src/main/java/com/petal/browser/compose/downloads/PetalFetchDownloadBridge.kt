@@ -15,20 +15,6 @@ import java.io.File
  */
 object PetalFetchDownloadBridge {
 
-    data class DownloadItem(
-        val id: Long = 0L,
-        val fileName: String = "",
-        val fileUrl: String = "",
-        val progress: Float? = 0f,
-        val status: Int = 0,
-        val bytesDownloaded: Long = 0L,
-        val totalSize: Long = 0L,
-        val speedBytesPerSec: Long = 0L,
-        val etaSeconds: Long = 0L,
-        val localUri: String? = null,
-        val timestampMs: Long = System.currentTimeMillis()
-    )
-
     private val _downloadItems = MutableStateFlow<List<DownloadItem>>(emptyList())
     val downloadItems: StateFlow<List<DownloadItem>> = _downloadItems.asStateFlow()
 

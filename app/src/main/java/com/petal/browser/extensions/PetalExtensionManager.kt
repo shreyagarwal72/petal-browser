@@ -2,6 +2,7 @@ package com.petal.browser.extensions
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,10 +57,34 @@ object PetalExtensionManager {
         val respond: (granted: Boolean) -> Unit = {}
     )
 
-    val catalog: List<CatalogEntry> = emptyList()
+    fun interface PopupRequestListener {
+        fun onPopupRequest(popup: PendingPopup)
+    }
+
+    val catalog: List<CatalogEntry> = listOf(
+        CatalogEntry(
+            id = "ublock-origin",
+            name = "uBlock Origin",
+            description = "Efficient content blocker.",
+            amoSlug = "ublock-origin",
+            amoListingUrl = "https://addons.mozilla.org/en-US/android/addon/ublock-origin/"
+        )
+    )
 
     private val _extensions = MutableStateFlow<List<InstalledExtension>>(emptyList())
     val extensions: StateFlow<List<InstalledExtension>> = _extensions.asStateFlow()
+
+    private val _pendingPrompt = MutableStateFlow<PendingPrompt?>(null)
+    val pendingPrompt: StateFlow<PendingPrompt?> = _pendingPrompt.asStateFlow()
+
+    private val _pendingPopup = MutableStateFlow<PendingPopup?>(null)
+    val pendingPopup: StateFlow<PendingPopup?> = _pendingPopup.asStateFlow()
+
+    private val _busy = MutableStateFlow(false)
+    val busy: StateFlow<Boolean> = _busy.asStateFlow()
+
+    private val _lastError = MutableStateFlow<String?>(null)
+    val lastError: StateFlow<String?> = _lastError.asStateFlow()
 
     @JvmStatic
     fun init(context: Context) {
@@ -78,12 +103,18 @@ object PetalExtensionManager {
     }
 
     @JvmStatic
+    fun installFromUri(context: Context, uri: Uri) {}
+
+    @JvmStatic
     fun uninstallExtension(extensionId: String, callback: (Boolean) -> Unit) {
         callback(true)
     }
 
     @JvmStatic
     fun setExtensionEnabled(extensionId: String, enabled: Boolean) {}
+
+    @JvmStatic
+    fun setEnabled(ext: InstalledExtension, enabled: Boolean) {}
 
     @JvmStatic
     fun triggerBrowserAction(ext: InstalledExtension) {}
@@ -96,4 +127,13 @@ object PetalExtensionManager {
 
     @JvmStatic
     fun uninstall(context: Context, ext: InstalledExtension) {}
+
+    @JvmStatic
+    fun addPopupRequestListener(listener: PopupRequestListener) {}
+
+    @JvmStatic
+    fun removePopupRequestListener(listener: PopupRequestListener) {}
+
+    @JvmStatic
+    fun dismissPopup(popup: PendingPopup) {}
 }

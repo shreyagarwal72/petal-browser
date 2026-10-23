@@ -41,7 +41,7 @@ class PetalTabViewController @JvmOverloads constructor(
     override fun loadUrl(url: String) { currentUrl = url }
     override fun evaluateJavascript(script: String, callback: ValueCallback<String>?) { callback?.onReceiveValue(null) }
 
-    fun stopLoading() {}
+    override fun stopLoading() {}
     fun getTabId(): String = tabId
     fun setTabId(id: String) { tabId = id }
     fun getTabGroupId(): String? = tabGroupId

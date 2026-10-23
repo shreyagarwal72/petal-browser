@@ -29,6 +29,15 @@ fi
 
 echo "🦁 Target Brave Release Tag: $BRAVE_TAG"
 
+JNILIBS_DIR="${ROOT_DIR}/app/src/main/jniLibs/arm64-v8a"
+ASSETS_DIR="${ROOT_DIR}/app/src/main/assets"
+LIBS_DIR="${ROOT_DIR}/app/libs"
+
+if [ -f "${JNILIBS_DIR}/libchrome.so" ] && [ -f "${LIBS_DIR}/brave_core_classes.jar" ]; then
+    echo "⚡ [CACHE HIT] Brave core components already present in workspace. Skipping download & extraction!"
+    exit 0
+fi
+
 rm -rf "$TEMP_DIR"
 mkdir -p "$TEMP_DIR"
 cd "$TEMP_DIR"
