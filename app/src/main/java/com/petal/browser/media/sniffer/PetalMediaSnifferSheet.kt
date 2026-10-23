@@ -601,12 +601,11 @@ private fun PetalMediaSheet(
                                                         PetalFetchDownloadBridge.enqueueMediaDownload(
                                                             context = context,
                                                             url = selFmt.formatId,
-                                                            fileName = info.title.ifBlank { "Petal media" },
+                                                            suggestedFileName = info.title.ifBlank { "Petal media" },
                                                             mimeType = mimeType,
                                                             userAgent = android.webkit.WebSettings.getDefaultUserAgent(context),
-                                                            cookie = cookies,
-                                                            headers = mapOf("Referer" to currentPageUrl),
-                                                            onFailed = { socialState = SocialState.Failed("Petal Download Manager could not queue this media.") }
+                                                            cookies = cookies,
+                                                            referrer = currentPageUrl
                                                         )
                                                     }
                                                     else -> {

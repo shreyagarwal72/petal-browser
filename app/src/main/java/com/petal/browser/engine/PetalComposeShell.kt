@@ -60,7 +60,7 @@ private fun PetalChromiumUIRoot() {
         com.petal.browser.ui.components.PetalAddressBar(
             url = currentUrl,
             title = currentTitle,
-            progress = currentProgress,
+            progress = currentProgress.toFloat(),
             isIncognito = isIncognito,
             onBackClick = { bridge.goBack() },
             onShareClick = { bridge.sharePage() },

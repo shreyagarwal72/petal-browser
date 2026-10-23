@@ -481,7 +481,7 @@ object PetalPrivacyShieldSheet {
                                     .putBoolean("profileStandard_adBlock", checked)
                                     .apply()
                                 PetalAdBlockEngine.setAdBlockEnabled(activity, checked)
-                                PetalGeckoRuntime.syncPreferences(sp)
+                                // Gecko synced via Chromium SharedPreferences
                                 onToggleAdBlock(checked)
                                 onReloadRequested()
                             },
@@ -507,7 +507,7 @@ object PetalPrivacyShieldSheet {
                                     .putBoolean("sp_block_third_party_cookies", checked)
                                     .putBoolean("profileStandard_cookiesThirdParty", !checked)
                                     .apply()
-                                PetalGeckoRuntime.syncPreferences(sp)
+                                // Gecko synced via Chromium SharedPreferences
                                 onReloadRequested()
                             },
                             position = PetalGroupPosition.TOP
@@ -524,7 +524,7 @@ object PetalPrivacyShieldSheet {
                                     .putBoolean("sp_fingerprint_protection", checked)
                                     .putBoolean("profileStandard_fingerPrintProtection", checked)
                                     .apply()
-                                PetalGeckoRuntime.syncPreferences(sp)
+                                // Gecko synced via Chromium SharedPreferences
                                 onReloadRequested()
                             },
                             position = PetalGroupPosition.MIDDLE
@@ -541,7 +541,7 @@ object PetalPrivacyShieldSheet {
                                     .putBoolean("sp_webrtc_protection", checked)
                                     .putBoolean("profileStandard_webrtcProtection", checked)
                                     .apply()
-                                PetalGeckoRuntime.syncPreferences(sp)
+                                // Gecko synced via Chromium SharedPreferences
                                 onReloadRequested()
                             },
                             position = PetalGroupPosition.MIDDLE
@@ -558,7 +558,7 @@ object PetalPrivacyShieldSheet {
                                     .putBoolean("sp_dnt_gpc", checked)
                                     .putBoolean("profileStandard_dnt", checked)
                                     .apply()
-                                PetalGeckoRuntime.syncPreferences(sp)
+                                // Gecko synced via Chromium SharedPreferences
                                 onReloadRequested()
                             },
                             position = PetalGroupPosition.MIDDLE
@@ -575,7 +575,7 @@ object PetalPrivacyShieldSheet {
                                     .putBoolean("sp_https_only", checked)
                                     .putBoolean("profileStandard_httpsOnly", checked)
                                     .apply()
-                                PetalGeckoRuntime.syncPreferences(sp)
+                                // Gecko synced via Chromium SharedPreferences
                                 onReloadRequested()
                             },
                             position = PetalGroupPosition.BOTTOM

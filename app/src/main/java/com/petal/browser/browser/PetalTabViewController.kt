@@ -50,7 +50,7 @@ class PetalTabViewController @JvmOverloads constructor(
     override fun getTabGroupTitle(): String? = tabGroupTitle
     override fun setTabGroupTitle(title: String?) { tabGroupTitle = title }
 
-    fun getFavicon(): Bitmap? = null
+    override fun getFavicon(): Bitmap? = null
     fun getCachedPreviewBitmap(): Bitmap? = null
     fun getMediaBridge(): PetalMediaBridge = mediaBridge
     fun isAdoptedPopup(): Boolean = false

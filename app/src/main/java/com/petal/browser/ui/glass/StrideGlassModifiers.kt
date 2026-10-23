@@ -222,3 +222,10 @@ fun Modifier.glassTile(target: () -> Rect?, shape: Shape, tint: Color, bar: Glas
             }
         }
 }
+
+
+fun Modifier.liquidGlassEffect(
+    shape: androidx.compose.ui.graphics.Shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    tint: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
+    sheen: Float = 0.6f
+): Modifier = this

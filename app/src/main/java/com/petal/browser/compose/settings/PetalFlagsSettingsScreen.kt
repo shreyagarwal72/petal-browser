@@ -215,8 +215,7 @@ private fun loadAllFlags(): List<PetalFlagEntry> {
                 description  = cls.getMethod("getDescription").invoke(item) as? String ?: "",
                 currentValue = cls.getMethod("getCurrentValue").invoke(item) as? String ?: "Default",
                 defaultValue = cls.getMethod("getDefaultValue").invoke(item) as? String ?: "Default",
-                @Suppress("UNCHECKED_CAST")
-                options      = cls.getMethod("getOptions").invoke(item) as? List<String> ?: listOf("enabled", "disabled")
+                options      = (cls.getMethod("getOptions").invoke(item) as? List<*>)?.filterIsInstance<String>() ?: listOf("enabled", "disabled")
             )
         } ?: emptyList()
     } catch (e: Exception) {

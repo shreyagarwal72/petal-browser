@@ -63,7 +63,7 @@ fun PetalSiteInfoBottomSheet(
             ""
         }
     }
-    val isHttps = urlScheme == "https" || geckoSecurity?.isSecure == true
+    val isHttps = urlScheme == "https"
     val isHttp = urlScheme == "http"
     val isInternalPage = currentUrl.startsWith("petal:") || currentUrl.startsWith("about:")
     val sslCertificate: SslCertificate? = null
@@ -265,7 +265,7 @@ fun PetalSiteInfoBottomSheet(
                                 sslCertificate != null && isHttps ->
                                     "Issued to: ${sslCertificate.issuedTo.cName}\nIssued by: ${sslCertificate.issuedBy.oName}"
                                 false ->
-                                    "Host: ${geckoSecurity.host}\nYour connection is encrypted and verified."
+                                    "Host: $domain\nYour connection is encrypted and verified."
                                 isHttps ->
                                     "Your information is encrypted when sent to this site."
                                 isInternalPage ->

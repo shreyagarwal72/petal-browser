@@ -7,7 +7,6 @@ import android.util.Log
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import com.petal.browser.media.sniffer.YouTubeExtractor
-import com.yausername.aria2c.Aria2c
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -53,8 +52,7 @@ object PetalYtDlpEngine {
             // Match Seal's startup order. These calls are idempotent in youtubedl-android.
             YoutubeDL.getInstance().init(context.applicationContext)
             FFmpeg.getInstance().init(context.applicationContext)
-            Aria2c.getInstance().init(context.applicationContext)
-            initialized.set(true)
+                        initialized.set(true)
             Log.i(TAG, "yt-dlp engine initialized")
         }
     }

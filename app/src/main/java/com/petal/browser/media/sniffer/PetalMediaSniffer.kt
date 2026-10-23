@@ -155,17 +155,15 @@ object PetalMediaSniffer {
         }
 
         try {
-            PetalFetchDownloadBridge.enqueueMediaDownload(
+            val id = PetalFetchDownloadBridge.enqueueMediaDownload(
                 context = context.applicationContext,
                 url = url,
-                fileName = fileName,
+                suggestedFileName = fileName,
                 mimeType = mimeType,
                 userAgent = userAgent,
-                cookie = cookie,
-                headers = extraHeaders,
-                onEnqueued = onEnqueued,
-                onFailed = onFailed
+                cookies = cookie
             )
+            onEnqueued(id)
         } catch (_: RuntimeException) {
             // Download initiation must never crash GeckoView/browser UI.
             onFailed?.invoke()

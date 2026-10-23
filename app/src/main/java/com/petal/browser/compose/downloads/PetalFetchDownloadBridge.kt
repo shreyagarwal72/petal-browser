@@ -59,33 +59,37 @@ object PetalFetchDownloadBridge {
     fun deleteDownload(context: Context, item: Any?) {}
     fun deleteDownloads(context: Context, items: List<Any?>, deleteFiles: Boolean = false) {}
 
+    @JvmOverloads
     fun enqueueMediaDownload(
         context: Context,
         url: String,
-        suggestedFileName: String?,
-        mimeType: String?,
-        userAgent: String?,
+        suggestedFileName: String? = null,
+        mimeType: String? = null,
+        userAgent: String? = null,
         contentLength: Long = -1L,
         cookies: String? = null,
-        referrer: String? = null
+        referrer: String? = null,
+        fileName: String? = suggestedFileName
     ): Long {
+        val effectiveFileName = fileName ?: suggestedFileName
         val intent = Intent(context, PetalChromiumDownloadService::class.java).apply {
             action = PetalChromiumDownloadService.ACTION_DOWNLOAD_START
             putExtra(PetalChromiumDownloadService.EXTRA_DOWNLOAD_URL, url)
-            putExtra(PetalChromiumDownloadService.EXTRA_FILE_NAME, suggestedFileName)
+            putExtra(PetalChromiumDownloadService.EXTRA_FILE_NAME, effectiveFileName)
             putExtra(PetalChromiumDownloadService.EXTRA_MIME_TYPE, mimeType)
         }
         context.startService(intent)
         return System.currentTimeMillis()
     }
 
+    @JvmOverloads
     fun enqueueGeckoDownload(
         context: Context,
         url: String,
         fileName: String,
-        mimeType: String?,
-        contentLength: Long,
-        userAgent: String?,
-        cookies: String?
+        mimeType: String? = null,
+        contentLength: Long = -1L,
+        userAgent: String? = null,
+        cookies: String? = null
     ): Long = enqueueMediaDownload(context, url, fileName, mimeType, userAgent, contentLength, cookies, null)
 }

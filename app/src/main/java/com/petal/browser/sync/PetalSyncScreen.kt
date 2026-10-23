@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.petal.browser.ui.components.IconSwitch
 import com.petal.browser.ui.components.bouncyClickable
-import com.petal.browser.ui.containment.PetalPredictiveBackSurface
+import com.petal.browser.predictive.PetalPredictiveBackSurface
 import com.petal.browser.ui.glass.liquidGlassEffect
 
 /**

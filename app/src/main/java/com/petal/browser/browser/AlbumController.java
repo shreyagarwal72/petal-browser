@@ -36,4 +36,5 @@ public interface AlbumController {
     default android.graphics.Bitmap getFavicon() { return null; }
     default Object getCurrentSecurityInfo() { return null; }
     default void reloadWithoutInit() { reload(); }
+    default com.petal.browser.media.PetalMediaBridge getMediaBridge() { return null; }
 }

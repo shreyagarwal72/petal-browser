@@ -64,7 +64,6 @@ object PetalQuickToolsBridge {
     ) {
         when (controller) {
             is PetalTabViewController -> controller.captureFullPageBitmap(callback)
-            is AlbumController -> controller.captureFullPageBitmap(callback)
             else -> callback(null)
         }
     }
@@ -74,8 +73,7 @@ object PetalQuickToolsBridge {
         userAgent: String?
     ) {
         when (controller) {
-            is PetalTabViewController -> controller.setUserAgent(userAgent)
-            is AlbumController -> controller.setUserAgent(userAgent)
+            is PetalTabViewController -> controller.setUserAgent(userAgent ?: "")
             else -> {}
         }
     }

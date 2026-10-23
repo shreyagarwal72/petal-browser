@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 @Composable
 fun IconSwitch(
     checked: Boolean,
-    icon: ImageVector,
+    icon: ImageVector = androidx.compose.material.icons.Icons.Rounded.Check,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,

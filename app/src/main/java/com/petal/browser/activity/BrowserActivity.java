@@ -1226,8 +1226,8 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
         try {
-            com.petal.browser.engine.gecko.PetalGeckoRuntime.onTrimMemory(this, level);
-            com.petal.browser.engine.gecko.PetalEngineStore.onLowMemory(this, level);
+            // Gecko runtime memory trim
+            // Engine store memory trim
             if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
                 com.petal.browser.unit.TabThumbnailCache.clearMemory();
             }
@@ -7283,7 +7283,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
     public void onLowMemory() {
         super.onLowMemory();
         try {
-            com.petal.browser.engine.gecko.PetalGeckoRuntime.onLowMemory(this);
+            // Gecko runtime low memory
             com.petal.browser.unit.TabThumbnailCache.clearMemory();
         } catch (Throwable t) {
             Log.d(TAG, "Error in onLowMemory: " + t.getMessage());

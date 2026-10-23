@@ -40,7 +40,7 @@ object BrowserNavigationDelegate {
 
         val canGoBack = tabSurface?.canGoBack() ?: geckoView?.canGoBack() ?: false
         val canGoForward = tabSurface?.canGoForward() ?: geckoView?.canGoForward() ?: false
-        val profile = AlbumController.getProfile(activity)
+        val profile = "default_profile"
         val prefs = activity.sp ?: PreferenceManager.getDefaultSharedPreferences(activity)
         val isDesktopSite = prefs.getBoolean("${profile}_desktop", false)
         val isAdBlock = prefs.getBoolean("sp_ad_block", prefs.getBoolean("${profile}_adBlock", true))
@@ -109,7 +109,7 @@ object BrowserNavigationDelegate {
                         .putBoolean("profileStandard_adBlock", enabled)
                         .apply()
                     if (tabSurface != null) tabSurface.reload() else {
-                        geckoView?.initPreferences(url)
+                        geckoView?.initPreferences()
                         geckoView?.reload()
                     }
                     PetalToast.show(activity, if (enabled) "AdBlocker Enabled" else "AdBlocker Disabled")
