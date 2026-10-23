@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.petal.browser.extensions.PetalExtensionManager
-import com.petal.browser.ui.theme.petalLiquidGlass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +33,7 @@ fun PetalExtensionsScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                modifier = Modifier.petalLiquidGlass(alpha = 0.85f)
+                modifier = Modifier
             )
         }
     ) { padding ->
