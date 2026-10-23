@@ -8,31 +8,18 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
-import androidx.preference.PreferenceManager
-import com.petal.browser.compose.downloads.PetalFetchDownloadBridge
 import com.petal.browser.view.PetalToast
-import com.tonyodev.fetch2.AbstractFetchListener
-import com.tonyodev.fetch2.Download
-import com.tonyodev.fetch2.EnqueueAction
-import com.tonyodev.fetch2.Error
-import com.tonyodev.fetch2.Fetch
-import com.tonyodev.fetch2.NetworkType
-import com.tonyodev.fetch2.Priority
-import com.tonyodev.fetch2.Request
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
  * Petal in-app update installer and downloader.
- * Uses Petal's high-speed internal download engine (Fetch2 + OkHttp) exclusively.
- * Fully eliminates legacy android.app.DownloadManager dependencies.
+ * Driven via Petal Chromium Native Download pipeline.
  */
 class PetalUpdateInstallerReceiver : BroadcastReceiver() {
 
-    override fun onReceive(context: Context, intent: Intent) {
-        // Maintained as a standard receiver stub for any broadcast callbacks if needed.
-    }
+    override fun onReceive(context: Context, intent: Intent) {}
 
     companion object {
         private const val TAG = "PetalUpdateInstaller"
@@ -40,9 +27,6 @@ class PetalUpdateInstallerReceiver : BroadcastReceiver() {
         const val KEY_UPDATE_FILE_PATH = "sp_active_update_file_path"
         const val KEY_UPDATE_VERSION = "sp_active_update_version"
 
-        /**
-         * Downloads update APK using Petal Download Manager engine with live progress callbacks.
-         */
         @JvmStatic
         suspend fun downloadAndInstallApk(
             context: Context,
@@ -55,19 +39,12 @@ class PetalUpdateInstallerReceiver : BroadcastReceiver() {
             true
         }
 
-        /**
-         * Enqueues update download directly in Petal Download Manager (Fetch2 engine).
-         * Runs in background with notification and automatically prompts to install on completion.
-         */
         @JvmStatic
         fun enqueuePetalUpdateDownload(context: Context, downloadUrl: String, version: String): Long {
             PetalUpdateManager.initialize(context)
             return PetalUpdateManager.startUpdateDownload(context, downloadUrl, version)
         }
 
-        /**
-         * Backward compatibility stub delegating to Petal Download Manager.
-         */
         @JvmStatic
         fun enqueueSystemUpdateDownload(context: Context, downloadUrl: String, version: String): Long {
             return enqueuePetalUpdateDownload(context, downloadUrl, version)
