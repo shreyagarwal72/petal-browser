@@ -639,28 +639,25 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setAdBlockEnabled(enabled: Boolean) {
         sp.edit().putBoolean("sp_ad_block", enabled)
             .putBoolean("profileStandard_adBlock", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setAdBlockEnabled(enabled)
     }
 
     override suspend fun setBlockThirdPartyCookies(enabled: Boolean) {
         sp.edit().putBoolean("sp_block_third_party_cookies", enabled)
             .putBoolean("profileStandard_cookiesThirdParty", !enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setBlockThirdPartyCookies(enabled)
     }
 
     override suspend fun setTotalCookieProtection(enabled: Boolean) {
         sp.edit().putBoolean("sp_total_cookie_protection", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setCookieBannerAutoReject(enabled: Boolean) {
         sp.edit().putBoolean("sp_cookie_banner_auto_reject", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setEtpStrict(enabled: Boolean) {
         sp.edit().putBoolean("sp_etp_strict", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setBiometricTabLock(enabled: Boolean) {
@@ -669,7 +666,6 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setSessionPartitioning(enabled: Boolean) {
         sp.edit().putBoolean("sp_session_partitioning", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setTorPrivateWindow(enabled: Boolean) {
@@ -679,57 +675,53 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setFingerprintProtection(enabled: Boolean) {
         sp.edit().putBoolean("sp_fingerprint_protection", enabled)
             .putBoolean("profileStandard_fingerPrintProtection", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setFingerprintProtection(enabled)
     }
 
     override suspend fun setWebrtcProtection(enabled: Boolean) {
         sp.edit().putBoolean("sp_webrtc_protection", enabled)
             .putBoolean("profileStandard_webrtcProtection", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setWebRtcProtection(enabled)
     }
 
     override suspend fun setDntGpc(enabled: Boolean) {
         sp.edit().putBoolean("sp_dnt_gpc", enabled)
             .putBoolean("profileStandard_dnt", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setDoNotTrack(enabled)
     }
 
     override suspend fun setTrimReferrers(enabled: Boolean) {
         sp.edit().putBoolean("sp_trim_referrers", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setWebauthnEnabled(enabled: Boolean) {
         sp.edit().putBoolean("sp_webauthn_enabled", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setHttpsOnly(enabled: Boolean) {
         sp.edit().putBoolean("sp_https_only", enabled)
             .putBoolean("profileStandard_httpsOnly", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setHttpsOnlyModeEnabled(enabled)
     }
 
     override suspend fun setJavaScriptEnabled(enabled: Boolean) {
         sp.edit().putBoolean("sp_javascript", enabled)
             .putBoolean("profileStandard_javascript", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setJavaScriptEnabled(enabled)
     }
 
     override suspend fun setBlockPopups(enabled: Boolean) {
         sp.edit().putBoolean("sp_block_popups", enabled)
             .putBoolean("profileStandard_javascriptPopUp", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
+        com.petal.browser.bridge.NativePrefBridge.setBlockPopups(enabled)
     }
 
     override suspend fun setOpenRedirectsInBackground(enabled: Boolean) {
         sp.edit().putBoolean("sp_open_redirects_in_background", enabled).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setPrivateDnsMode(mode: String) {
         sp.edit().putString("sp_private_dns_mode", mode).apply()
-        com.petal.browser.engine.gecko.PetalGeckoRuntime.syncPreferences(sp)
     }
 
     override suspend fun setCustomDohUrl(url: String) {

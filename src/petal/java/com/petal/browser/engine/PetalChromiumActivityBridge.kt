@@ -75,10 +75,51 @@ class PetalChromiumActivityBridge private constructor() {
 
     fun selectTab(tab: AlbumController) { /* delegate to TabModelSelector */ }
     fun closeTab(tab: AlbumController) { /* delegate to TabModelSelector */ }
-    fun openNewTab(incognito: Boolean) { /* delegate to TabCreator */ }
+    fun openNewTab(incognito: Boolean) {
+        try {
+            val mgr = Class.forName("com.petal.browser.engine.PetalTabManager")
+                .getMethod("getInstance").invoke(null)
+            mgr?.javaClass?.getMethod("openNewTab", Boolean::class.javaPrimitiveType)
+                ?.invoke(mgr, incognito)
+            if (incognito) {
+                this.isIncognito.value = true
+                android.util.Log.i("PetalBridge", "Opened new OTR incognito tab")
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("PetalBridge", "openNewTab: $e")
+        }
+    }
     fun openSettings() { /* start PetalSettingsActivity */ }
     fun sharePage() { /* Android share intent */ }
-    fun toggleDesktopSite() { /* Chromium UserAgentOverride */ }
+    fun toggleDesktopSite() {
+        try {
+            val mgr = PetalTabManager::class.java.getDeclaredField("instance").get(null) as? PetalTabManager
+            val activeTab = mgr?.getActiveTab() ?: return
+            val webContents = activeTab.javaClass.getMethod("getWebContents").invoke(activeTab)
+            val currentUa = webContents?.javaClass?.getMethod("getUserAgentOverride")?.invoke(webContents) as? String ?: ""
+            val isCurrentlyDesktop = currentUa.isNotEmpty() && !currentUa.contains("Android")
+            val newDesktopEnabled = !isCurrentlyDesktop
+
+            if (newDesktopEnabled) {
+                val defaultUa = webContents?.javaClass?.getMethod("getUserAgent")?.invoke(webContents) as? String ?: ""
+                val desktopUa = com.petal.browser.engine.petal.DesktopSiteRules.desktopUserAgent(defaultUa)
+                webContents?.javaClass?.getMethod("setUserAgentOverride", String::class.java, Boolean::class.javaPrimitiveType)
+                    ?.invoke(webContents, desktopUa, false)
+            } else {
+                webContents?.javaClass?.getMethod("setUserAgentOverride", String::class.java, Boolean::class.javaPrimitiveType)
+                    ?.invoke(webContents, "", false)
+            }
+
+            runCatching {
+                com.petal.browser.bridge.NativePrefBridge.setRequestDesktopSite(newDesktopEnabled)
+            }
+
+            activeTab.javaClass.getMethod("reload").invoke(activeTab)
+            android.util.Log.i("PetalBridge", "toggleDesktopSite: desktopEnabled=$newDesktopEnabled")
+        } catch (e: Exception) {
+            android.util.Log.w("PetalBridge", "toggleDesktopSite: $e")
+        }
+    }
     fun toggleReaderMode() { /* Chromium DomDistillerService */ }
     fun bookmarkCurrentPage() { /* Chromium BookmarkModel */ }
     fun downloadCurrentPage() { /* Chromium DownloadManagerService */ }

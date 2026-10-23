@@ -70,4 +70,38 @@ class SearchHomeSettingsViewModel @Inject constructor(
     fun setShowSearchEngineSelectorInOmnibox(enabled: Boolean) = viewModelScope.launch {
         settingsRepository.setShowSearchEngineSelectorInOmnibox(enabled)
     }
+
+    fun getAvailableSearchEngines(): List<Pair<String, String>> {
+        return runCatching {
+            val serviceFactory = Class.forName("org.chromium.chrome.browser.search_engines.TemplateUrlServiceFactory")
+            val profileManagerClass = Class.forName("org.chromium.chrome.browser.profiles.ProfileManager")
+            val profile = profileManagerClass.getMethod("getLastUsedRegularProfile").invoke(null)
+            val service = serviceFactory.getMethod("getForProfile", profile.javaClass).invoke(null, profile)
+            @Suppress("UNCHECKED_CAST")
+            val urls = service?.javaClass?.getMethod("getTemplateUrls")?.invoke(service) as? List<Any>
+            urls?.mapNotNull { templateUrl ->
+                val shortName = templateUrl.javaClass.getMethod("getShortName").invoke(templateUrl) as? String
+                val keyword = templateUrl.javaClass.getMethod("getKeyword").invoke(templateUrl) as? String
+                if (shortName != null && keyword != null) Pair(shortName, keyword) else null
+            } ?: emptyList()
+        }.getOrElse { emptyList() }
+    }
+
+    fun setDefaultSearchEngineByKeyword(keyword: String) {
+        runCatching {
+            val serviceFactory = Class.forName("org.chromium.chrome.browser.search_engines.TemplateUrlServiceFactory")
+            val profileManagerClass = Class.forName("org.chromium.chrome.browser.profiles.ProfileManager")
+            val profile = profileManagerClass.getMethod("getLastUsedRegularProfile").invoke(null)
+            val service = serviceFactory.getMethod("getForProfile", profile.javaClass).invoke(null, profile)
+            @Suppress("UNCHECKED_CAST")
+            val urls = service?.javaClass?.getMethod("getTemplateUrls")?.invoke(service) as? List<Any>
+            val target = urls?.find { url ->
+                url.javaClass.getMethod("getKeyword").invoke(url) as? String == keyword
+            }
+            if (target != null) {
+                service?.javaClass?.getMethod("setSearchEngine", target.javaClass)?.invoke(service, target)
+            }
+        }
+        viewModelScope.launch { settingsRepository.setSearchEngineIndex(keyword) }
+    }
 }

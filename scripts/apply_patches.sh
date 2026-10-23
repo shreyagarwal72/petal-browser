@@ -86,6 +86,20 @@ if [[ -d "$BRAVE_DOWNLOAD_RES" ]]; then
   cp -r "$BRAVE_DOWNLOAD_RES/." "$CHROMIUM_DOWNLOAD_RES/"
 fi
 
+# ─── Fix print_rust_log_ffi.cc namespace / override compatibility ────────────
+# Upstream brave-core's chromium_src/base/logging/rust_logger/print_rust_log_ffi.cc
+# wraps ShouldPrintRustLog in namespace logging::internal { namespace { ... } }.
+# However, base/logging/rust_logger/print_rust_log_ffi.cc is outside the anonymous
+# namespace, causing Clang to fail with: error: use of undeclared identifier 'ShouldPrintRustLog'.
+# Declaring ShouldPrintRustLog in logging::internal fixes the visibility for the included cc file.
+RUST_LOG_OVERRIDE="$BRAVE_CORE_DIR/chromium_src/base/logging/rust_logger/print_rust_log_ffi.cc"
+if [[ -f "$RUST_LOG_OVERRIDE" ]]; then
+  echo "[2g/4] Ensuring ShouldPrintRustLog has visible linkage in $RUST_LOG_OVERRIDE..."
+  sed -i 's/namespace {/namespace {\nbool ShouldPrintRustLog(int32_t\& severity);/g' "$RUST_LOG_OVERRIDE" || true
+  # Also declare in logging::internal right before the anonymous namespace
+  sed -i 's/namespace logging::internal {/namespace logging::internal {\nbool ShouldPrintRustLog(int32_t\& severity);/g' "$RUST_LOG_OVERRIDE" || true
+fi
+
 # ─── Copy patches into brave-core patches directory ───────────────────────────
 PATCHES_SRC="$REPO_ROOT/patches/petal"
 PATCHES_DST="$BRAVE_CORE_DIR/patches/petal"

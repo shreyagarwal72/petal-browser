@@ -161,6 +161,37 @@ object PetalChromiumTabModelBridge {
     // Native Tab Thumbnail Retrieval (via Chromium's TabContentManager)
     // -------------------------------------------------------------------------
 
+    data class TabSummary(
+        val id: Int,
+        val title: String,
+        val url: String,
+        val isIncognito: Boolean = false
+    )
+
+    @JvmStatic
+    fun getTabSummaries(): List<TabSummary> {
+        val selector = tabModelSelector ?: return emptyList()
+        return try {
+            val model = selector.javaClass.getMethod("getCurrentModel").invoke(selector)
+            val count = model?.javaClass?.getMethod("getCount")?.invoke(model) as? Int ?: 0
+            (0 until count).mapNotNull { i ->
+                try {
+                    val tab = model?.javaClass?.getMethod("getTabAt", Int::class.javaPrimitiveType)?.invoke(model, i)
+                    val id = tab?.javaClass?.getMethod("getId")?.invoke(tab) as? Int ?: -1
+                    val title = tab?.javaClass?.getMethod("getTitle")?.invoke(tab) as? String ?: ""
+                    val url = tab?.javaClass?.getMethod("getUrl")?.invoke(tab)
+                    val urlStr = url?.let {
+                        runCatching { it.javaClass.getMethod("getSpec").invoke(it) as? String }.getOrNull()
+                    } ?: ""
+                    TabSummary(id = id, title = title, url = urlStr, isIncognito = _isIncognitoSelected.value)
+                } catch (e: Throwable) { null }
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "getTabSummaries: ${e.message}")
+            emptyList()
+        }
+    }
+
     @JvmStatic
     fun getTabThumbnail(tabId: Int, callback: (Bitmap?) -> Unit) {
         val manager = tabContentManager
@@ -169,12 +200,9 @@ object PetalChromiumTabModelBridge {
             return
         }
         try {
-            // Invokes TabContentManager.getTabThumbnailWithCallback(tabId, thumbnailSize, callback)
-            // Using reflection to adapt to Chromium version signatures
             val methods = manager.javaClass.methods.filter { it.name.startsWith("getTabThumbnail") }
             val matching = methods.firstOrNull()
             if (matching != null) {
-                // If native callback is expected, invoke or fallback gracefully
                 Log.d(TAG, "Fetching native Chromium thumbnail for tab $tabId")
             }
             callback(null)
