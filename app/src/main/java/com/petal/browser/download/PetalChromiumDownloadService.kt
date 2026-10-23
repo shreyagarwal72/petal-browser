@@ -37,7 +37,7 @@ import java.lang.reflect.Method
 class PetalChromiumDownloadService : Service() {
 
     companion object {
-        // Download actions & extras for Petal UI & LiveAlertManager
+
         const val ACTION_DOWNLOAD_START  = "com.petal.browser.download.START"
         const val ACTION_DOWNLOAD_PAUSE  = "com.petal.browser.download.PAUSE"
         const val ACTION_DOWNLOAD_RESUME = "com.petal.browser.download.RESUME"
@@ -140,7 +140,7 @@ class PetalChromiumDownloadService : Service() {
 
     private fun buildIdleNotification(): Notification =
         NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_download)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("Petal Downloads")
             .setContentText("Ready")
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -172,8 +172,8 @@ class PetalChromiumDownloadService : Service() {
 
         val builder = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(
-                if (isComplete) R.drawable.ic_download
-                else R.drawable.ic_download
+                if (isComplete) android.R.drawable.stat_sys_download_done
+                else android.R.drawable.stat_sys_download
             )
             .setContentTitle(title)
             .setPriority(NotificationCompat.PRIORITY_LOW)

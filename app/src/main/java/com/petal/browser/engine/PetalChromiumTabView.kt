@@ -20,12 +20,6 @@ import com.petal.browser.ui.glass.ChromiumGlassBackend
  *  - Liquid Glass real-time AGSL sampling hook via [ChromiumGlassBackend]
  *  - Zero GeckoView or Mozilla components
  */
-object PetalTabThumbnailCache {
-    fun get(id: Int): Bitmap? = null
-    fun put(id: Int, bm: Bitmap?) {}
-    fun clear() {}
-}
-
 class PetalChromiumTabView(
     private val chromiumTab: Any,         // org.chromium.chrome.browser.tab.Tab
     private val contentView: View,        // org.chromium.content.browser.ContentView
@@ -103,7 +97,7 @@ class PetalChromiumTabView(
         }
     }
 
-    override fun canGoBack(): Boolean {
+    fun canGoBack(): Boolean {
         return try {
             chromiumTab.javaClass.getMethod("canGoBack").invoke(chromiumTab) as? Boolean ?: false
         } catch (e: Throwable) {
@@ -111,7 +105,7 @@ class PetalChromiumTabView(
         }
     }
 
-    override fun canGoForward(): Boolean {
+    fun canGoForward(): Boolean {
         return try {
             chromiumTab.javaClass.getMethod("canGoForward").invoke(chromiumTab) as? Boolean ?: false
         } catch (e: Throwable) {
@@ -119,7 +113,7 @@ class PetalChromiumTabView(
         }
     }
 
-    override fun goBack() {
+    fun goBack() {
         try {
             chromiumTab.javaClass.getMethod("goBack").invoke(chromiumTab)
         } catch (e: Throwable) {
@@ -127,7 +121,7 @@ class PetalChromiumTabView(
         }
     }
 
-    override fun goForward() {
+    fun goForward() {
         try {
             chromiumTab.javaClass.getMethod("goForward").invoke(chromiumTab)
         } catch (e: Throwable) {
@@ -135,7 +129,7 @@ class PetalChromiumTabView(
         }
     }
 
-    override fun reload() {
+    fun reload() {
         try {
             chromiumTab.javaClass.getMethod("reload").invoke(chromiumTab)
         } catch (e: Throwable) {
@@ -197,6 +191,4 @@ class PetalChromiumTabView(
     fun attachGlassBackend() {
         ChromiumGlassBackend.attachTextureListener(contentView)
     }
-
-    fun getTabId(): Int = tabId
 }

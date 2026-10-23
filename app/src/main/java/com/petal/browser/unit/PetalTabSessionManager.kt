@@ -8,12 +8,12 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.petal.browser.R
 import com.petal.browser.activity.BrowserActivity
-// import com.petal.browser.browser.AlbumController
+import com.petal.browser.browser.AlbumController
 import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
 import com.petal.browser.controller.BrowserWebViewController
 import com.petal.browser.database.RecordAction
-// import com.petal.browser.browser.AlbumController
+import com.petal.browser.browser.AlbumController
 import java.util.Arrays
 import java.util.concurrent.Executors
 
@@ -95,9 +95,9 @@ object PetalTabSessionManager {
                         !controller.url.equals("about:blank", ignoreCase = true) ->
                             controller.url
                         controller is AlbumController &&
-                        controller.url.isNotBlank() &&
-                        !controller.url.equals("about:blank", ignoreCase = true) ->
-                            controller.url
+                        controller.persistentUrl.isNotBlank() &&
+                        !controller.persistentUrl.equals("about:blank", ignoreCase = true) ->
+                            controller.persistentUrl
                         rawUrl.isNotBlank() && !rawUrl.equals("about:blank", ignoreCase = true) ->
                             rawUrl
                         else -> rawUrl
@@ -266,6 +266,7 @@ object PetalTabSessionManager {
 
                 if (isForeground) {
                     val tabId = record.persistentTabId.ifBlank { "tab_restored_${System.currentTimeMillis()}_$i" }
+                    )
 
                     val geckoView = com.petal.browser.browser.PetalTabViewController(activity)
                     
@@ -349,6 +350,7 @@ object PetalTabSessionManager {
         }
 
         val tabId = "tab_silently_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().substring(0, 8)}"
+        )
 
         val geckoView = com.petal.browser.browser.PetalTabViewController(activity)
         
