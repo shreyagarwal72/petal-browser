@@ -95,7 +95,7 @@ class PetalChromiumTabView(
 
     override fun getFavicon(): Bitmap? = null
     fun getCachedPreviewBitmap(): Bitmap? = getThumbnail()
-    fun getMediaBridge(): com.petal.browser.media.PetalMediaBridge? = null
+    override fun getMediaBridge(): com.petal.browser.media.PetalMediaBridge? = null
     fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) {
         captureThumbnail { callback(it) }
     }

@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 @Composable
 fun IconSwitch(
     checked: Boolean,
-    icon: ImageVector = androidx.compose.material.icons.Icons.Rounded.Done,
+    icon: ImageVector? = null,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -24,12 +24,14 @@ fun IconSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,
-        thumbContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(SwitchDefaults.IconSize),
-            )
+        thumbContent = icon?.let {
+            {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(SwitchDefaults.IconSize),
+                )
+            }
         },
         modifier = modifier.scale(0.9f),
     )
