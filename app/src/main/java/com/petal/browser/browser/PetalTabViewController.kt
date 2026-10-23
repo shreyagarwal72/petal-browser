@@ -3,51 +3,51 @@ package com.petal.browser.browser
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.AttributeSet
-import android.view.View
-import android.webkit.ValueCallback
-import com.petal.browser.engine.PetalChromiumTabView
+import android.widget.FrameLayout
 import com.petal.browser.media.PetalMediaBridge
 
-/**
- * PetalTabViewController
- * Compatibility wrapper routing all tab operations to the genuine Chromium engine.
- * Fully decoupled from Mozilla Android Components and GeckoView.
- */
 class PetalTabViewController @JvmOverloads constructor(
     context: Context,
-    attrs: AttributeSet? = null
-) : View(context, attrs), AlbumController {
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : FrameLayout(context, attrs, defStyleAttr), AlbumController {
 
-    private var tabId: String = System.currentTimeMillis().toString()
+    private var currentUrl: String? = null
+    private var currentTitle: String? = null
+    private var tabId: String = ""
     private var tabGroupId: String? = null
     private var tabGroupTitle: String? = null
-    private var currentUrl: String = "about:blank"
-    private var currentTitle: String = "New Tab"
-    private var isIncognitoMode: Boolean = false
-    private val mediaBridge = PetalMediaBridge(context, null as PetalMediaBridge.MediaStateListener?)
+    private val mediaBridge = PetalMediaBridge()
 
-    override fun getAlbumView(): View = this
-    override fun activate() {}
-    override fun deactivate() {}
-    override fun getTitle(): String = currentTitle
-    override fun getUrl(): String = currentUrl
-    override fun isIncognito(): Boolean = isIncognitoMode
+    data class BrowserState(
+        val url: String = "",
+        val title: String = "",
+        val progress: Int = 100,
+        val isSecure: Boolean = false
+    )
 
-    override fun canGoBack(): Boolean = false
-    override fun canGoForward(): Boolean = false
-    override fun goBack() {}
-    override fun goForward() {}
-    override fun reload() {}
-    override fun loadUrl(url: String) { currentUrl = url }
-    override fun evaluateJavascript(script: String, callback: ValueCallback<String>?) { callback?.onReceiveValue(null) }
+    var onBrowserStateChanged: ((BrowserState) -> Unit)? = null
 
-    override fun stopLoading() {}
+    override fun getUrl(): String? = currentUrl
+    fun setUrl(url: String?) {
+        currentUrl = url
+        notifyState()
+    }
+
+    override fun getTitle(): String? = currentTitle
+    fun setTitle(title: String?) {
+        currentTitle = title
+        notifyState()
+    }
+
+    override fun getPersistentUrl(): String? = currentUrl
     override fun getTabId(): String = tabId
     fun setTabId(id: String) { tabId = id }
     override fun getTabGroupId(): String? = tabGroupId
     fun setTabGroupId(id: String?) { tabGroupId = id }
     override fun getTabGroupTitle(): String? = tabGroupTitle
     fun setTabGroupTitle(title: String?) { tabGroupTitle = title }
+
     fun getFavicon(): Bitmap? = null
     fun getCachedPreviewBitmap(): Bitmap? = null
     fun getMediaBridge(): PetalMediaBridge = mediaBridge
@@ -55,16 +55,54 @@ class PetalTabViewController @JvmOverloads constructor(
     fun captureFullPageBitmap(callback: (Bitmap?) -> Unit) { callback(null) }
     override fun setDesktopMode(enabled: Boolean) {}
     fun isPageAtTop(): Boolean = true
-    fun processBackPressed(): Boolean = false
     fun bindTab(pair: Any?) {}
     fun setTrackingProtection(enabled: Boolean) {}
-    val currentState: Any? get() = null
+    val currentState: BrowserState get() = BrowserState(currentUrl ?: "", currentTitle ?: "", progress, isSecure)
     fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) { callback(null) }
     fun setUserAgent(ua: String) {}
 
     var progress: Int = 0
+        set(value) {
+            field = value
+            notifyState()
+        }
     var isSecure: Boolean = false
-    fun attachLifecycle(owner: Any?) {}
-    fun processBackPressed(fallback: Boolean = false): Boolean = false
+        set(value) {
+            field = value
+            notifyState()
+        }
 
+    fun attachLifecycle(owner: Any?) {}
+
+    fun processBackPressed(onFallback: (() -> Unit)? = null): Boolean {
+        if (canGoBack()) {
+            goBack()
+            return true
+        }
+        onFallback?.invoke()
+        return false
+    }
+
+    fun processBackPressed(fallback: Boolean): Boolean {
+        if (canGoBack()) {
+            goBack()
+            return true
+        }
+        return fallback
+    }
+
+    fun canGoBack(): Boolean = false
+    fun goBack() {}
+    fun reload() {}
+    fun loadUrl(url: String) {
+        currentUrl = url
+        notifyState()
+    }
+    fun activate() {}
+    fun deactivate() {}
+    fun destroy() {}
+
+    private fun notifyState() {
+        onBrowserStateChanged?.invoke(currentState)
+    }
 }

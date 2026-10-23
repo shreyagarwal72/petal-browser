@@ -29,7 +29,6 @@ import com.petal.browser.predictive.PetalContentSnapshot
 import com.petal.browser.ui.theme.PetalExpressiveTheme
 import com.petal.browser.unit.HelperUnit
 import com.petal.browser.unit.ReaderModeManager
-import com.petal.browser.browser.AlbumController
 
 object PetalReaderBridge {
 

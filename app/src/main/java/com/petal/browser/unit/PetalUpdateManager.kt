@@ -84,4 +84,26 @@ object PetalUpdateManager {
     fun cancelUpdate(context: Context) {
         _downloadState.value = UpdateDownloadState.Idle
     }
+
+    fun pauseUpdateDownload(context: Context) = pauseUpdate(context)
+    fun resumeUpdateDownload(context: Context) = resumeUpdate(context)
+    fun cancelUpdateDownload(context: Context) = cancelUpdate(context)
+
+    fun installActiveUpdate(context: Context) {
+        val sp = PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
+        val apkPath = sp.getString(PREF_KEY_UPDATE_FILE_PATH, null) ?: return
+        val apkFile = File(apkPath)
+        if (apkFile.exists()) {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                context.packageName + ".fileprovider",
+                apkFile
+            )
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+            }
+            context.startActivity(intent)
+        }
+    }
 }

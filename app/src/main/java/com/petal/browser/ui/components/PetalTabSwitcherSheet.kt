@@ -125,7 +125,7 @@ object PetalTabSwitcherBridge {
                                     val rawTitle = try {
                                         if (album is com.petal.browser.browser.AlbumController) {
                                             val t = album.title
-                                            if (t.isNotBlank() && t != "Petal Start" && t != "Petal Home") t else album.getAlbumTitle()
+                                            if (t.isNotBlank() && t != "Petal Start" && t != "Petal Home") t else album.getTitle()
                                         } else {
                                             album.getTitle()
                                         }
@@ -133,7 +133,7 @@ object PetalTabSwitcherBridge {
                                     val rawUrl = try {
                                         if (album is com.petal.browser.browser.AlbumController) {
                                             val u = album.url
-                                            if (u.isNotBlank() && !u.equals("about:blank", ignoreCase = true) && !u.equals("petal://home", ignoreCase = true)) u else album.getAlbumUrl()
+                                            if (u.isNotBlank() && !u.equals("about:blank", ignoreCase = true) && !u.equals("petal://home", ignoreCase = true)) u else album.getUrl()
                                         } else {
                                             album.getUrl()
                                         }
@@ -191,7 +191,7 @@ object PetalTabSwitcherBridge {
                                         thumbnailKey = when (album) {
                                             is com.petal.browser.engine.PetalChromiumTabView -> album.getTabId()
                                             is PlaceholderAlbumController -> album.getTabId()
-                                            is com.petal.browser.browser.PetalTabViewController -> album.getTabId() ?: album.hashCode().toString()
+                                            is com.petal.browser.browser.PetalTabViewController -> album.getTabId().ifBlank { album.hashCode().toString() }
                                             else -> album.hashCode().toString()
                                         },
                                         title = displayTitle,
@@ -338,8 +338,8 @@ object PetalTabSwitcherBridge {
                             }
                             val targetAlbum = BrowserContainer.list().find { it.hashCode().toString() == tabItem.id }
                             if (tabItem.previewBitmap == null && targetAlbum != null && targetAlbum.albumView?.isShown == true) {
-                                if (targetAlbum is com.petal.browser.browser.AlbumController) {
-                                    targetAlbum.capturePreviewBitmapAsync { bitmap ->
+                                if (targetAlbum is com.petal.browser.browser.PetalTabViewController) {
+                                    targetAlbum.capturePreviewBitmapAsync { bitmap: android.graphics.Bitmap? ->
                                         val index = tabItems.indexOfFirst { it.id == tabItem.id }
                                         if (bitmap != null && index >= 0 && tabItems[index].thumbnailKey == expectedKey &&
                                             tabItems[index].url == tabItem.url) {
@@ -347,7 +347,7 @@ object PetalTabSwitcherBridge {
                                         }
                                     }
                                 } else if (targetAlbum is com.petal.browser.browser.PetalTabViewController) {
-                                    targetAlbum.capturePreviewBitmapAsync { bitmap ->
+                                    targetAlbum.capturePreviewBitmapAsync { bitmap: android.graphics.Bitmap? ->
                                         val index = tabItems.indexOfFirst { it.id == tabItem.id }
                                         if (bitmap != null && index >= 0 && tabItems[index].thumbnailKey == expectedKey &&
                                             tabItems[index].url == tabItem.url) {
@@ -376,7 +376,7 @@ object PetalTabSwitcherBridge {
                                     is PlaceholderAlbumController -> otherAlbum.getTabId()
                                     else -> null
                                 }
-                                com.petal.browser.unit.TabThumbnailCache.removeAllIdentifiers(otherTabId, id)
+                                if (!otherTabId.isNullOrBlank()) { com.petal.browser.unit.TabThumbnailCache.removeAllIdentifiers(otherTabId, id) } else { com.petal.browser.unit.TabThumbnailCache.removeAllIdentifiers(id) }
                                 onCloseTab(otherAlbum)
                             }
                             com.petal.browser.compose.incognito.PetalIncognitoSessionManager.syncIncognitoState(context)

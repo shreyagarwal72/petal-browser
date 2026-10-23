@@ -8,12 +8,11 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.petal.browser.R
 import com.petal.browser.activity.BrowserActivity
-// import com.petal.browser.browser.AlbumController
+import com.petal.browser.browser.AlbumController
 import com.petal.browser.browser.BrowserContainer
 import com.petal.browser.browser.PlaceholderAlbumController
 import com.petal.browser.controller.BrowserWebViewController
 import com.petal.browser.database.RecordAction
-// import com.petal.browser.browser.AlbumController
 import java.util.Arrays
 import java.util.concurrent.Executors
 

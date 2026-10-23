@@ -1,6 +1,10 @@
 package com.petal.browser.compose.settings
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,49 +14,41 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.petal.browser.ui.components.ExpressiveHeader
 import com.petal.browser.ui.containment.PetalGroup
 import com.petal.browser.ui.containment.PetalGroupListRow
-import com.petal.browser.ui.components.ExpressiveHeader
-import com.petal.browser.ui.components.IconSwitch
+import com.petal.browser.ui.containment.PetalGroupPosition
 
-/**
- * PetalFlagsSettingsScreen
- *
- * Exposes Chromium's chrome://flags engine (AboutFlagsAndroid) in a searchable,
- * filterable Compose screen inside Petal Settings → Developer → Experimental Flags.
- *
- * Provides the same power-user flags UI as chrome://flags but styled with Petal's
- * Liquid Glass containment surfaces and M3 Expressive motion.
- *
- * Features:
- *  - Full-text search across all flag names and descriptions
- *  - Boolean flags shown as IconSwitch toggles
- *  - Multi-value flags shown as PetalSelectableOptionCard rows
- *  - Reset all to defaults with animated confirmation
- *  - Restart required banner for active flag changes
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PetalFlagsSettingsScreen(onBack: () -> Unit) {
-    var query by remember { mutableStateOf("") }
+fun PetalFlagsSettingsScreen(
+    onBack: () -> Unit,
+    onRestartRequired: () -> Unit = {}
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var flags by remember { mutableStateOf<List<PetalFlagEntry>>(emptyList()) }
     var showRestartBanner by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
 
-    val allFlags by remember { mutableStateOf(loadAllFlags()) }
-    val filteredFlags = remember(query, allFlags) {
-        if (query.isBlank()) allFlags
-        else allFlags.filter {
-            it.name.contains(query, ignoreCase = true) ||
-            it.description.contains(query, ignoreCase = true)
+    LaunchedEffect(Unit) {
+        flags = loadAllFlags()
+    }
+
+    val filteredFlags = remember(searchQuery, flags) {
+        if (searchQuery.isBlank()) flags
+        else flags.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.description.contains(searchQuery, ignoreCase = true) ||
+            it.internalName.contains(searchQuery, ignoreCase = true)
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         ExpressiveHeader(
             title = "Experimental Flags",
             subtitle = "⚠️ These features may be unstable",
-            leadingIcon = Icons.Rounded.Science,
             onBack = onBack,
             actions = {
                 IconButton(onClick = { showResetDialog = true }) {
@@ -61,85 +57,82 @@ fun PetalFlagsSettingsScreen(onBack: () -> Unit) {
             }
         )
 
-        // Restart required banner
         AnimatedVisibility(visible = showRestartBanner) {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = MaterialTheme.shapes.medium
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Rounded.Warning, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error)
+                    Icon(
+                        Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text("Restart required to apply flag changes",
+                    Text(
+                        "Restart required to apply changes",
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f))
-                    TextButton(onClick = {
-                        // Trigger Chromium process restart
-                        android.os.Process.killProcess(android.os.Process.myPid())
-                    }) { Text("Restart") }
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onRestartRequired) {
+                        Text("Restart")
+                    }
                 }
             }
         }
 
-        // Search bar
         OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text("Search flags...") },
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search flags…") },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { query = "" }) {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
                         Icon(Icons.Rounded.Close, contentDescription = "Clear")
                     }
                 }
             },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            shape = MaterialTheme.shapes.large
         )
 
-        if (filteredFlags.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No flags match \"$query\"",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
-                items(filteredFlags, key = { it.internalName }) { flag ->
-                    FlagRow(
-                        flag = flag,
-                        onChanged = { showRestartBanner = true }
-                    )
-                    Spacer(Modifier.height(4.dp))
-                }
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filteredFlags, key = { it.internalName }) { flag ->
+                FlagRow(flag = flag, onChanged = { showRestartBanner = true })
             }
         }
     }
 
-    // Reset all flags dialog
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
             title = { Text("Reset all flags?") },
-            text = { Text("All experimental flags will be reset to their default values.") },
+            text = { Text("This will restore all experimental flags to their default state.") },
             confirmButton = {
                 TextButton(onClick = {
                     resetAllFlags()
-                    showResetDialog = false
+                    flags = loadAllFlags()
                     showRestartBanner = true
-                }) { Text("Reset All", color = MaterialTheme.colorScheme.error) }
+                    showResetDialog = false
+                }) {
+                    Text("Reset")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -147,64 +140,58 @@ fun PetalFlagsSettingsScreen(onBack: () -> Unit) {
 
 @Composable
 private fun FlagRow(flag: PetalFlagEntry, onChanged: () -> Unit) {
-    PetalGroup {
-        if (flag.options.size <= 2) {
-            // Boolean flag → IconSwitch
-            val currentlyEnabled = flag.currentValue != "disabled" &&
-                flag.currentValue != "Default" || flag.defaultValue == "enabled"
-            var enabled by remember { mutableStateOf(currentlyEnabled) }
+    PetalGroup(rowCount = 1) { _, position ->
+        var expanded by remember { mutableStateOf(false) }
+        var selected by remember { mutableStateOf(flag.currentValue) }
 
-            PetalGroupListRow(
-                headlineText = flag.name,
-                supportingText = flag.description,
-                trailingContent = {
-                    IconSwitch(
-                        checked = enabled,
-                        icon = Icons.Rounded.Science,
-                        onCheckedChange = { on ->
-                            enabled = on
-                            setFlag(flag.internalName, if (on) "enabled" else "disabled")
-                            onChanged()
-                        }
-                    )
-                }
-            )
-        } else {
-            // Multi-value flag → dropdown
-            var expanded by remember { mutableStateOf(false) }
-            var selected by remember { mutableStateOf(flag.currentValue) }
-
-            PetalGroupListRow(
-                headlineText = flag.name,
-                supportingText = "${flag.description}\n→ $selected",
-                trailingContent = {
-                    Box {
-                        IconButton(onClick = { expanded = true }) {
-                            Icon(Icons.Rounded.ExpandMore, contentDescription = "Choose value")
-                        }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            flag.options.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        selected = option
-                                        setFlag(flag.internalName, option)
-                                        expanded = false
-                                        onChanged()
-                                    }
-                                )
-                            }
+        PetalGroupListRow(
+            position = position,
+            onClick = { expanded = true },
+            leading = {
+                Icon(
+                    Icons.Rounded.Science,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            content = {
+                Text(
+                    text = flag.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "${flag.description}\nValue: $selected",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            trailing = {
+                Box {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(Icons.Rounded.ExpandMore, contentDescription = "Select Option")
+                    }
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        flag.options.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    selected = option
+                                    setFlag(flag.internalName, option)
+                                    onChanged()
+                                    expanded = false
+                                }
+                            )
                         }
                     }
                 }
-            )
-        }
+            }
+        )
     }
 }
-
-// ---------------------------------------------------------------------------
-// Data model + JNI bridge calls
-// ---------------------------------------------------------------------------
 
 data class PetalFlagEntry(
     val internalName: String,
@@ -217,8 +204,7 @@ data class PetalFlagEntry(
 
 private fun loadAllFlags(): List<PetalFlagEntry> {
     return try {
-        val clazz = Class.forName(
-            "org.chromium.chrome.browser.flags.AboutFlagsAndroid")
+        val clazz = Class.forName("org.chromium.chrome.browser.flags.AboutFlagsAndroid")
         @Suppress("UNCHECKED_CAST")
         val list = clazz.getMethod("petalGetAllFlags").invoke(null) as? List<Any>
         list?.map { item ->
@@ -230,7 +216,7 @@ private fun loadAllFlags(): List<PetalFlagEntry> {
                 currentValue = cls.getMethod("getCurrentValue").invoke(item) as? String ?: "Default",
                 defaultValue = cls.getMethod("getDefaultValue").invoke(item) as? String ?: "Default",
                 @Suppress("UNCHECKED_CAST")
-                options      = cls.getMethod("getOptions").invoke(item) as? List<String> ?: listOf("enabled","disabled")
+                options      = cls.getMethod("getOptions").invoke(item) as? List<String> ?: listOf("enabled", "disabled")
             )
         } ?: emptyList()
     } catch (e: Exception) {
@@ -252,7 +238,8 @@ private fun setFlag(internalName: String, value: String) {
 private fun resetAllFlags() {
     try {
         Class.forName("org.chromium.chrome.browser.flags.AboutFlagsAndroid")
-            .getMethod("petalResetAllFlags").invoke(null)
+            .getMethod("petalResetAllFlags")
+            .invoke(null)
     } catch (e: Exception) {
         android.util.Log.w("PetalFlags", "resetAllFlags: $e")
     }

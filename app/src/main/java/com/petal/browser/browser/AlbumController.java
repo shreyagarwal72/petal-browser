@@ -32,4 +32,10 @@ public interface AlbumController {
     default String getTabGroupId() { return null; }
     default String getTabGroupTitle() { return null; }
 
+    default String getPersistentUrl() { return getUrl(); }
+    default String getTabId() { return ""; }
+    default String getTabGroupId() { return null; }
+    default String getTabGroupTitle() { return null; }
+    default void setTabGroupId(String id) {}
+    default void setTabGroupTitle(String title) {}
 }

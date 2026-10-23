@@ -591,10 +591,10 @@ fun PetalUpdateSheetContent(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Row {
-                                        TextButton(onClick = { // PetalUpdateManager.resumeUpdateDownload(context) }) {
+                                        TextButton(onClick = { PetalUpdateManager.resumeUpdateDownload(context) }) {
                                             Text("Resume")
                                         }
-                                        TextButton(onClick = { // PetalUpdateManager.cancelUpdateDownload(context) }) {
+                                        TextButton(onClick = { PetalUpdateManager.cancelUpdateDownload(context) }) {
                                             Text("Cancel")
                                         }
                                     }
@@ -606,7 +606,7 @@ fun PetalUpdateSheetContent(
                         Button(
                             onClick = {
                                 PetalHapticEngine.getInstance(context).play(PetalHapticEngine.Pattern.HEAVY_CLICK, 0.9f)
-                                // PetalUpdateManager.installActiveUpdate(context)
+                                PetalUpdateManager.installActiveUpdate(context)
                             },
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth().height(50.dp)
