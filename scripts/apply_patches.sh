@@ -132,7 +132,7 @@ if [[ -f "$CHROMIUM_ALLOWLIST_CC" ]]; then
 p = '$CHROMIUM_ALLOWLIST_CC'
 with open(p, 'r') as f:
     c = f.read()
-if 'IsMemoryAllocatorDumpNameInBraveAllowlist' not in c:
+if 'bool IsMemoryAllocatorDumpNameInBraveAllowlist(' not in c:
     helper = '''
 namespace {
 bool IsMemoryAllocatorDumpNameInBraveAllowlist(const std::string& name) {
@@ -150,10 +150,14 @@ bool IsMemoryAllocatorDumpNameInBraveAllowlist(const std::string& name) {
         c = c.replace('bool IsMemoryAllocatorDumpNameInAllowlist(', helper + '\nbool IsMemoryAllocatorDumpNameInAllowlist(')
     elif 'namespace base::trace_event {' in c:
         c = c.replace('namespace base::trace_event {', 'namespace base::trace_event {\n' + helper)
+    else:
+        c = helper + '\n' + c
     with open(p, 'w') as f:
         f.write(c)
     print('Successfully injected IsMemoryAllocatorDumpNameInBraveAllowlist into memory_infra_background_allowlist.cc')
-" || true
+else:
+    print('IsMemoryAllocatorDumpNameInBraveAllowlist already defined in memory_infra_background_allowlist.cc')
+"
 fi
 
 # ─── Copy patches into brave-core patches directory ───────────────────────────
