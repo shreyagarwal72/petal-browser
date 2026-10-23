@@ -8,59 +8,92 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * PetalExtensionItem
- */
-data class PetalExtensionItem(
-    val id: String,
-    val name: String,
-    val version: String,
-    val description: String,
-    val isEnabled: Boolean = true,
-    val iconBitmap: Bitmap? = null
-)
-
-/**
  * PetalExtensionManager
  * ─────────────────────────────────────────────────────────────────────────────
  * Native Chromium & Brave Extension Runtime Manager.
- *
- * Interfaces with Chromium's native ExtensionSystem / ExtensionRegistry to install,
- * enable, disable, and query Chrome Web Store extensions.
- * Replaces old Mozilla WebExtensionController with zero GeckoView dependencies.
  */
 object PetalExtensionManager {
 
     private const val TAG = "PetalExtensionManager"
 
-    private val _extensions = MutableStateFlow<List<PetalExtensionItem>>(emptyList())
-    val extensions: StateFlow<List<PetalExtensionItem>> = _extensions.asStateFlow()
+    data class InstalledExtension(
+        val id: String = "",
+        val name: String = "",
+        val description: String = "",
+        val version: String = "",
+        val enabled: Boolean = true,
+        val temporary: Boolean = false,
+        val allowedInPrivateBrowsing: Boolean = false,
+        val homepageUrl: String? = null,
+        val amoListingUrl: String? = null,
+        val optionsPageUrl: String? = null,
+        val supportsPopup: Boolean = false,
+        val icon: Bitmap? = null,
+        val raw: Any? = null
+    )
+
+    data class CatalogEntry(
+        val id: String = "",
+        val name: String = "",
+        val description: String = "",
+        val amoSlug: String = "",
+        val amoListingUrl: String = "",
+        val downloadUrl: String = ""
+    )
+
+    data class PendingPopup(
+        val extensionId: String = "",
+        val extensionName: String = "",
+        val session: Any? = null,
+        val sourceSession: Any? = null
+    )
+
+    data class PendingPrompt(
+        val extension: Any? = null,
+        val permissions: List<String> = emptyList(),
+        val origins: List<String> = emptyList(),
+        val isUpdate: Boolean = false,
+        val respond: (granted: Boolean) -> Unit = {}
+    )
+
+    val catalog: List<CatalogEntry> = emptyList()
+
+    private val _extensions = MutableStateFlow<List<InstalledExtension>>(emptyList())
+    val extensions: StateFlow<List<InstalledExtension>> = _extensions.asStateFlow()
 
     @JvmStatic
     fun init(context: Context) {
-        Log.i(TAG, "PetalExtensionManager initialized for Chromium extensions")
+        Log.i(TAG, "PetalExtensionManager initialized")
         refreshExtensions()
     }
 
     @JvmStatic
     fun refreshExtensions() {
-        // Query Chromium ExtensionRegistry
         _extensions.value = emptyList()
     }
 
     @JvmStatic
     fun installExtension(extensionId: String, callback: (Boolean) -> Unit) {
-        Log.i(TAG, "Install Chrome extension requested: $extensionId")
         callback(true)
     }
 
     @JvmStatic
     fun uninstallExtension(extensionId: String, callback: (Boolean) -> Unit) {
-        Log.i(TAG, "Uninstall Chrome extension requested: $extensionId")
         callback(true)
     }
 
     @JvmStatic
-    fun setExtensionEnabled(extensionId: String, enabled: Boolean) {
-        Log.i(TAG, "Set Chrome extension $extensionId enabled=$enabled")
-    }
+    fun setExtensionEnabled(extensionId: String, enabled: Boolean) {}
+
+    @JvmStatic
+    fun triggerBrowserAction(ext: InstalledExtension) {}
+
+    @JvmStatic
+    fun setAllowedInPrivateBrowsing(ext: InstalledExtension, allowed: Boolean) {}
+
+    @JvmStatic
+    fun openOptionsPage(context: Context, ext: InstalledExtension) {}
+
+    @JvmStatic
+    fun uninstall(context: Context, ext: InstalledExtension) {}
 }

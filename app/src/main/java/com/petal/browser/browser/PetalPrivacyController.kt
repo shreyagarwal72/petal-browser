@@ -3,7 +3,8 @@ package com.petal.browser.browser
 import android.content.Context
 import android.util.Log
 import androidx.preference.PreferenceManager
-import com.petal.browser.shields.PetalShieldEngine
+import com.petal.browser.bridge.NativePrefBridge
+import com.petal.browser.browser.adblock.PetalBraveShieldEngine
 
 /**
  * PetalPrivacyController
@@ -32,9 +33,9 @@ object PetalPrivacyController {
         sp.edit().putString("petal_etp_mode", mode.name).apply()
 
         try {
-            PetalShieldEngine.init(context)
-            PetalShieldEngine.setShieldsEnabled(true)
-            PetalShieldEngine.setFingerprintingProtection(strictMode)
+            PetalBraveShieldEngine.initialize(context)
+            NativePrefBridge.setAdBlockEnabled(true)
+            NativePrefBridge.setFingerprintProtection(strictMode)
             Log.i(TAG, "Applied tracking protection mode: $mode (strict=$strictMode)")
         } catch (e: Throwable) {
             Log.w(TAG, "Error applying tracking protection mode: ${e.message}")

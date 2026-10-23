@@ -152,4 +152,15 @@ object NativePrefBridge {
                 ?.invoke(instance, enabled)
         }.onFailure { Log.w(TAG, "setBlockThirdPartyCookies($enabled): ${it.message}") }
     }
+
+    @JvmStatic
+    fun syncPreferences(sp: android.content.SharedPreferences) {
+        setAdBlockEnabled(sp.getBoolean("sp_ad_block", true))
+        setHttpsOnlyModeEnabled(sp.getBoolean("sp_https_only", false))
+        setJavaScriptEnabled(sp.getBoolean("sp_javascript", true))
+        setBlockPopups(sp.getBoolean("sp_block_popups", true))
+        setDoNotTrack(sp.getBoolean("sp_do_not_track", true))
+        setRequestDesktopSite(sp.getBoolean("sp_desktop", false))
+        setBlockThirdPartyCookies(sp.getBoolean("sp_block_third_party_cookies", true))
+    }
 }

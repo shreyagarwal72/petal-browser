@@ -22,4 +22,8 @@ public interface AlbumController {
     default void reload() {}
     default void loadUrl(String url) {}
     default void evaluateJavascript(String script, ValueCallback<String> callback) {}
+    default void stopLoading() {}
+    default void setDesktopMode(boolean enabled) {}
+    default void initPreferences() {}
+    default Object getProfile() { return null; }
 }

@@ -24,7 +24,7 @@ class PetalTabViewController @JvmOverloads constructor(
     private var currentUrl: String = "about:blank"
     private var currentTitle: String = "New Tab"
     private var isIncognitoMode: Boolean = false
-    private val mediaBridge = PetalMediaBridge(context)
+    private val mediaBridge = PetalMediaBridge(context, null as PetalMediaBridge.MediaStateListener?)
 
     override fun getAlbumView(): View = this
     override fun activate() {}
@@ -53,5 +53,12 @@ class PetalTabViewController @JvmOverloads constructor(
     fun getMediaBridge(): PetalMediaBridge = mediaBridge
     fun isAdoptedPopup(): Boolean = false
     fun captureFullPageBitmap(callback: (Bitmap?) -> Unit) { callback(null) }
+    override fun setDesktopMode(enabled: Boolean) {}
+    fun isPageAtTop(): Boolean = true
+    fun processBackPressed(): Boolean = false
+    fun bindTab(pair: Any?) {}
+    fun setTrackingProtection(enabled: Boolean) {}
+    val currentState: Any? get() = null
+    fun capturePreviewBitmapAsync(callback: (Bitmap?) -> Unit) { callback(null) }
     fun setUserAgent(ua: String) {}
 }

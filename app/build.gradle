@@ -267,4 +267,8 @@ dependencies {
     implementation 'com.google.dagger:hilt-android:2.60.1'
     ksp 'com.google.dagger:hilt-compiler:2.60.1'
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
+
+    // Fetch2 high-speed multi-threaded download manager
+    implementation 'androidx.tonyodev.fetch2:xfetch2:3.1.6'
+    implementation 'androidx.tonyodev.fetch2okhttp:xfetch2okhttp:3.1.6'
 }
