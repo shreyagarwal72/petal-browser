@@ -167,6 +167,7 @@ configurations.all {
 
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.activity:activity:1.9.3'
     implementation 'androidx.fragment:fragment:1.8.5'
