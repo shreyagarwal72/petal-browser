@@ -5326,6 +5326,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         article,
                         () -> {
                             showAlbum(currentAlbumController);
+                            return kotlin.Unit.INSTANCE;
                             
                         }
                     );

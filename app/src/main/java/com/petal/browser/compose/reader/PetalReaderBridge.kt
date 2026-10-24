@@ -70,6 +70,14 @@ object PetalReaderBridge {
     fun createReaderView(
         activity: ComponentActivity,
         article: ReaderArticleData,
+        onBack: Runnable
+    ): ComposeView {
+        return createReaderView(activity, article) { onBack.run() }
+    }
+
+    fun createReaderView(
+        activity: ComponentActivity,
+        article: ReaderArticleData,
         onBack: () -> Unit
     ): ComposeView {
         val rootView = activity.findViewById<View>(android.R.id.content) ?: activity.window.decorView
