@@ -4109,7 +4109,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     currentUrl,
                     cleanText
                 );
-                return kotlin.Unit.INSTANCE;
             }
         );
     }

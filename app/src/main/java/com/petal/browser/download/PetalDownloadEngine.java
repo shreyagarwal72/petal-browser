@@ -44,6 +44,25 @@ public class PetalDownloadEngine {
         return System.currentTimeMillis();
     }
 
+    public void enqueueDownload(
+            Context ctx,
+            String url,
+            String fileName,
+            String userAgent,
+            String cookie,
+            java.util.Map<String, String> extraHeaders,
+            java.util.function.BiConsumer<Long, String> onEnqueued
+    ) {
+        String mimeType = null;
+        if (extraHeaders != null) {
+            mimeType = extraHeaders.get("Content-Type");
+        }
+        long downloadId = enqueueDownload(url, fileName, userAgent, mimeType, cookie, extraHeaders != null ? extraHeaders.get("Referer") : null);
+        if (onEnqueued != null) {
+            onEnqueued.accept(downloadId, fileName);
+        }
+    }
+
     public void cancelDownload(long downloadId) {
         Intent intent = new Intent(context, PetalChromiumDownloadService.class);
         intent.setAction(PetalChromiumDownloadService.ACTION_DOWNLOAD_CANCEL);

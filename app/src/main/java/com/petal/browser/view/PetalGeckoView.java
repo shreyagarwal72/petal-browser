@@ -16,16 +16,33 @@ import com.petal.browser.media.PetalMediaBridge;
 public class PetalGeckoView extends PetalTabViewController {
 
     public interface OnScrollChangeListener {
-        void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY);
+        default void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {}
         default void onScrollDown() {}
         default void onScrollUp() {}
     }
 
-    public void setBrowserController(Object controller) {}
+    private static com.petal.browser.browser.BrowserController globalBrowserController = null;
+    public static com.petal.browser.browser.BrowserController getBrowserController() {
+        return globalBrowserController;
+    }
+    public static void setGlobalBrowserController(com.petal.browser.browser.BrowserController controller) {
+        globalBrowserController = controller;
+    }
+
+    public void setBrowserController(Object controller) {
+        if (controller instanceof com.petal.browser.browser.BrowserController) {
+            globalBrowserController = (com.petal.browser.browser.BrowserController) controller;
+        }
+    }
     public void resumeTimers() {}
     public void pauseTimers() {}
     public boolean canClearSelection() { return false; }
     public void clearWebSelection() {}
+    public boolean isForeground() { return true; }
+    public void initPreferences(String url) {}
+    public void clearMatches() {}
+    public void findAllAsync(String query) {}
+    public void findNext(boolean forward) {}
     public void evaluateJavascript(String script, ValueCallback<String> resultCallback) {
         if (resultCallback != null) {
             resultCallback.onReceiveValue("");

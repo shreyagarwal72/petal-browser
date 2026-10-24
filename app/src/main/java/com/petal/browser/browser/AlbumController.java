@@ -25,6 +25,14 @@ public interface AlbumController {
     default void stopLoading() {}
     default void setDesktopMode(boolean enabled) {}
     default void initPreferences() {}
+    default void initPreferences(String url) {}
+    default String getAlbumUrl() { return getUrl(); }
+    default String getAlbumTitle() { return getTitle(); }
+    default void printToPdf(java.io.FileOutputStream fos, java.util.function.Consumer<Boolean> callback) {
+        if (callback != null) callback.accept(false);
+    }
+    default void onResume() {}
+    default void onPause() {}
     default Object getProfile() { return null; }
 
     default String getPersistentUrl() { return getUrl(); }

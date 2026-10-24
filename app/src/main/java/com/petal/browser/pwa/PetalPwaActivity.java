@@ -53,7 +53,7 @@ public class PetalPwaActivity extends AppCompatActivity {
     private View progressBarComposeView;
     private View fabBubbleView;
     private int fabBaseMarginPx = 0;
-    private AlbumController geckoView;
+    private com.petal.browser.view.PetalGeckoView geckoView;
     private String pwaUrl = "about:blank";
     private String pwaTitle = "Web App";
     private String themeColorHex = "#FFFFFF";
@@ -215,7 +215,7 @@ public class PetalPwaActivity extends AppCompatActivity {
     private void setupGeckoView() {
         if (contentFrame == null) return;
 
-        geckoView = new AlbumController(this);
+        geckoView = new com.petal.browser.view.PetalGeckoView(this);
         geckoView.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT

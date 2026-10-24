@@ -119,7 +119,7 @@ cd ../merged_classes
 # Remove META-INF signatures
 rm -rf META-INF/*.SF META-INF/*.RSA META-INF/*.DSA 2>/dev/null || true
 # Strip duplicate AndroidX / Google Play libraries from APK classes so they don't shadow Gradle dependencies
-rm -rf androidx/ com/google/android/play/ com/google/android/material/ 2>/dev/null || true
+rm -rf androidx/ android/support/ com/google/android/play/ com/google/android/material/ 2>/dev/null || true
 jar -cf "${LIBS_DIR}/brave_core_classes.jar" .
 cd "$ROOT_DIR"
 
