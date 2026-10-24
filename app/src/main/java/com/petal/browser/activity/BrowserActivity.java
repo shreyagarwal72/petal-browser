@@ -5326,8 +5326,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         article,
                         () -> {
                             showAlbum(currentAlbumController);
-                            return kotlin.Unit.INSTANCE;
-                            
                         }
                     );
                     presentComposeScreen(readerView);
@@ -6404,7 +6402,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                                         runOnUiThread(() -> PetalToast.show(this, message));
                                     }
                                 }, "PetalBackupImportV2").start();
-                                return kotlin.Unit.INSTANCE;
                             }));
                             return;
                         }

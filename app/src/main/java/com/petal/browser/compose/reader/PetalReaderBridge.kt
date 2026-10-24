@@ -75,6 +75,7 @@ object PetalReaderBridge {
         return createReaderView(activity, article) { onBack.run() }
     }
 
+    @JvmStatic
     fun createReaderView(
         activity: ComponentActivity,
         article: ReaderArticleData,
