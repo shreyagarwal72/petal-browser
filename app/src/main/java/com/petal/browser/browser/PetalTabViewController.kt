@@ -148,7 +148,7 @@ open class PetalTabViewController @JvmOverloads constructor(
     private var pwaManager: com.petal.browser.pwa.PetalPwaManager? = null
     fun getPwaManager(): com.petal.browser.pwa.PetalPwaManager? = pwaManager
     fun setPwaManager(manager: com.petal.browser.pwa.PetalPwaManager?) { pwaManager = manager }
-    fun printToPdf(fos: java.io.FileOutputStream, callback: java.util.function.Consumer<Boolean>) {
+    override fun printToPdf(fos: java.io.FileOutputStream, callback: java.util.function.Consumer<Boolean>) {
         callback.accept(false)
     }
     fun printToPdf(fos: java.io.FileOutputStream, callback: (Boolean) -> Unit) {
