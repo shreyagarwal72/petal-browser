@@ -736,8 +736,7 @@ public class PetalPwaManager {
                                     if (Boolean.TRUE.equals(success)) {
                                         // offline archive handled natively
                                     }
-                                    return kotlin.Unit.INSTANCE;
-                                });
+                                    });
                             } catch (Exception ignored) {}
                         }
                     } catch (Exception e) {

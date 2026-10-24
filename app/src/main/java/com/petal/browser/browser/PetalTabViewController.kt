@@ -112,9 +112,9 @@ open class PetalTabViewController @JvmOverloads constructor(
     fun getPredecessor(): AlbumController? = predecessor
     fun setPredecessor(controller: AlbumController?) { predecessor = controller }
 
-    fun clearFindMatches() {}
-    fun findAll(query: String) {}
-    fun findNext(forward: Boolean) {}
+    open fun clearFindMatches() {}
+    open fun findAll(query: String) {}
+    open fun findNext(forward: Boolean) {}
 
     fun reloadBypassCache() { reload() }
 
@@ -133,13 +133,10 @@ open class PetalTabViewController @JvmOverloads constructor(
         stateChangeListener?.onStateChanged(currentState)
     }
 
-    typealias State = BrowserState
+    class State(url: String = "", title: String = "", progress: Int = 100, isSecure: Boolean = false, loading: Boolean = false) : BrowserState(url, title, progress, isSecure, loading)
 
     fun captureForSwitcher(callback: java.util.function.Consumer<Bitmap?>) {
         callback.accept(null)
-    }
-    fun captureForSwitcher(callback: (Bitmap?) -> Unit) {
-        callback(null)
     }
     fun currentState(): BrowserState = currentState
     fun loadData(data: String?, mimeType: String?, encoding: String?) {
@@ -151,8 +148,7 @@ open class PetalTabViewController @JvmOverloads constructor(
     override fun printToPdf(fos: java.io.FileOutputStream, callback: java.util.function.Consumer<Boolean>) {
         callback.accept(false)
     }
-    fun printToPdf(fos: java.io.FileOutputStream, callback: (Boolean) -> Unit) {
-        callback(false)
-    }
 
+
+    open fun updatePreviewCache(force: Boolean = true) {}
 }

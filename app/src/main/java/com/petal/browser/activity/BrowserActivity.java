@@ -4883,11 +4883,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 currentAlbumController,
                 (AlbumController album) -> {
                     showAlbum(album);
-                    return kotlin.Unit.INSTANCE;
+                    
                 },
                 (AlbumController album) -> {
                     removeAlbumSilently(album);
-                    return kotlin.Unit.INSTANCE;
+                    
                 },
                 () -> {
                     for (AlbumController album : BrowserContainer.list()) {
@@ -4903,11 +4903,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     com.petal.browser.unit.TabThumbnailCache.clear();
                     com.petal.browser.unit.PetalTabSessionManager.clearSession(BrowserActivity.this);
                     addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
-                            return kotlin.Unit.INSTANCE;
+                            
                 },
                 (Boolean isIncognito) -> {
                     addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true, isIncognito);
-                    return kotlin.Unit.INSTANCE;
+                    
                 },
                 () -> {
                     if (currentAlbumController != null) {
@@ -4917,7 +4917,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     } else {
                         addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
                     }
-                    return kotlin.Unit.INSTANCE;
+                    
                 }
             );
             presentComposeScreen(tabSwitcherView);
@@ -5035,7 +5035,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 isIncognitoTab,
                 () -> {
                     showAlbum(currentAlbumController);
-                    return kotlin.Unit.INSTANCE;
+                    
                 },
                 (String result) -> {
                     if (result != null && !result.trim().isEmpty()) {
@@ -5050,7 +5050,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                             }
                         });
                     }
-                    return kotlin.Unit.INSTANCE;
+                    
                 }
             );
             presentComposeScreen(omniboxView);
@@ -5326,7 +5326,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         article,
                         () -> {
                             showAlbum(currentAlbumController);
-                            return kotlin.Unit.INSTANCE;
+                            
                         }
                     );
                     presentComposeScreen(readerView);
@@ -6391,7 +6391,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                         if (com.petal.browser.passwords.PetalCredentialVault.INSTANCE.isPasswordBackup(backup)) {
                             // New password-protected backup: ask for the password first.
                             runOnUiThread(() -> com.petal.browser.passwords.PetalBackupPasswordPrompt.askAsync(this, (String password) -> {
-                                if (password == null) return kotlin.Unit.INSTANCE;
+                                if (password == null) return;
                                 new Thread(() -> {
                                     try {
                                         int imported = com.petal.browser.passwords.PetalCredentialVault.INSTANCE.importWithPasswordOrThrow(backup, password);
@@ -6599,7 +6599,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                                 }
                             });
                         }
-                        return kotlin.Unit.INSTANCE;
+                        
                     });
                 } catch (Exception e) {
                     showOmniboxPage("");
@@ -6873,7 +6873,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         String url = null;
         if (currentAlbumController instanceof com.petal.browser.browser.PetalTabViewController) {
             com.petal.browser.browser.PetalTabViewController surface = (com.petal.browser.browser.PetalTabViewController) currentAlbumController;
-            com.petal.browser.browser.PetalTabViewController.State state = surface.currentState();
+            com.petal.browser.browser.PetalTabViewController.BrowserState state = surface.currentState();
             if (state != null && state.getUrl() != null && !state.getUrl().trim().isEmpty()) {
                 url = state.getUrl().trim();
             }
