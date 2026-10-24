@@ -153,7 +153,6 @@ open class PetalTabViewController @JvmOverloads constructor(
         addView(webView)
     }
 
-    fun getWebView(): WebView = webView
 
     override fun getAlbumView(): View = this
     override fun getUrl(): String? = currentUrl ?: webView.url
