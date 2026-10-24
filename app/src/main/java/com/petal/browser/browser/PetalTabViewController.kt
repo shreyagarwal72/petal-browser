@@ -133,8 +133,6 @@ open class PetalTabViewController @JvmOverloads constructor(
         stateChangeListener?.onStateChanged(currentState)
     }
 
-    class State(url: String = "", title: String = "", progress: Int = 100, isSecure: Boolean = false, loading: Boolean = false) : BrowserState(url, title, progress, isSecure, loading)
-
     fun captureForSwitcher(callback: java.util.function.Consumer<Bitmap?>) {
         callback.accept(null)
     }
