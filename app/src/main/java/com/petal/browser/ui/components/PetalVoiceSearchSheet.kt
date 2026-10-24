@@ -87,6 +87,13 @@ object PetalVoiceSearchBridge {
     @JvmStatic
     fun showVoiceSearchSheet(
         activity: ComponentActivity,
+        onResult: java.util.function.Consumer<String>
+    ) {
+        showVoiceSearchSheet(activity) { onResult.accept(it) }
+    }
+
+    fun showVoiceSearchSheet(
+        activity: ComponentActivity,
         onResult: (String) -> Unit
     ) {
         activity.runOnUiThread {

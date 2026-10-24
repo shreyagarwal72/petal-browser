@@ -82,6 +82,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 object PetalBackupPasswordPrompt {
 
     @JvmStatic
+    @JvmStatic
+    fun askAsync(activity: Activity, onResult: java.util.function.Consumer<String?>) {
+        askAsync(activity) { onResult.accept(it) }
+    }
+
     fun askAsync(activity: Activity, onResult: (String?) -> Unit) {
         if (activity.isFinishing || activity.isDestroyed) {
             onResult(null)

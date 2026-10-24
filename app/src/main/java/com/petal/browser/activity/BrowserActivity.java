@@ -4881,11 +4881,11 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
             View tabSwitcherView = com.petal.browser.ui.components.PetalTabSwitcherBridge.createTabSwitcherView(
                 this,
                 currentAlbumController,
-                album -> {
+                (AlbumController album) -> {
                     showAlbum(album);
                     return kotlin.Unit.INSTANCE;
                 },
-                album -> {
+                (AlbumController album) -> {
                     removeAlbumSilently(album);
                     return kotlin.Unit.INSTANCE;
                 },
@@ -4905,7 +4905,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true);
                             return kotlin.Unit.INSTANCE;
                 },
-                isIncognito -> {
+                (Boolean isIncognito) -> {
                     addAlbum(getString(R.string.app_name), sp.getString("favoriteURL", "about:blank"), true, isIncognito);
                     return kotlin.Unit.INSTANCE;
                 },
@@ -5037,7 +5037,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     showAlbum(currentAlbumController);
                     return kotlin.Unit.INSTANCE;
                 },
-                result -> {
+                (String result) -> {
                     if (result != null && !result.trim().isEmpty()) {
                         performSearchWithFixerPrompt(result.trim(), isIncognitoTab, targetUrl -> {
                             if (currentAlbumController != null) {
@@ -5306,7 +5306,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
         try {
             captureBrowserMainPreview();
-            com.petal.browser.compose.reader.PetalReaderBridge.extractArticle(currentAlbumController, article -> {
+            com.petal.browser.compose.reader.PetalReaderBridge.extractArticle(currentAlbumController, (com.petal.browser.compose.reader.ReaderArticleData article) -> {
                 if (article != null && article.getContentText() != null && !article.getContentText().trim().isEmpty()) {
                     isOverlayScreenShowing = true;
                     clearContentFrameKeepingTabs();
@@ -6390,7 +6390,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
 
                         if (com.petal.browser.passwords.PetalCredentialVault.INSTANCE.isPasswordBackup(backup)) {
                             // New password-protected backup: ask for the password first.
-                            runOnUiThread(() -> com.petal.browser.passwords.PetalBackupPasswordPrompt.askAsync(this, password -> {
+                            runOnUiThread(() -> com.petal.browser.passwords.PetalBackupPasswordPrompt.askAsync(this, (String password) -> {
                                 if (password == null) return kotlin.Unit.INSTANCE;
                                 new Thread(() -> {
                                     try {
@@ -6588,7 +6588,7 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                     addAlbum(null, "petal://home", true);
                 }
                 try {
-                    com.petal.browser.ui.components.PetalVoiceSearchBridge.showVoiceSearchSheet(this, result -> {
+                    com.petal.browser.ui.components.PetalVoiceSearchBridge.showVoiceSearchSheet(this, (String result) -> {
                         if (result != null && !result.trim().isEmpty()) {
                             boolean isIncog = currentAlbumController != null && currentAlbumController.isIncognito();
                             performSearchWithFixerPrompt(result.trim(), isIncog, targetUrl -> {
@@ -6828,42 +6828,12 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         try {
             String popupUrl = targetUrl == null || targetUrl.trim().isEmpty()
                     ? "about:blank" : targetUrl;
-            com.petal.browser.view.PetalGeckoView geckoView =
-                com.petal.browser.controller.BrowserWebViewController.createAndConfigureGeckoView(
-                    this, getString(R.string.app_name), popupUrl, true, isIncognito
-                );
-            // Replace the auto-created session with the one GeckoView opened for us.
-            // adoptSession() swaps the underlying session without calling open() again.
-            geckoView.adoptPopupSession(popupSession);
-
-            geckoView.setBrowserController(this);
-            // Gecko has already started loading the requested popup URL. Keep that URL in
-            // the tab metadata without calling loadUrl again, which would race the adopted
-            // session and could replace the destination with the home page.
-            geckoView.setAlbumTitle(getString(R.string.app_name), popupUrl);
-            // Tell the tab its real URL (no reload). Without this its URL stays
-            // "about:blank", showAlbum() treats it as the home page and resets it,
-            // cancelling the link that Gecko was loading.
-            geckoView.markAdoptedNavigation(popupUrl);
-
-            if (currentAlbumController != null) {
-                geckoView.setPredecessor(currentAlbumController);
-                int index = com.petal.browser.browser.BrowserContainer.indexOf(currentAlbumController) + 1;
-                com.petal.browser.browser.BrowserContainer.add(geckoView, index);
-            } else {
-                com.petal.browser.browser.BrowserContainer.add(geckoView);
-            }
-
-            geckoView.setBrowserController(this);
+            addAlbum(getString(R.string.app_name), popupUrl, true, isIncognito);
             hideOverview();
-            geckoView.activate();
-            if (dialogOverview != null) dialogOverview.cancel();
-            showAlbum(geckoView);
-
             updateOmniBox();
             updatePersistentBottomNav();
         } catch (Exception e) {
-            android.util.Log.e("BrowserActivity", "Failed to adopt popup GeckoSession", e);
+            android.util.Log.e("BrowserActivity", "Failed to adopt popup session", e);
         }
     }
 
@@ -7058,7 +7028,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                             }
                         });
                     }
-                    return kotlin.Unit.INSTANCE;
                 });
             } catch (Exception e) {
                 Log.e(TAG, "Error generating print job via GeckoView", e);

@@ -76,4 +76,21 @@ public class PetalGeckoView extends PetalTabViewController {
     public void loadDataWithBaseURL(String baseUrl, String data, String mimeType, String encoding, String historyUrl) {
         loadUrl(baseUrl != null ? baseUrl : "about:blank");
     }
+
+    public void setProfileChanged() {}
+    public void captureForSwitcher(java.util.function.Consumer<android.graphics.Bitmap> callback) {
+        if (callback != null) callback.accept(null);
+    }
+    public void captureForSwitcher(kotlin.jvm.functions.Function1<? super android.graphics.Bitmap, kotlin.Unit> callback) {
+        if (callback != null) callback.invoke(null);
+    }
+    public com.petal.browser.pwa.PetalPwaManager getPwaManager() { return null; }
+    public void setPwaManager(com.petal.browser.pwa.PetalPwaManager manager) {}
+    public void printToPdf(java.io.FileOutputStream fos, java.util.function.Consumer<Boolean> callback) {
+        if (callback != null) callback.accept(false);
+    }
+    public void printToPdf(java.io.FileOutputStream fos, kotlin.jvm.functions.Function1<? super Boolean, kotlin.Unit> callback) {
+        if (callback != null) callback.invoke(false);
+    }
+
 }

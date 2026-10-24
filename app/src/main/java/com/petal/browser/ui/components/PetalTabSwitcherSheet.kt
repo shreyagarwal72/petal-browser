@@ -385,6 +385,26 @@ object PetalTabSwitcherBridge {
     }
 
     @JvmStatic
+    fun createTabSwitcherView(
+        activity: ComponentActivity,
+        currentAlbum: AlbumController?,
+        onSelectTab: java.util.function.Consumer<AlbumController>,
+        onCloseTab: java.util.function.Consumer<AlbumController>,
+        onCloseAllTabs: Runnable,
+        onNewTab: java.util.function.Consumer<Boolean>,
+        onBackPress: Runnable
+    ): ComposeView {
+        return createTabSwitcherView(
+            activity,
+            currentAlbum,
+            { onSelectTab.accept(it) },
+            { onCloseTab.accept(it) },
+            { onCloseAllTabs.run() },
+            { onNewTab.accept(it) },
+            { onBackPress.run() }
+        )
+    }
+
     fun showTabSwitcherSheet(
         activity: ComponentActivity,
         currentAlbum: AlbumController?,

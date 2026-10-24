@@ -33,6 +33,11 @@ import com.petal.browser.unit.ReaderModeManager
 object PetalReaderBridge {
 
     @JvmStatic
+    @JvmStatic
+    fun extractArticle(controller: AlbumController?, callback: java.util.function.Consumer<ReaderArticleData?>) {
+        extractArticle(controller) { callback.accept(it) }
+    }
+
     fun extractArticle(controller: AlbumController?, callback: (ReaderArticleData?) -> Unit) {
         val url = controller?.url
         if (controller == null || url.isNullOrBlank() || url.startsWith("about:") || url.startsWith("petal://")) {

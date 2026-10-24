@@ -134,7 +134,28 @@ object PetalOmniboxBridge {
      * and site shortcuts.
      */
     @JvmStatic
-    @JvmOverloads
+    fun createOmniboxView(
+        activity: ComponentActivity,
+        initialQuery: String,
+        pageTitle: String,
+        pageUrl: String,
+        favicon: Bitmap?,
+        isIncognito: Boolean,
+        onBackPress: Runnable,
+        onQuerySubmitted: java.util.function.Consumer<String>
+    ): ComposeView {
+        return createOmniboxView(
+            activity,
+            initialQuery,
+            pageTitle,
+            pageUrl,
+            favicon,
+            isIncognito,
+            { onBackPress.run() },
+            { onQuerySubmitted.accept(it) }
+        )
+    }
+
     fun createOmniboxView(
         activity: ComponentActivity,
         initialQuery: String = "",

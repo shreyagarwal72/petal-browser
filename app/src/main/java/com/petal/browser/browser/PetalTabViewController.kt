@@ -132,4 +132,27 @@ open class PetalTabViewController @JvmOverloads constructor(
     private fun notifyState() {
         stateChangeListener?.onStateChanged(currentState)
     }
+
+    typealias State = BrowserState
+
+    fun captureForSwitcher(callback: java.util.function.Consumer<Bitmap?>) {
+        callback.accept(null)
+    }
+    fun captureForSwitcher(callback: (Bitmap?) -> Unit) {
+        callback(null)
+    }
+    fun currentState(): BrowserState = currentState
+    fun loadData(data: String?, mimeType: String?, encoding: String?) {
+        loadUrl("about:blank")
+    }
+    private var pwaManager: com.petal.browser.pwa.PetalPwaManager? = null
+    fun getPwaManager(): com.petal.browser.pwa.PetalPwaManager? = pwaManager
+    fun setPwaManager(manager: com.petal.browser.pwa.PetalPwaManager?) { pwaManager = manager }
+    fun printToPdf(fos: java.io.FileOutputStream, callback: java.util.function.Consumer<Boolean>) {
+        callback.accept(false)
+    }
+    fun printToPdf(fos: java.io.FileOutputStream, callback: (Boolean) -> Unit) {
+        callback(false)
+    }
+
 }
