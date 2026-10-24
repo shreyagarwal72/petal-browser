@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.petal.browser.accessibility.PetalAccessibilityEngine
 import com.petal.browser.compose.settings.viewmodel.DisplaySettingsViewModel
@@ -39,7 +39,7 @@ fun DisplaySettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     targetHighlightItemId: String? = null,
-    viewModel: DisplaySettingsViewModel = hiltViewModel()
+    viewModel: DisplaySettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val touchHaptics by viewModel.touchHaptics.collectAsStateWithLifecycle()
     val scrollHaptics by viewModel.scrollHaptics.collectAsStateWithLifecycle()

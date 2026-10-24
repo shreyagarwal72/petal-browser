@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.petal.browser.browser.PetalAdBlockEngine
 import com.petal.browser.compose.settings.viewmodel.PrivacySettingsViewModel
@@ -46,7 +46,7 @@ fun PrivacySettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     targetHighlightItemId: String? = null,
-    viewModel: PrivacySettingsViewModel = hiltViewModel()
+    viewModel: PrivacySettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val adBlockEnabled by viewModel.adBlockEnabled.collectAsStateWithLifecycle()
     val blockThirdPartyCookies by viewModel.blockThirdPartyCookies.collectAsStateWithLifecycle()

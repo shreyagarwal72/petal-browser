@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.preference.PreferenceManager
 import com.petal.browser.compose.composable.ContainedLoadingIndicator
@@ -45,7 +45,7 @@ import com.petal.browser.R
 fun UpdaterSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MiscSettingsViewModel = hiltViewModel()
+    viewModel: MiscSettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val checkUpdateOnLaunch by viewModel.checkUpdateOnLaunch.collectAsStateWithLifecycle()
 

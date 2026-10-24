@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.petal.browser.compose.settings.viewmodel.MiscSettingsViewModel
 import com.petal.browser.ui.components.ExpressiveHeader
@@ -37,7 +37,7 @@ fun MiscSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     targetHighlightItemId: String? = null,
-    viewModel: MiscSettingsViewModel = hiltViewModel()
+    viewModel: MiscSettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val context = LocalContext.current
     val autoOpenApps by viewModel.autoOpenApps.collectAsStateWithLifecycle()

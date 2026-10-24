@@ -38,7 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.petal.browser.compose.settings.viewmodel.AppearanceSettingsViewModel
 import com.petal.browser.ui.components.*
@@ -53,7 +53,7 @@ fun AppearanceSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     targetHighlightItemId: String? = null,
-    viewModel: AppearanceSettingsViewModel = hiltViewModel()
+    viewModel: AppearanceSettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val appFont by viewModel.appFont.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()

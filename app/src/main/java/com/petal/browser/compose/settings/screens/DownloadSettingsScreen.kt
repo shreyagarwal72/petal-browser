@@ -23,7 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.preference.PreferenceManager
 import com.petal.browser.compose.downloads.LiveUpdateNotificationManager
@@ -39,7 +39,7 @@ fun DownloadSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     targetHighlightItemId: String? = null,
-    viewModel: DownloadSettingsViewModel = hiltViewModel()
+    viewModel: DownloadSettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val downloadManagerMode by viewModel.downloadManagerMode.collectAsStateWithLifecycle()
     val confirmDownloadDelete by viewModel.confirmDownloadDelete.collectAsStateWithLifecycle()

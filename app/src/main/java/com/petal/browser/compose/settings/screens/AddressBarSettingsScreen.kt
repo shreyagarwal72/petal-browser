@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.petal.browser.activity.BrowserActivity
 import com.petal.browser.compose.settings.viewmodel.AddressBarSettingsViewModel
@@ -30,7 +30,7 @@ fun AddressBarSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     targetHighlightItemId: String? = null,
-    viewModel: AddressBarSettingsViewModel = hiltViewModel()
+    viewModel: AddressBarSettingsViewModel = viewModel(factory = com.petal.browser.compose.settings.viewmodel.SettingsViewModelFactory)
 ) {
     val position by viewModel.position.collectAsStateWithLifecycle()
     val height by viewModel.height.collectAsStateWithLifecycle()

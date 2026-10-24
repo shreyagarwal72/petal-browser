@@ -17,7 +17,6 @@ import com.petal.browser.predictive.PetalPredictiveJunction
 import com.petal.browser.unit.BrowserUnit
 import com.petal.browser.unit.TabThumbnailCache
 import com.petal.browser.widget.PetalSearchWidgetProvider
-import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,7 +25,7 @@ import kotlinx.coroutines.launch
  * Custom Application class for Petal Browser written in Kotlin.
  * Initializes ChromiumNativeEngineCore and predictive junctions during early app process launch.
  */
-@HiltAndroidApp
+
 class PetalApplication : Application() {
 
     private var lastNightModeBits: Int = 0
