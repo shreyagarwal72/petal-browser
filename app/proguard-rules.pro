@@ -66,3 +66,8 @@
 # ---- PDFBox ---------------------------------------------------------------------------------
 # JPEG 2000 support is an optional dependency that is not bundled.
 -dontwarn com.gemalto.jp2.**
+
+# Keep Android Translation & ContentCapture callbacks from interface method stripping
+-keep interface android.view.translation.ViewTranslationCallback { *; }
+-keep class * implements android.view.translation.ViewTranslationCallback { *; }
+-dontwarn android.view.translation.**

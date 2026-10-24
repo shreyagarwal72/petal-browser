@@ -25,6 +25,11 @@ object PetalSetupBridge {
     fun createSetupView(activity: BrowserActivity, onFinished: () -> Unit): ComposeView {
         val model = ViewModelProvider(activity)[PetalSetupState::class.java]
         val view = ComposeView(activity).apply {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                try {
+                    clearViewTranslationCallback()
+                } catch (ignored: Throwable) {}
+            }
             setViewTreeLifecycleOwner(activity)
             setViewTreeViewModelStoreOwner(activity)
             setViewTreeSavedStateRegistryOwner(activity)

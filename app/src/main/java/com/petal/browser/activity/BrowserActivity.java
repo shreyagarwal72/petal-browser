@@ -1853,7 +1853,21 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
         if (contentFrame == null) return;
         for (int i = contentFrame.getChildCount() - 1; i >= 0; i--) {
             View child = contentFrame.getChildAt(i);
-            if (!isTabSurface(child)) contentFrame.removeViewAt(i);
+            if (!isTabSurface(child)) {
+                try {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        child.clearViewTranslationCallback();
+                    }
+                } catch (Throwable ignored) {}
+                try {
+                    contentFrame.removeViewAt(i);
+                } catch (Throwable t) {
+                    android.util.Log.w("BrowserActivity", "Error detaching overlay view at " + i, t);
+                    try {
+                        child.setVisibility(View.GONE);
+                    } catch (Throwable ignored) {}
+                }
+            }
         }
     }
 
