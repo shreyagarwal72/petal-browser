@@ -13,9 +13,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-class AppearanceSettingsViewModel @Inject constructor(
+class AppearanceSettingsViewModel constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 

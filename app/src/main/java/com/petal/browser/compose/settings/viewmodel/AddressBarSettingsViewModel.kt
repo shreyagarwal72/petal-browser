@@ -7,9 +7,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-class AddressBarSettingsViewModel @Inject constructor(
+class AddressBarSettingsViewModel constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     val position: StateFlow<String> = settingsRepository.addressBarPosition

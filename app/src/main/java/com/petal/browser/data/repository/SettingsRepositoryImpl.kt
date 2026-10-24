@@ -15,11 +15,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class SettingsRepositoryImpl @Inject constructor(
+class SettingsRepositoryImpl constructor(
     private val application: Application
 ) : SettingsRepository {
 
