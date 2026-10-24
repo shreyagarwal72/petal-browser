@@ -19,6 +19,9 @@ concurrency:
 jobs:
   build:
     name: Build Petal Brave APK (arm64-v8a)
+    permissions:
+      contents: write
+      packages: write
     runs-on: ubuntu-22.04
     timeout-minutes: 15
 
