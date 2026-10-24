@@ -42,8 +42,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 📱 Install Android Build Tools
+      - name: 📦 Install Python Dependencies & Android Build Tools
         run: |
+          pip install --no-cache-dir Pillow
           sudo apt-get update && sudo apt-get install -y zipalign apksigner
 
       - name: 🦁 Download Authentic Brave Browser APK
@@ -85,9 +86,8 @@ jobs:
             ## 🌸 Petal Browser (Built on Authentic Brave Engine)
             
             - **Base**: Genuine Brave Chromium 64-bit arm64-v8a engine
-            - **Package Name**: `com.petal.browser`
-            - **Version**: 4.4.000 (code 440)
-            - **Features**: Full Brave Shields, Sync v2, native web rendering intact
+            - **Icons**: Authentic Petal adaptive and legacy launcher icons across all screen densities
+            - **Features**: Full Brave Shields, Sync v2, Chromium speed and stability intact
             - **Signature**: Authentic Petal keystore
           files: petal-browser-brave-rebranded.apk
         env:
