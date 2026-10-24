@@ -44,8 +44,12 @@ public class PetalGeckoView extends PetalTabViewController {
     public void findAllAsync(String query) {}
     @Override public void findNext(boolean forward) {}
     public void evaluateJavascript(String script, ValueCallback<String> resultCallback) {
-        if (resultCallback != null) {
-            resultCallback.onReceiveValue("");
+        try {
+            getWebView().evaluateJavascript(script, resultCallback);
+        } catch (Throwable t) {
+            if (resultCallback != null) {
+                resultCallback.onReceiveValue("");
+            }
         }
     }
 

@@ -71,3 +71,17 @@
 -keep interface android.view.translation.ViewTranslationCallback { *; }
 -keep class * implements android.view.translation.ViewTranslationCallback { *; }
 -dontwarn android.view.translation.**
+
+# Keep Android OnBackInvokedCallback from interface method stripping
+-keep interface android.window.OnBackInvokedCallback { *; }
+-keep class * implements android.window.OnBackInvokedCallback { *; }
+-dontwarn android.window.**
+
+# Keep AndroidX Back / PredictiveBack from interface stripping
+-keep class androidx.activity.** { *; }
+-keep interface androidx.activity.** { *; }
+-keep class * implements android.window.OnBackInvokedCallback { *; }
+-keep interface android.window.OnBackInvokedCallback { *; }
+-keep class * implements android.window.OnBackAnimationCallback { *; }
+-keep interface android.window.OnBackAnimationCallback { *; }
+-dontwarn android.window.**
