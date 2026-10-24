@@ -3,21 +3,20 @@ import sys
 import zipfile
 import shutil
 import subprocess
-import zlib
-import hashlib
+import io
+from PIL import Image
 
-# Accept CLI arguments or use defaults
 SRC_APK = sys.argv[1] if len(sys.argv) > 1 else "/data/data/com.termux/files/home/brave_base/Bravearm64Universal.apk"
 OUT_SIGNED = sys.argv[2] if len(sys.argv) > 2 else "/data/data/com.termux/files/home/brave_base/petal-browser-brave-rebranded.apk"
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WORK_DIR = os.path.join(ROOT_DIR, "build_work_brave")
-OUT_UNALIGNED = os.path.join(ROOT_DIR, "petal_unaligned.apk")
-OUT_ALIGNED = os.path.join(ROOT_DIR, "petal_aligned.apk")
+ROOT_DIR = "/data/data/com.termux/files/home/petal-browser"
+WORK_DIR = "/data/data/com.termux/files/home/brave_base/work"
+OUT_UNALIGNED = "/data/data/com.termux/files/home/brave_base/petal_unaligned.apk"
+OUT_ALIGNED = "/data/data/com.termux/files/home/brave_base/petal_aligned.apk"
 PETAL_RES = os.path.join(ROOT_DIR, "app/src/main/res")
 KEYSTORE = os.path.join(ROOT_DIR, "app/release.keystore")
 
-print("🌸 [1/6] Extracting clean base APK...")
+print("🌸 [1/5] Extracting clean base APK...")
 shutil.rmtree(WORK_DIR, ignore_errors=True)
 os.makedirs(WORK_DIR, exist_ok=True)
 
@@ -26,97 +25,62 @@ with zipfile.ZipFile(SRC_APK, 'r') as z:
 
 shutil.rmtree(os.path.join(WORK_DIR, "META-INF"), ignore_errors=True)
 
-print("🌸 [2/6] Replacing AndroidManifest.xml package identity, version name, and version code...")
-manifest_path = os.path.join(WORK_DIR, "AndroidManifest.xml")
-with open(manifest_path, "rb") as f:
-    manifest_bytes = bytearray(f.read())
+print("🌸 [2/5] Replacing all launcher & adaptive icons with authentic Petal Browser icons...")
+# Authentic Petal icon source
+petal_icon_source = os.path.join(PETAL_RES, "mipmap-xxxhdpi/ic_launcher.png")
+base_petal_img = Image.open(petal_icon_source).convert("RGBA")
 
-# 1. Package Name: "com.brave.browser" -> "com.petal.browser" (UTF-16LE, 34 bytes)
-old_pkg_16 = "com.brave.browser".encode("utf-16le")
-new_pkg_16 = "com.petal.browser".encode("utf-16le")
-idx = 0
-while True:
-    idx = manifest_bytes.find(old_pkg_16, idx)
-    if idx == -1: break
-    manifest_bytes[idx:idx+len(old_pkg_16)] = new_pkg_16
-    idx += len(new_pkg_16)
+# Exact mapping of all launcher and adaptive mipmaps identified in Brave APK
+icon_targets = {
+    # mdpi (48x48 icon, 108x108 adaptive foreground)
+    "res/80y": (48, 48, False),
+    "res/Nkp": (48, 48, False),
+    "res/QtC": (108, 108, True),
+    "res/lMS": (108, 108, True),
+    # hdpi (72x72 icon, 162x162 adaptive foreground)
+    "res/k1k": (72, 72, False),
+    "res/oKz": (72, 72, False),
+    "res/rps": (162, 162, True),
+    "res/Zyh": (162, 162, True),
+    # xhdpi (96x96 icon, 216x216 adaptive foreground)
+    "res/0dH": (96, 96, False),
+    "res/YGc": (96, 96, False),
+    "res/PQv": (216, 216, True),
+    "res/6Pj": (216, 216, True),
+    # xxhdpi (144x144 icon, 324x324 adaptive foreground)
+    "res/R4U": (144, 144, False),
+    "res/gG8": (144, 144, False),
+    "res/EFE": (324, 324, True),
+    "res/BLH": (324, 324, True),
+    # xxxhdpi (192x192 icon, 432x432 adaptive foreground)
+    "res/tT1": (192, 192, False),
+    "res/tOW": (192, 192, False),
+    "res/ima": (432, 432, True),
+    "res/PCI": (432, 432, True),
+}
 
-# 2. Version Name: "1.98.60" -> "4.4.000" (UTF-16LE, 14 bytes)
-old_vname_16 = "1.98.60".encode("utf-16le")
-new_vname_16 = "4.4.000".encode("utf-16le")
-idx_vn = manifest_bytes.find(old_vname_16)
-if idx_vn != -1:
-    manifest_bytes[idx_vn:idx_vn+len(old_vname_16)] = new_vname_16
+for path_rel, (w, h, is_adaptive) in icon_targets.items():
+    dest_path = os.path.join(WORK_DIR, path_rel)
+    if is_adaptive:
+        # Standard Android adaptive icon foreground: icon occupies inner ~66% with transparent margin
+        canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        icon_dim = int(w * 0.66)
+        scaled_icon = base_petal_img.resize((icon_dim, icon_dim), Image.Resampling.LANCZOS)
+        offset = (w - icon_dim) // 2
+        canvas.paste(scaled_icon, (offset, offset), scaled_icon)
+        canvas.save(dest_path, "WEBP")
+    else:
+        scaled = base_petal_img.resize((w, h), Image.Resampling.LANCZOS)
+        scaled.save(dest_path, "WEBP")
 
-# 3. Version Code: 429806004 -> 440 (0x000001B8, 4 bytes)
-old_vcode = (429806004).to_bytes(4, "little")
-new_vcode = (440).to_bytes(4, "little")
-idx_vc = manifest_bytes.find(old_vcode)
-if idx_vc != -1:
-    manifest_bytes[idx_vc:idx_vc+4] = new_vcode
+print(f"✅ Generated and injected all {len(icon_targets)} launcher & adaptive icons!")
 
-with open(manifest_path, "wb") as f:
-    f.write(manifest_bytes)
-
-print("🌸 [3/6] Synchronizing classes.dex and native libchrome.so...")
-# Update classes5.dex package references & recalculate Adler32 + SHA1
-dex5_path = os.path.join(WORK_DIR, "classes5.dex")
-if os.path.exists(dex5_path):
-    with open(dex5_path, "rb") as f:
-        dex5_data = bytearray(f.read())
-
-    old_pkg = b"com.brave.browser"
-    new_pkg = b"com.petal.browser"
-    idx = 0
-    while True:
-        idx = dex5_data.find(old_pkg, idx)
-        if idx == -1: break
-        dex5_data[idx:idx+len(old_pkg)] = new_pkg
-        idx += len(new_pkg)
-
-    sha1 = hashlib.sha1(dex5_data[32:]).digest()
-    dex5_data[12:32] = sha1
-    adler = zlib.adler32(dex5_data[12:]) & 0xffffffff
-    dex5_data[8:12] = adler.to_bytes(4, "little")
-
-    with open(dex5_path, "wb") as f:
-        f.write(dex5_data)
-
-# Update native libchrome.so
-libchrome_path = os.path.join(WORK_DIR, "lib/arm64-v8a/libchrome.so")
-if os.path.exists(libchrome_path):
-    with open(libchrome_path, "rb") as f:
-        so_data = bytearray(f.read())
-
-    old_pkg = b"com.brave.browser"
-    new_pkg = b"com.petal.browser"
-    idx = 0
-    while True:
-        idx = so_data.find(old_pkg, idx)
-        if idx == -1: break
-        so_data[idx:idx+len(old_pkg)] = new_pkg
-        idx += len(new_pkg)
-
-    with open(libchrome_path, "wb") as f:
-        f.write(so_data)
-
-print("🌸 [4/6] Rebranding App Launcher Icons & String Table...")
-# Replace launcher icons
-density_map = ["mipmap-mdpi", "mipmap-hdpi", "mipmap-xhdpi", "mipmap-xxhdpi", "mipmap-xxxhdpi"]
-for d in density_map:
-    petal_icon = os.path.join(PETAL_RES, d, "ic_launcher.png")
-    if os.path.exists(petal_icon):
-        for root, dirs, files in os.walk(os.path.join(WORK_DIR, "res")):
-            if os.path.basename(root) == d or os.path.basename(root).startswith(d + "-"):
-                for f in files:
-                    if ("icon" in f.lower() or "launcher" in f.lower() or "brave" in f.lower()) and f.endswith(".png"):
-                        shutil.copyfile(petal_icon, os.path.join(root, f))
-
-# Rebrand resources.arsc safely (ONLY within table string pool range: 12 to 28346876)
+print("🌸 [3/5] Updating Strings & Theme Palettes in resources.arsc...")
 arsc_path = os.path.join(WORK_DIR, "resources.arsc")
 with open(arsc_path, "rb") as f:
     arsc_data = bytearray(f.read())
 
+# Rebrand resources.arsc safely (ONLY within table string pool range: 12 to 28346876)
 POOL_END = 28346876
 pool_data = arsc_data[12:POOL_END]
 pool_data = pool_data.replace(b"Brave Browser", b"Petal Browser")
@@ -136,7 +100,7 @@ while True:
 with open(arsc_path, "wb") as f:
     f.write(arsc_data)
 
-print("📦 [5/6] Packaging unaligned APK...")
+print("📦 [4/5] Packaging unaligned APK...")
 do_not_compress = [
     "resources.arsc",
     "assets/brave_resources.pak",
@@ -163,7 +127,7 @@ with zipfile.ZipFile(OUT_UNALIGNED, 'w', compression=zipfile.ZIP_DEFLATED) as z_
             else:
                 z_out.write(full_path, rel_path, compress_type=zipfile.ZIP_DEFLATED)
 
-print("✍️ [6/6] Aligning & Signing with authentic Petal Keystore...")
+print("✍️ [5/5] Aligning & Signing with authentic Petal Keystore...")
 if os.path.exists(OUT_ALIGNED):
     os.remove(OUT_ALIGNED)
 
