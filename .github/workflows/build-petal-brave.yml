@@ -74,7 +74,9 @@ jobs:
           KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
           STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD || secrets.KEY_STORE_PASSWORD }}
         run: |
-          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Listing all generated APKs:"
+          ls -la app/build/outputs/apk/release/ || true
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*arm64*.apk" -o -name "app-release-unsigned.apk" -o -name "*.apk" | head -n 1)
           echo "Found unsigned APK: $UNSIGNED_APK"
 
           ANDROID_SDK_BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
@@ -116,6 +118,13 @@ jobs:
 
           $ANDROID_SDK_BUILD_TOOLS/apksigner verify --verbose petal-browser-arm64-signed.apk
           ls -lh petal-browser-arm64-signed.apk
+          echo "Verifying APK 64-bit arm64-v8a architecture:"
+          unzip -l petal-browser-arm64-signed.apk | grep "lib/" || true
+          if unzip -l petal-browser-arm64-signed.apk | grep -q "lib/armeabi-v7a" || unzip -l petal-browser-arm64-signed.apk | grep -q "lib/x86/"; then
+            echo "❌ Error: APK contains 32-bit binaries!"
+            exit 1
+          fi
+          echo "✅ Verified: APK contains pure 64-bit architecture!"
       - name: 📦 Upload APK Artifact
         uses: actions/upload-artifact@v7
         with:

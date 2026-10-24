@@ -29,15 +29,15 @@ android {
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
         resConfigs "ar", "b+hi+Latn", "b+sr+Latn", "cs", "de", "el", "es", "et", "fa", "fr", "he", "hi", "hu", "id", "it", "ja", "nl", "pl", "pt", "ro", "ru", "sr", "sv", "tr", "uk", "vi", "zh", "zh-rTW"
+
+        ndk {
+            abiFilters "arm64-v8a"
+        }
     }
 
     splits {
         abi {
-            enable true
-            reset()
-            include 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
-            // Keep the universal APK so all supported ABIs are available in one package.
-            universalApk true
+            enable false
         }
     }
 
