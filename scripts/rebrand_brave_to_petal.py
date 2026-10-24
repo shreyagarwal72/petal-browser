@@ -6,13 +6,16 @@ import subprocess
 import io
 from PIL import Image
 
-SRC_APK = sys.argv[1] if len(sys.argv) > 1 else "/data/data/com.termux/files/home/brave_base/Bravearm64Universal.apk"
-OUT_SIGNED = sys.argv[2] if len(sys.argv) > 2 else "/data/data/com.termux/files/home/brave_base/petal-browser-brave-rebranded.apk"
+# Locate repository root relative to this script: <repo>/scripts/rebrand_brave_to_petal.py
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 
-ROOT_DIR = "/data/data/com.termux/files/home/petal-browser"
-WORK_DIR = "/data/data/com.termux/files/home/brave_base/work"
-OUT_UNALIGNED = "/data/data/com.termux/files/home/brave_base/petal_unaligned.apk"
-OUT_ALIGNED = "/data/data/com.termux/files/home/brave_base/petal_aligned.apk"
+SRC_APK = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT_DIR, "base_apk/Bravearm64Universal.apk")
+OUT_SIGNED = sys.argv[2] if len(sys.argv) > 2 else os.path.join(ROOT_DIR, "petal-browser-brave-rebranded.apk")
+
+WORK_DIR = os.path.join(ROOT_DIR, "build_work_brave")
+OUT_UNALIGNED = os.path.join(ROOT_DIR, "petal_unaligned.apk")
+OUT_ALIGNED = os.path.join(ROOT_DIR, "petal_aligned.apk")
 PETAL_RES = os.path.join(ROOT_DIR, "app/src/main/res")
 KEYSTORE = os.path.join(ROOT_DIR, "app/release.keystore")
 
@@ -26,7 +29,6 @@ with zipfile.ZipFile(SRC_APK, 'r') as z:
 shutil.rmtree(os.path.join(WORK_DIR, "META-INF"), ignore_errors=True)
 
 print("🌸 [2/5] Replacing all launcher & adaptive icons with authentic Petal Browser icons...")
-# Authentic Petal icon source
 petal_icon_source = os.path.join(PETAL_RES, "mipmap-xxxhdpi/ic_launcher.png")
 base_petal_img = Image.open(petal_icon_source).convert("RGBA")
 
@@ -62,7 +64,6 @@ icon_targets = {
 for path_rel, (w, h, is_adaptive) in icon_targets.items():
     dest_path = os.path.join(WORK_DIR, path_rel)
     if is_adaptive:
-        # Standard Android adaptive icon foreground: icon occupies inner ~66% with transparent margin
         canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         icon_dim = int(w * 0.66)
         scaled_icon = base_petal_img.resize((icon_dim, icon_dim), Image.Resampling.LANCZOS)
