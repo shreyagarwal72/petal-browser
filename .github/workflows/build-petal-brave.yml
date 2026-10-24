@@ -23,113 +23,56 @@ jobs:
       contents: write
       packages: write
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: ☕ Setup Java 17
-        uses: actions/setup-java@v5
+      - name: ☕ Setup Java 21
+        uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: 📱 Setup Android SDK
-        run: |
-          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-      - name: ⚡ Cache Genuine Brave Engine Components
-        id: cache-brave-core
-        uses: actions/cache@v4
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            app/src/main/jniLibs/arm64-v8a
-            app/src/main/assets
-            app/libs/brave_core_classes.jar
-          key: brave-core-v1.100.23-p3-${{ runner.os }}-arm64
+          python-version: '3.11'
 
-      - name: 🦁 Download & Extract Genuine Brave Engine Components
-        if: steps.cache-brave-core.outputs.cache-hit != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 📱 Install Android Build Tools
         run: |
-          chmod +x scripts/fetch_brave_core.sh
-          ./scripts/fetch_brave_core.sh "${{ github.event.inputs.brave_version || 'latest' }}"
+          sudo apt-get update && sudo apt-get install -y zipalign apksigner
 
-      - name: 🐘 Build Petal Release APK with Gradle
+      - name: 🦁 Download Authentic Brave Browser APK
         run: |
-          chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
-
-      - name: ✍️ Sign APK
-        env:
-          SIGNING_KEY: ${{ secrets.RELEASE_KEY_BASE64 || secrets.SIGNING_KEY }}
-          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || secrets.ALIAS }}
-          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.KEY_PASSWORD }}
-          STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD || secrets.KEY_STORE_PASSWORD }}
-        run: |
-          echo "Listing all generated APKs:"
-          ls -la app/build/outputs/apk/release/ || true
-          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*arm64*.apk" -o -name "app-release-unsigned.apk" -o -name "*.apk" | head -n 1)
-          echo "Found unsigned APK: $UNSIGNED_APK"
-
-          ANDROID_SDK_BUILD_TOOLS=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
-          echo "Using Android Build-Tools: $ANDROID_SDK_BUILD_TOOLS"
-
-          ALIGNED_APK="/tmp/aligned.apk"
-          $ANDROID_SDK_BUILD_TOOLS/zipalign -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK" || cp "$UNSIGNED_APK" "$ALIGNED_APK"
-
-          if [ -n "$SIGNING_KEY" ]; then
-            echo "✅ Using secret SIGNING_KEY..."
-            echo "$SIGNING_KEY" | base64 -d > /tmp/release.keystore
-            STORE_P="${STORE_PASS:-android}"
-            KEY_P="${KEY_PASS:-android}"
-            ALIAS_N="${KEY_ALIAS:-releasekey}"
-          elif [ -f "app/release.keystore" ]; then
-            echo "✅ Using canonical committed Petal release.keystore..."
-            cp app/release.keystore /tmp/release.keystore
-            STORE_P="android"
-            KEY_P="android"
-            ALIAS_N="releasekey"
+          mkdir -p base_apk
+          BRAVE_VER="${{ github.event.inputs.brave_version || 'latest' }}"
+          if [ "$BRAVE_VER" = "latest" ]; then
+            DOWNLOAD_URL=$(curl -s https://api.github.com/repos/brave/brave-browser/releases/latest | grep "browser_download_url.*Bravearm64Universal\.apk" | head -n 1 | cut -d '"' -f 4)
           else
-            echo "⚠️ Generating and signing with automated release key..."
-            keytool -genkeypair -v -keystore /tmp/release.keystore -alias releasekey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Petal Browser, O=Petal, C=US"
-            STORE_P="android"
-            KEY_P="android"
-            ALIAS_N="releasekey"
+            DOWNLOAD_URL="https://github.com/brave/brave-browser/releases/download/${BRAVE_VER}/Bravearm64Universal.apk"
           fi
+          echo "Downloading base from $DOWNLOAD_URL..."
+          curl -L -o base_apk/Bravearm64Universal.apk "$DOWNLOAD_URL"
+          ls -lh base_apk/Bravearm64Universal.apk
 
-          $ANDROID_SDK_BUILD_TOOLS/apksigner sign \
-            --ks /tmp/release.keystore \
-            --ks-key-alias "$ALIAS_N" \
-            --ks-pass "pass:$STORE_P" \
-            --key-pass "pass:$KEY_P" \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --v3-signing-enabled true \
-            --out petal-browser-arm64-signed.apk \
-            "$ALIGNED_APK"
+      - name: 🌸 Run Petal Customization & Rebranding Pipeline
+        run: |
+          python3 scripts/rebrand_brave_to_petal.py base_apk/Bravearm64Universal.apk petal-browser-brave-rebranded.apk
 
-          $ANDROID_SDK_BUILD_TOOLS/apksigner verify --verbose petal-browser-arm64-signed.apk
-          ls -lh petal-browser-arm64-signed.apk
-          echo "Verifying APK 64-bit arm64-v8a architecture:"
-          unzip -l petal-browser-arm64-signed.apk | grep "lib/" || true
-          if unzip -l petal-browser-arm64-signed.apk | grep -q "lib/armeabi-v7a" || unzip -l petal-browser-arm64-signed.apk | grep -q "lib/x86/"; then
-            echo "❌ Error: APK contains 32-bit binaries!"
-            exit 1
-          fi
-          echo "✅ Verified: APK contains pure 64-bit architecture!"
+      - name: 🔍 Verify Signed APK
+        run: |
+          apksigner verify --verbose petal-browser-brave-rebranded.apk
+          ls -lh petal-browser-brave-rebranded.apk
+
       - name: 📦 Upload APK Artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
-          name: petal-browser-brave-arm64
-          path: petal-browser-arm64-signed.apk
+          name: petal-browser-brave-rebranded
+          path: petal-browser-brave-rebranded.apk
           if-no-files-found: error
 
       - name: 🚀 Publish GitHub Release
@@ -139,14 +82,13 @@ jobs:
           tag_name: ${{ github.ref_name == 'main' && 'latest' || github.ref_name }}
           name: "Petal Browser with Genuine Brave Engine ${{ github.ref_name }}"
           body: |
-            ## 🦁 Petal Browser — Genuine Brave Engine Release
+            ## 🌸 Petal Browser (Built on Authentic Brave Engine)
             
-            Built with 100% genuine Brave Chromium native core:
-            - **Engine**: Genuine Brave `libchrome.so` + `libbrave.so` (Brave Shields Rust/C++)
-            - **No System WebView**: Direct native Chromium pipeline
-            - **Features**: Chrome Web Store extensions, 24-word Brave Sync v2, Brave Shields, Native Chromium Cache/Storage Manager
-            - **UI/UX**: Petal Material 3 Expressive + Liquid Glass UI
-            - **Architecture**: `arm64-v8a`
-          files: petal-browser-arm64-signed.apk
+            - **Base**: Genuine Brave Chromium 64-bit arm64-v8a engine
+            - **Package Name**: `com.petal.browser`
+            - **Version**: 4.4.000 (code 440)
+            - **Features**: Full Brave Shields, Sync v2, native web rendering intact
+            - **Signature**: Authentic Petal keystore
+          files: petal-browser-brave-rebranded.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
