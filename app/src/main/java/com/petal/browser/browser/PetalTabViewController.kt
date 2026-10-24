@@ -53,98 +53,103 @@ open class PetalTabViewController @JvmOverloads constructor(
         this.stateChangeListener = OnBrowserStateChangeListener { listener(it) }
     }
 
-    protected val webView: WebView = WebView(context).apply {
-        layoutParams = LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-        settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            databaseEnabled = true
-            setSupportMultipleWindows(true)
-            javaScriptCanOpenWindowsAutomatically = true
-            allowFileAccess = true
-            allowContentAccess = true
-            useWideViewPort = true
-            loadWithOverviewMode = true
-            setSupportZoom(true)
-            builtInZoomControls = true
-            displayZoomControls = false
-            cacheMode = WebSettings.LOAD_DEFAULT
-            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        }
-        CookieManager.getInstance().setAcceptCookie(true)
-        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-
-        webChromeClient = object : WebChromeClient() {
-            override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                super.onProgressChanged(view, newProgress)
-                progress = newProgress
-                val isLoading = newProgress < 100
-                stateChangeListener?.onStateChanged(
-                    BrowserState(
-                        url = currentUrl ?: "",
-                        title = currentTitle ?: "",
-                        progress = newProgress,
-                        isSecure = isSecure,
-                        loading = isLoading
-                    )
-                )
-            }
-
-            override fun onReceivedTitle(view: WebView?, title: String?) {
-                super.onReceivedTitle(view, title)
-                if (!title.isNullOrEmpty()) {
-                    currentTitle = title
-                    notifyState()
-                }
-            }
-        }
-
-        webViewClient = object : WebViewClient() {
-            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                currentUrl = url
-                isSecure = url?.startsWith("https://") == true
-                stateChangeListener?.onStateChanged(
-                    BrowserState(
-                        url = currentUrl ?: "",
-                        title = currentTitle ?: "",
-                        progress = progress,
-                        isSecure = isSecure,
-                        loading = true
-                    )
-                )
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                currentUrl = url
-                currentTitle = view?.title ?: currentTitle
-                isSecure = url?.startsWith("https://") == true
-                stateChangeListener?.onStateChanged(
-                    BrowserState(
-                        url = currentUrl ?: "",
-                        title = currentTitle ?: "",
-                        progress = 100,
-                        isSecure = isSecure,
-                        loading = false
-                    )
-                )
-            }
-
-            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val reqUrl = request?.url?.toString()
-                if (reqUrl != null && (reqUrl.startsWith("http://") || reqUrl.startsWith("https://") || reqUrl.startsWith("about:"))) {
-                    return false
-                }
-                return false
-            }
-        }
-    }
+    protected lateinit var webView: WebView
 
     init {
+        initWebView()
+    }
+
+    private fun initWebView() {
+        webView = WebView(context).apply {
+            layoutParams = LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                setSupportMultipleWindows(true)
+                javaScriptCanOpenWindowsAutomatically = true
+                allowFileAccess = true
+                allowContentAccess = true
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                setSupportZoom(true)
+                builtInZoomControls = true
+                displayZoomControls = false
+                cacheMode = WebSettings.LOAD_DEFAULT
+                mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            }
+            CookieManager.getInstance().setAcceptCookie(true)
+            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+
+            webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                    super.onProgressChanged(view, newProgress)
+                    this@PetalTabViewController.progress = newProgress
+                    val isLoading = newProgress < 100
+                    stateChangeListener?.onStateChanged(
+                        BrowserState(
+                            url = currentUrl ?: "",
+                            title = currentTitle ?: "",
+                            progress = newProgress,
+                            isSecure = isSecure,
+                            loading = isLoading
+                        )
+                    )
+                }
+
+                override fun onReceivedTitle(view: WebView?, title: String?) {
+                    super.onReceivedTitle(view, title)
+                    if (!title.isNullOrEmpty()) {
+                        currentTitle = title
+                        notifyState()
+                    }
+                }
+            }
+
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    currentUrl = url
+                    isSecure = url?.startsWith("https://") == true
+                    stateChangeListener?.onStateChanged(
+                        BrowserState(
+                            url = currentUrl ?: "",
+                            title = currentTitle ?: "",
+                            progress = this@PetalTabViewController.progress,
+                            isSecure = isSecure,
+                            loading = true
+                        )
+                    )
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    currentUrl = url
+                    currentTitle = view?.title ?: currentTitle
+                    isSecure = url?.startsWith("https://") == true
+                    stateChangeListener?.onStateChanged(
+                        BrowserState(
+                            url = currentUrl ?: "",
+                            title = currentTitle ?: "",
+                            progress = 100,
+                            isSecure = isSecure,
+                            loading = false
+                        )
+                    )
+                }
+
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val reqUrl = request?.url?.toString()
+                    if (reqUrl != null && (reqUrl.startsWith("http://") || reqUrl.startsWith("https://") || reqUrl.startsWith("about:"))) {
+                        return false
+                    }
+                    return false
+                }
+            }
+        }
         addView(webView)
     }
 
