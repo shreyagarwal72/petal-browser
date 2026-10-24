@@ -5332,7 +5332,6 @@ public class BrowserActivity extends AppCompatActivity implements BrowserControl
                 } else {
                     PetalToast.show(BrowserActivity.this, "Could not extract article content for Reading mode");
                 }
-                return kotlin.Unit.INSTANCE;
             });
         } catch (Exception e) {
             Log.e(TAG, "Error launching reader mode", e);
